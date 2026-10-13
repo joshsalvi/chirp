@@ -1,3 +1,11 @@
+## 0.5.12.t — 2026-10-13 — ENHANCEMENT — Contact form and feature ideas
+
+- Support page has a contact form (question, problem, feature idea) instead of an email address; the About page links to it.
+- My Profile → Help & Feedback sends a feature idea, problem or question from the app (POST /api/v1/support, rate-limited).
+- Messages are emailed to the server's admins and, on ourchirp.com, listed in Global Admin → Requests with Mark done.
+- About page: the station → server → app diagram shows its arrows again, nav links line up with Sign in, and every card ends in the same pair of buttons (in-page action, plus GitHub links that open in a new tab).
+- App Store link placeholder in public/site.js; setting CHIRP_APP_STORE_URL there shows the App Store buttons on About and Support.
+
 ## 0.5.12.s — 2026-10-13 — ENHANCEMENT — One password, shorter What's New
 
 - Joining a site needs only the invite code; the separate location password is gone from sign-up, Join, New Location, Import and Global Admin → Add member.

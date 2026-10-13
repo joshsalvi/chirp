@@ -14,10 +14,10 @@
 // WHATS_NEW.version must match the VERSION file (stamp-sw-version.mjs
 // checks it), or the popup won't show for anyone.
 export const WHATS_NEW = {
-  version: '0.5.12.s',
+  version: '0.5.12.t',
   title: "What's new in Chirp",
   latest: {
-    intro: 'Easier invites, your own site on ourchirp.com, and a tidier What’s New.',
+    intro: 'Easier invites, your own site on ourchirp.com, and a way to send us ideas.',
     sections: [
       {
         heading: '🔑 Invites need only the code',
@@ -28,12 +28,13 @@ export const WHATS_NEW = {
         body: 'Build a station and request a hosted site at ourchirp.com/about. Approval emails your sign-in, device key and setup steps.',
       },
       {
-        heading: '📜 Changelog',
-        body: 'Each version shows a one-line summary when collapsed; open it for the details.',
+        heading: '💡 Suggest a feature',
+        body: 'My Profile → Help & Feedback sends an idea, a problem or a question straight to us.',
       },
     ],
   },
   recent: [
+    { version: '0.5.12.t', summary: 'Help & Feedback in My Profile; contact form on the support page.' },
     { version: '0.5.12.s', summary: 'Invite code is all you need to join a site; shorter What’s New and Changelog.' },
     { version: '0.5.12.p', summary: 'Request a hosted site or a push relay token at ourchirp.com/about.' },
     { version: '0.5.12.o', summary: 'About page at ourchirp.com/about.' },

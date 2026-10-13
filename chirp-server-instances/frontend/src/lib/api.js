@@ -251,10 +251,17 @@ export const api = {
     approveSiteRequest: (id) => request(`/admin/site-requests/${id}/approve`, { method: 'POST' }),
     denySiteRequest: (id, body) => request(`/admin/site-requests/${id}/deny`, { method: 'POST', body: JSON.stringify(body) }),
     deleteSiteRequest: (id) => request(`/admin/site-requests/${id}`, { method: 'DELETE' }),
+    supportMessages: () => request('/admin/support'),
+    markSupportMessage: (id, done) => request(`/admin/support/${id}`, { method: 'PATCH', body: JSON.stringify({ done }) }),
+    deleteSupportMessage: (id) => request(`/admin/support/${id}`, { method: 'DELETE' }),
     relayServers: () => request('/admin/relay-servers'),
     createRelayServer: (body) => request('/admin/relay-servers', { method: 'POST', body: JSON.stringify(body) }),
     updateRelayServer: (id, body) => request(`/admin/relay-servers/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
     deleteRelayServer: (id) => request(`/admin/relay-servers/${id}`, { method: 'DELETE' }),
+  },
+
+  support: {
+    send: (body) => request('/support', { method: 'POST', body: JSON.stringify(body) }),
   },
 
   notifications: {

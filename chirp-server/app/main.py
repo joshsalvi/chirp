@@ -586,6 +586,7 @@ UNPROTECTED = {
     "/api/v1/health",
     "/api/v1/changelog",     # readable by all users, auth or not
     "/api/v1/ios-resign/event",   # X-API-Key (stack device key), see api/ios_resign.py
+    "/api/v1/support",            # support / feature form (rate-limited), see api/support.py
 }
 
 def _is_media_path(path: str) -> bool:
@@ -810,6 +811,8 @@ app.include_router(moderation_router.router, prefix="/api/v1/moderation", tags=[
 app.include_router(techdocs_router.router, prefix="/api/v1/techdocs", tags=["techdocs"])
 app.include_router(live_detect_router.router, prefix="/api/v1/live-detect", tags=["live-detect"])
 app.include_router(near_misses_router.router, prefix="/api/v1/near-misses", tags=["near-misses"])
+from .api import support as support_router
+app.include_router(support_router.router, prefix="/api/v1/support", tags=["support"])
 
 
 @app.get("/icon.svg", include_in_schema=False)

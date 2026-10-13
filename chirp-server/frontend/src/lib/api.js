@@ -142,6 +142,10 @@ async function sendRequest(path, options = {}) {
 export const api = {
   health: () => request('/health'),
 
+  support: {
+    send: (body) => request('/support', { method: 'POST', body: JSON.stringify(body) }),
+  },
+
   notifications: {
     list:    (limit = 100) => request(`/notifications?limit=${limit}`),
     unread:  () => request('/notifications/unread'),

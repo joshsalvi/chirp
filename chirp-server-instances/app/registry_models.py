@@ -188,3 +188,21 @@ class RelayServer(RegistryBase):
     last_used_at = Column(DateTime, nullable=True)
     sent_count = Column(Integer, default=0)
 
+
+
+class SupportMessage(RegistryBase):
+    """A question, problem report or feature idea from support.html, the
+    About page or the app (api/support.py). Listed in Global Admin → Requests."""
+    __tablename__ = "support_messages"
+
+    id = Column(String, primary_key=True, default=new_uuid)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    kind = Column(String, default="question")        # question | problem | feature | other
+    name = Column(String, nullable=True)
+    email = Column(String, nullable=True)
+    username = Column(String, nullable=True)          # when sent from the app while signed in
+    site = Column(String, nullable=True)
+    page = Column(String, nullable=True)
+    message = Column(Text, nullable=False)
+    ip = Column(String, nullable=True)
+    done = Column(Boolean, default=False)

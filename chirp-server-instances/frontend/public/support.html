@@ -14,7 +14,29 @@
   p, li { color: #d8d1c5; font-size: 15px; }
   a { color: #fb923c; }
   img { width: 64px; height: auto; }
+  [hidden] { display: none !important; }
+  .top { display: flex; gap: 14px; flex-wrap: wrap; margin: 12px 0 4px; font-size: 14px; }
+  form { background: #13261a; border: 1px solid rgba(245,239,230,.1); border-radius: 18px; padding: 20px; margin-top: 10px; }
+  label { display: block; font-size: 13px; color: #9fb0a2; margin: 12px 0 4px; }
+  input, select, textarea { width: 100%; box-sizing: border-box; padding: 11px 12px; border-radius: 12px;
+    border: 1px solid rgba(245,239,230,.12); background: #0a160c; color: #f5efe6; font: 16px -apple-system, sans-serif; }
+  textarea { min-height: 120px; resize: vertical; }
+  .kinds { display: flex; flex-wrap: wrap; gap: 8px; }
+  .kinds label { margin: 0; display: flex; align-items: center; gap: 7px; padding: 8px 13px; border-radius: 999px;
+    border: 1px solid rgba(245,239,230,.12); color: #f5efe6; font-size: 14px; cursor: pointer; }
+  .kinds input { width: auto; accent-color: #fbbf24; margin: 0; }
+  .kinds label:has(input:checked) { border-color: #fbbf24; background: rgba(251,191,36,.08); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
+  button { margin-top: 16px; padding: 12px 22px; border: 0; border-radius: 999px; background: #fbbf24; color: #1a1405;
+    font-weight: 600; font-size: 15px; cursor: pointer; }
+  button:disabled { opacity: .6; }
+  .hp { position: absolute; left: -9999px; }
+  #msg { min-height: 22px; font-size: 14px; margin: 12px 0 0; }
+  #msg.ok { color: #4ade80; } #msg.err { color: #fb923c; }
+  .btn { display: inline-block; padding: 10px 18px; border-radius: 999px; background: #fbbf24; color: #1a1405; font-weight: 600; text-decoration: none; }
 </style>
+<script src="site.js"></script>
 </head>
 <body>
 <main>
@@ -22,14 +44,17 @@
   <h1>Chirp support</h1>
   <p>Chirp listens for bird calls with a small station in your yard, identifies each species with BirdNET, and keeps your recordings, life list and alerts on your Chirp server.</p>
 
-  <h2>Contact</h2>
-  <p>Email <a href="mailto:josh.salvi@gmail.com">josh.salvi@gmail.com</a>. Replies usually within two days.</p>
+  <div class="top"><a href="about">About Chirp</a><a href="#contact">Contact us</a><a href="#contact" data-kind="feature">Suggest a feature</a><a href="privacy.html">Privacy</a></div>
+
+  <h2>The iPhone app</h2>
+  <p data-appstore-soon>The Chirp iPhone app is coming soon. Until then, open your Chirp site in Safari and choose <b>Share → Add to Home Screen</b>.</p>
+  <p><a class="btn" data-appstore hidden href="#">Get Chirp on the App Store</a></p>
 
   <h2>Getting an account</h2>
   <p>Chirp works with a Chirp site. Ask the person who runs your site for an invite code, then tap <b>Create account</b> on the sign-in screen and enter it.</p>
 
   <h2>Notifications</h2>
-  <p>Chirp asks for permission the first time you sign in. If you said no, turn alerts on in the iPhone <b>Settings → Chirp → Notifications</b>. Choose which alerts you get under <b>⋮ → Settings → My Notifications</b> (or tap the gear at the bottom of the Notifications tab): new species, the 6 pm Daily Journal, the Sunday Weekly Journal, the morning digest, and birds you watch. Every alert also stays in the <b>Notifications</b> tab.</p>
+  <p>Chirp asks for permission the first time you sign in. If you said no, turn alerts on in the iPhone <b>Settings → Chirp → Notifications</b>. Choose which alerts you get under <b>⋮ → Settings → My Notifications</b> (or tap the gear at the bottom of the Notifications tab): new species, the Daily Journal, the Sunday Weekly Journal, the daily digest (your site sets its time), and birds you watch. Every alert also stays in the <b>Notifications</b> tab.</p>
 
   <h2>Watching a bird</h2>
   <p>Open a species and tap <b>Notify me</b>, then choose every time it's heard or a 7 pm daily summary. Tapping an alert opens the recording.</p>
@@ -39,6 +64,54 @@
 
   <h2>Deleting your account</h2>
   <p>In Chirp, open <b>⋮ → My Profile → Delete account</b> and confirm with your password. See the <a href="privacy.html">privacy policy</a> for what is removed.</p>
+  <h2 id="contact">Contact us</h2>
+  <p>Questions, problems or ideas for Chirp. Replies usually within two days.</p>
+  <form id="support" novalidate>
+    <div class="kinds">
+      <label><input type="radio" name="kind" value="question" checked> Question</label>
+      <label><input type="radio" name="kind" value="problem"> Something's wrong</label>
+      <label><input type="radio" name="kind" value="feature"> Suggest a feature</label>
+    </div>
+    <div class="row">
+      <div><label for="s-name">Name</label><input id="s-name" name="name" autocomplete="name"></div>
+      <div><label for="s-email">Email (for our reply)</label><input id="s-email" name="email" type="email" autocomplete="email"></div>
+    </div>
+    <label for="s-msg" id="s-msg-label">How can we help?</label>
+    <textarea id="s-msg" name="message" required></textarea>
+    <div class="hp" aria-hidden="true"><label for="s-web">Website</label><input id="s-web" name="website" tabindex="-1" autocomplete="off"></div>
+    <button type="submit" id="s-send">Send</button>
+    <p id="msg" role="status"></p>
+  </form>
 </main>
+<script>
+(function () {
+  var f = document.getElementById('support'), msg = document.getElementById('msg')
+  var prompts = { question: 'How can we help?', problem: 'What happened, and what did you expect?', feature: 'What would you like Chirp to do?' }
+  function kind() { return f.querySelector('input[name=kind]:checked').value }
+  function setKind(k) {
+    f.querySelector('input[value=' + k + ']').checked = true
+    document.getElementById('s-msg-label').textContent = prompts[k]
+  }
+  f.querySelectorAll('input[name=kind]').forEach(function (r) { r.addEventListener('change', function () { setKind(kind()) }) })
+  document.querySelectorAll('a[data-kind]').forEach(function (a) { a.addEventListener('click', function () { setKind(a.dataset.kind) }) })
+  if (/feature/.test(location.hash + location.search)) setKind('feature')
+  f.addEventListener('submit', function (e) {
+    e.preventDefault()
+    var body = { kind: kind(), page: 'support', name: f.name.value.trim(), email: f.email.value.trim(),
+                 message: f.message.value.trim(), website: f.website.value }
+    if (body.message.length < 5) { msg.className = 'err'; msg.textContent = 'Write a few words so we know how to help.'; return }
+    if (!body.email) { msg.className = 'err'; msg.textContent = 'Add your email so we can reply.'; return }
+    var btn = document.getElementById('s-send'); btn.disabled = true; msg.className = ''; msg.textContent = 'Sending…'
+    fetch('/api/v1/support', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().catch(function () { return {} }).then(function (j) { return [r, j] }) })
+      .then(function (rj) {
+        if (rj[0].ok) { f.reset(); setKind('question'); msg.className = 'ok'; msg.textContent = 'Thanks! We\u2019ll be in touch.' }
+        else { var d = rj[1].detail; msg.className = 'err'; msg.textContent = (typeof d === 'string' && d) || 'Something went wrong. Please try again.' }
+      })
+      .catch(function () { msg.className = 'err'; msg.textContent = 'Couldn\u2019t reach the server. Check your connection.' })
+      .then(function () { btn.disabled = false })
+  })
+})()
+</script>
 </body>
 </html>

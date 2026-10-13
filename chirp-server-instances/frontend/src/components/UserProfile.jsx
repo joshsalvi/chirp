@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { User, Lock, Bell, Check, AlertCircle, Eye, EyeOff, Save, Shield, Feather, Leaf, RefreshCw, LogOut, Camera, Trash2, UserX, Server } from 'lucide-react'
+import { User, Lock, Bell, Check, AlertCircle, Eye, EyeOff, Save, Shield, Feather, Leaf, RefreshCw, LogOut, Camera, Trash2, UserX, Server, MessageSquare } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { api, mediaUrl } from '../lib/api'
 import { format } from 'date-fns'
@@ -278,6 +278,54 @@ function ServerSection() {
         </div>
         <button onClick={openServerPicker} className="btn-secondary text-xs px-3 py-1.5 flex-shrink-0">Change server</button>
       </div>
+    </Section>
+  )
+}
+
+// ── Help & feedback ───────────────────────────────────────────────────────────
+// Questions, problems and feature ideas go to the server's admins
+// (api/support.py), signed with this account.
+const FEEDBACK_KINDS = [
+  ['feature', 'Suggest a feature', 'What would you like Chirp to do?'],
+  ['problem', "Something's wrong", 'What happened, and what did you expect?'],
+  ['question', 'Question', 'How can we help?'],
+]
+function FeedbackSection() {
+  const [kind, setKind] = useState('feature')
+  const [message, setMessage] = useState('')
+  const [state, setState] = useState(null)   // null | 'sending' | 'sent' | error text
+  const send = async () => {
+    if (message.trim().length < 5) { setState('Write a few words first.'); return }
+    setState('sending')
+    try {
+      await api.support.send({ kind, message: message.trim(), page: 'app' })
+      setMessage(''); setState('sent')
+    } catch (e) { setState(e.message || 'Couldn\u2019t send. Try again.') }
+  }
+  return (
+    <Section id="me:feedback" fallbackOpen={false} icon={MessageSquare} title="Help & Feedback" color="#fbbf24">
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {FEEDBACK_KINDS.map(([k, label]) => (
+          <button key={k} onClick={() => { setKind(k); setState(null) }}
+                  className="text-xs px-3 py-1.5 rounded-full font-medium"
+                  style={kind === k ? { background: 'var(--nav-active-bg)', color: 'var(--accent-400)' }
+                                    : { background: 'var(--bg-raised)', color: 'var(--text-tertiary)' }}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <textarea className="input w-full text-sm" rows={4} value={message} onChange={e => setMessage(e.target.value)}
+                placeholder={FEEDBACK_KINDS.find(x => x[0] === kind)[2]}/>
+      <div className="flex items-center gap-3 mt-2">
+        <button onClick={send} disabled={state === 'sending'} className="btn-primary text-sm px-4 py-2">
+          {state === 'sending' ? 'Sending…' : 'Send'}
+        </button>
+        {state === 'sent' && <span className="text-xs" style={{ color: 'var(--pastel-green)' }}>Thanks! It's on its way.</span>}
+        {state && state !== 'sent' && state !== 'sending' && <span className="text-xs" style={{ color: 'var(--pastel-red)' }}>{state}</span>}
+      </div>
+      <p className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
+        Sent with your username so we can reply. More help on the <a href="/support.html" style={{ color: 'var(--accent-400)' }}>support page</a>.
+      </p>
     </Section>
   )
 }
@@ -717,6 +765,7 @@ export default function UserProfile() {
       </button>
 
       {hasServerPicker() && <ServerSection/>}
+      <FeedbackSection/>
       <BlockedPeopleSection/>
       <DeleteAccountSection/>
 
