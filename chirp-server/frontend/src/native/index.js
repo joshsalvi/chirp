@@ -210,10 +210,12 @@ export const native = {
   /**
    * Microphone — triggers the iOS permission prompt (the app's Info.plist
    * carries NSMicrophoneUsageDescription). Opens and immediately releases
-   * the mic. Resolves 'granted' | 'denied' | 'unavailable'.
+   * the mic. Resolves 'granted' | 'denied' | 'insecure' | 'unavailable'.
    */
   mic: {
     request: async () => {
+      // Plain http:// pages get no microphone at all (not a secure context).
+      if (!window.isSecureContext) return 'insecure'
       if (!navigator.mediaDevices?.getUserMedia) return 'unavailable'
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true })

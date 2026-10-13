@@ -1,3 +1,8 @@
+## 0.5.12.r — 2026-10-13 — BUGFIX — Live Detect on http:// servers
+
+- Live Detect on a plain http:// server address (e.g. a home-network IP in Chirp β) said microphone access was off; iOS and browsers give http:// pages no microphone. It now says the server needs an https:// address, and the app's permissions card shows the same.
+- The picker's custom-server note says Live Detect needs https://.
+
 ## 0.5.12.q — 2026-10-13 — ENHANCEMENT — Server picker test build
 
 - PICKER=1 ./build-ios.sh --testflight builds "Chirp β": same app, starts on ios-launcher/index.html to choose ourchirp.com or a custom server (address or IP:port), uploaded for internal testers only.

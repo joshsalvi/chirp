@@ -17,6 +17,7 @@ const LABEL = {
   denied: 'Not allowed. Turn it on in Settings → Chirp.',
   'no-delivery': "Allowed, but this build of the app can't receive push alerts. You'll still get email alerts.",
   unavailable: "Not available here.",
+  insecure: "Needs an https:// server address; this server uses http://.",
 }
 
 export default function AppPermissions() {

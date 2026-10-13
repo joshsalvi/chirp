@@ -42,7 +42,7 @@
 // won't trigger for anyone since it'll look identical to whatever they
 // already last saw.
 export const WHATS_NEW = {
-  version: '0.5.12.q',
+  version: '0.5.12.r',
   title: "What's new in Chirp",
   latest: {
     intro: "Fewer false owls, an evening digest for the day you just had, a tidier Settings page, and working test emails.",
@@ -66,6 +66,7 @@ export const WHATS_NEW = {
     ],
   },
   previousHighlights: [
+    { version: '0.5.12.r', summary: 'Live Detect explains when a server address needs https://.' },
     { version: '0.5.12.q', summary: 'Groundwork for connecting the iPhone app to any Chirp server.' },
     { version: '0.5.12.p', summary: 'Request a hosted site or a push relay token at ourchirp.com/about.' },
     { version: '0.5.12.o', summary: 'A public About page at ourchirp.com/about, linked from the sign-in screen.' },

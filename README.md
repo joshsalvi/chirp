@@ -5,7 +5,7 @@ identification, and archival. It runs entirely on your own hardware — no cloud
 subscriptions, no data sharing.
 
 **Author:** Joshua Salvi — josh.salvi@gmail.com  
-**Version:** 0.5.12.q  
+**Version:** 0.5.12.p  
 **Status:** Active development · [ourchirp.com/about](https://ourchirp.com/about)
 
 ---

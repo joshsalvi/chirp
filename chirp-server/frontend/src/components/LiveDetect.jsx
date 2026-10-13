@@ -573,6 +573,11 @@ export default function LiveDetect() {
 
   const startPhoneCapture = useCallback(async () => {
     let stream
+    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+      setMicPermissionDenied(false)
+      setError("Live Detect needs an https:// server address. Browsers and the iPhone app block the microphone on plain http:// addresses like this one; everything else works.")
+      return false
+    }
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     } catch (e) {
