@@ -1,0 +1,51 @@
+site_name: Chirp — Technical Documentation
+site_description: Internal technical reference for the Chirp bioacoustic monitoring system
+site_author: Joshua Salvi
+copyright: "© 2026 Joshua Salvi"
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: green
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: green
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - toc.integrate
+    - content.code.copy
+    - search.suggest
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Overview: index.md
+  - System Architecture: architecture.md
+  - Detection Pipeline: detection-pipeline.md
+  - Species Enrichment: enrichment.md
+  - Hardware & Edge Device: hardware.md
+  - Microphones: microphones.md
+  - Device Setup Guide: device-setup.md
+  - Server Deployment: deployment.md
+  - Remote Access (Tailscale/Headscale): remote-access.md
+  - Configuration Reference: configuration.md
+  - AI Features: ai-features.md
+  - API Reference: api.md
+  - FAQ / Troubleshooting: faq.md

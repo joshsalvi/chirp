@@ -1,0 +1,68 @@
+{
+  "id": "/",
+  "name": "Chirp — Bird Call Detection",
+  "short_name": "Chirp",
+  "description": "Automated bird call detection, identification, and archival",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#071009",
+  "theme_color": "#0a160c",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/favicon.svg?v=0.5.12.p",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png?v=0.5.12.p",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png?v=0.5.12.p",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": [
+    "nature",
+    "utilities",
+    "productivity"
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "url": "/",
+      "description": "Live stats and recent detections"
+    },
+    {
+      "name": "Recordings",
+      "url": "/recordings",
+      "description": "View all recordings"
+    },
+    {
+      "name": "Life List",
+      "url": "/library",
+      "description": "Your bird life list"
+    },
+    {
+      "name": "Regional",
+      "url": "/regional",
+      "description": "Birds likely near you"
+    },
+    {
+      "name": "Devices",
+      "url": "/devices",
+      "description": "Manage Pi recording devices"
+    },
+    {
+      "name": "Users",
+      "url": "/users",
+      "description": "User management"
+    }
+  ]
+}

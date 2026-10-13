@@ -1,0 +1,66 @@
+# Headscale configuration for Chirp's remote device mesh.
+#
+# Copy this to config.yaml (removing the .example suffix) in the same
+# directory that docker-compose.headscale.yml mounts to /etc/headscale,
+# then fill in the two REQUIRED changes marked below before first start.
+# See docs/REMOTE_DEVICES.md for the full setup walkthrough.
+
+# REQUIRED: the public address this Headscale instance is reachable at.
+# This is Headscale's OWN address (for the coordination/control-plane
+# traffic), separate from chirp-server's own address — e.g. if
+# chirp-server is at https://chirp.example.com, this might be
+# https://chirp.example.com:8090 (using the port mapping from
+# docker-compose.headscale.yml) or its own subdomain if you'd rather
+# put it behind its own reverse-proxy entry.
+server_url: https://CHANGE-ME.example.com:8090
+
+listen_addr: 0.0.0.0:8080
+metrics_listen_addr: 127.0.0.1:9090
+
+# Where Headscale keeps its own state (device list, keys, ACLs) —
+# matches the volume mount in docker-compose.headscale.yml.
+database:
+  type: sqlite
+  sqlite:
+    path: /var/lib/headscale/db.sqlite
+
+# REQUIRED: the private IP range Chirp's devices and server will use to
+# reach each other over the mesh. The default below is a standard,
+# unlikely-to-collide private range — only change this if it genuinely
+# conflicts with a network you already use elsewhere.
+prefixes:
+  v4: 100.64.0.0/10
+
+# DERP relay — the fallback path when two peers can't negotiate a direct
+# connection. Points at the self-hosted chirp-derper service from
+# docker-compose.headscale.yml by default, keeping the whole mesh
+# self-hosted end to end. See that compose file's own comments for why
+# this matters and what the alternative (Tailscale's public DERP
+# servers) would look like if you'd rather not run this piece yourself.
+derp:
+  server:
+    enabled: true
+    region_id: 999
+    region_code: chirp
+    region_name: "Chirp self-hosted DERP"
+    stun_listen_addr: "0.0.0.0:3478"
+  urls: []
+  paths: []
+  auto_update_enabled: false
+
+dns:
+  magic_dns: true
+  base_domain: chirp.internal
+  nameservers:
+    global:
+      - 1.1.1.1
+      - 8.8.8.8
+
+# How long a device stays authorized before needing to re-auth — 180 days
+# is a reasonable default for permanently-installed hardware that isn't
+# moving between networks; tighten this if that doesn't fit your setup.
+node_update_check_interval: 10s
+ephemeral_node_inactivity_timeout: 30m
+
+log:
+  level: info

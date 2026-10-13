@@ -1,0 +1,115 @@
+<!doctype html>
+<!-- DRAFT, not in any build yet. See docs/SERVER_PICKER_PLAN.md.
+     Bundled start page for the iPhone app: opens the saved Chirp server
+     (default https://ourchirp.com) after a health check, or shows a picker. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chirp</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; min-height: 100vh; background: #0a160c; color: #f5efe6;
+         font: 16px/1.5 -apple-system, BlinkMacSystemFont, sans-serif;
+         display: flex; align-items: center; justify-content: center; }
+  main { width: 100%; max-width: 380px; padding: 28px 22px; }
+  img { width: 64px; display: block; margin: 0 auto 10px; }
+  h1 { text-align: center; font: 600 26px ui-serif, Georgia, serif; margin: 0 0 4px; }
+  .muted { color: #9fb0a2; font-size: 14px; text-align: center; }
+  #picker { display: none; margin-top: 22px; }
+  label { font-size: 13px; color: #9fb0a2; }
+  input { width: 100%; box-sizing: border-box; margin: 6px 0 10px; padding: 13px 14px; border-radius: 12px;
+          border: 1px solid rgba(245,239,230,.15); background: #13261a; color: #f5efe6; font-size: 16px; }
+  button { width: 100%; padding: 13px; border-radius: 999px; border: 0; font-weight: 600; font-size: 16px; margin-top: 6px; }
+  .primary { background: #fbbf24; color: #1a1405; }
+  .ghost { background: transparent; color: #f5efe6; border: 1px solid rgba(245,239,230,.15); }
+  .recent button { text-align: left; background: #13261a; color: #f5efe6; font-weight: 500; }
+  #msg { min-height: 22px; font-size: 14px; color: #fb923c; text-align: center; margin-top: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <img src="logo.svg" alt="" id="logo">
+  <h1>Chirp</h1>
+  <p class="muted" id="status">Connecting…</p>
+  <div id="picker">
+    <label for="url">Chirp server</label>
+    <input id="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false"
+           placeholder="ourchirp.com, chirp.example.com or 192.168.1.50:8768">
+    <button class="primary" id="connect">Connect</button>
+    <button class="ghost" id="default">Use ourchirp.com</button>
+    <div class="recent" id="recent"></div>
+    <p id="msg"></p>
+  </div>
+</main>
+<script>
+  const DEFAULT = 'https://ourchirp.com'
+  const KEY = 'chirp_server', RECENT = 'chirp_recent_servers'
+  const get = (k, d) => { try { return localStorage.getItem(k) || d } catch { return d } }
+  const set = (k, v) => { try { localStorage.setItem(k, v) } catch {} }
+
+  // "chirp.example.com" -> https://…; a bare IP or host:port on the LAN -> http://…
+  function normalize(raw) {
+    let s = (raw || '').trim().replace(/\/+$/, '')
+    if (!s) return null
+    if (!/^https?:\/\//i.test(s)) {
+      const lan = /^(\d{1,3}\.){3}\d{1,3}(:\d+)?$/.test(s) || /\.local(:\d+)?$/i.test(s) || /^[^.]+:\d+$/.test(s)
+      s = (lan ? 'http://' : 'https://') + s
+    }
+    try { const u = new URL(s); return u.origin } catch { return null }
+  }
+
+  async function check(origin) {
+    const ctl = new AbortController()
+    const t = setTimeout(() => ctl.abort(), 4000)
+    try {
+      const r = await fetch(origin + '/api/v1/health', { signal: ctl.signal, cache: 'no-store' })
+      const j = await r.json()
+      return r.ok && j && j.version ? j : null
+    } catch { return null } finally { clearTimeout(t) }
+  }
+
+  function open(origin) {
+    set(KEY, origin)
+    const recent = [origin, ...JSON.parse(get(RECENT, '[]')).filter(x => x !== origin)].slice(0, 5)
+    set(RECENT, JSON.stringify(recent))
+    location.replace(origin + '/')
+  }
+
+  function showPicker(message) {
+    document.getElementById('status').textContent = 'Choose the Chirp server to open.'
+    document.getElementById('picker').style.display = 'block'
+    document.getElementById('msg').textContent = message || ''
+    document.getElementById('url').value = get(KEY, DEFAULT).replace(/^https:\/\//, '')
+    const box = document.getElementById('recent')
+    box.innerHTML = ''
+    for (const o of JSON.parse(get(RECENT, '[]'))) {
+      const b = document.createElement('button'); b.textContent = o.replace(/^https?:\/\//, '')
+      b.onclick = () => tryOpen(o); box.appendChild(b)
+    }
+  }
+
+  async function tryOpen(raw) {
+    const origin = normalize(raw)
+    if (!origin) return showPicker('That doesn’t look like a server address.')
+    document.getElementById('msg').textContent = 'Checking ' + origin + '…'
+    if (await check(origin)) open(origin)
+    else showPicker('No Chirp server answered at ' + origin + '.')
+  }
+
+  document.getElementById('connect').onclick = () => tryOpen(document.getElementById('url').value)
+  document.getElementById('default').onclick = () => tryOpen(DEFAULT)
+  // Hold the logo for a second at launch to pick a server instead of auto-connecting.
+  let hold = null, picking = new URLSearchParams(location.search).has('pick')
+  document.getElementById('logo').addEventListener('touchstart', () => { hold = setTimeout(() => { picking = true; showPicker() }, 800) })
+  document.getElementById('logo').addEventListener('touchend', () => clearTimeout(hold))
+
+  ;(async () => {
+    if (picking) return showPicker()
+    const saved = get(KEY, DEFAULT)
+    if (await check(saved)) { if (!picking) open(saved) }
+    else if (!picking) showPicker('Couldn’t reach ' + saved + '.')
+  })()
+</script>
+</body>
+</html>

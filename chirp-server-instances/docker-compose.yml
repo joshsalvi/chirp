@@ -1,0 +1,290 @@
+# Chirp Server (Instances) — multi-database, single-container build.
+#
+# Deliberately a SEPARATE container, image, and port from the real
+# chirp-server — per explicit instruction, this stays fully isolated
+# until proven, so the main server can never break while this is being
+# tested. See ARCHITECTURE.md for the full design; app/main.py's
+# lifespan() has the one small, clearly-marked addition that makes this
+# whole thing work (a FastAPI dependency_overrides registration) —
+# everything else in this codebase is the real, unmodified chirp-server.
+#
+# Port 8768 — distinct from chirp-server's own 8765 (main) and 8760
+# (multi-instance launcher, a different feature: switching between
+# several independent chirp-server PROCESSES, not what this is).
+#
+# Data volume is intentionally its OWN separate path, never the same
+# volume chirp-server uses — this container creates a NEW kind of
+# per-instance database layout under data/instances/ that chirp-server
+# itself doesn't know about; sharing a volume would be confusing at
+# best and risky at worst.
+
+name: chirp-server-instances
+
+services:
+  chirp-server-instances:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chirp-server-instances
+    restart: unless-stopped
+    network_mode: host
+    labels:
+      - "net.unraid.docker.icon=http://192.168.1.224:8768/icon.svg"
+      - "net.unraid.docker.webui=http://[IP]:[PORT:8768]/"
+      - "net.unraid.docker.shell=bash"
+      - "net.unraid.docker.name=Chirp (Instances - TESTING)"
+      - "com.centurylinklabs.watchtower.enable=false"
+    volumes:
+      - /mnt/user/data/media/miscellaneous/chirp-instances-data:/app/data
+      - headscale-shared:/shared:ro
+    depends_on:
+      headscale:
+        condition: service_healthy
+    # See chirp-server's own docker-compose.yml for the full reasoning
+    # (identical here) — NET_ADMIN + /dev/net/tun let the tailscale
+    # client create its own network interface; no-op unless
+    # CHIRP_TAILSCALE_ENABLED=true below.
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - CHIRP_SECRET_KEY=${CHIRP_SECRET_KEY:-changeme-use-a-real-secret}
+      - CHIRP_DEVICE_API_KEY=${CHIRP_DEVICE_API_KEY:-chirp-device-key-change-me}
+      # This multi-tenant fork has no meaningful "auth disabled" mode —
+      # every request needs a logged-in user's JWT to know which
+      # instance's database to route to at all, unlike the original
+      # single-tenant chirp-server where this is a legitimate, useful
+      # setting. Forced true here so a freshly-created instance (whose
+      # own AppSettings.auth_enabled hasn't been explicitly set yet, and
+      # so falls back to this global default) never briefly reports
+      # itself as not requiring auth to a real logged-in user.
+      - CHIRP_AUTH_ENABLED=true
+      # Global-admin bootstrap: set this to your registered username to be
+      # promoted to server-wide admin (all instances, all users) on the
+      # next restart — see app/main.py's own comment for the full
+      # reasoning. Safe to leave set permanently once bootstrapped.
+      - CHIRP_GLOBAL_ADMIN_USERNAME=${CHIRP_GLOBAL_ADMIN_USERNAME:-joshsalvi}
+      - CHIRP_EBIRD_API_KEY=${CHIRP_EBIRD_API_KEY:-}
+      - CHIRP_DATA_DIR=/app/data
+      - CHIRP_RECORDINGS_DIR=/app/data/recordings
+      - CHIRP_MEDIA_DIR=/app/data/media/birds
+      # This single-instance DB URL is now mostly vestigial — real
+      # per-instance databases live under /app/data/instances/, opened
+      # dynamically (see instance_registry.py). init_db() at startup
+      # still runs against this URL for now (see main.py's lifespan —
+      # a known, documented simplification, not yet cleaned up), but
+      # nothing in normal request traffic uses it once a real instance
+      # is selected.
+      - CHIRP_DB_URL=sqlite:////app/data/_legacy_unused.db
+      - CHIRP_HOST=0.0.0.0
+      - CHIRP_PORT=8768
+      # Reach this server itself over Tailscale — via the SELF-HOSTED
+      # Headscale bundled right below (the "headscale" service), which
+      # auto-provisions its own reusable key with zero manual steps —
+      # see headscale/entrypoint.sh. CHIRP_TAILSCALE_AUTH_KEY only
+      # needs setting here if you'd rather point this at a real
+      # Tailscale.com account instead; leave it blank to use the
+      # bundled Headscale's auto-generated key (main.py reads it from
+      # the shared volume automatically once headscale has bootstrapped
+      # — usually within a few seconds of first `docker compose up`).
+      # CHIRP_TAILSCALE_ENABLED still needs to be true either way.
+      - CHIRP_TAILSCALE_ENABLED=${CHIRP_TAILSCALE_ENABLED:-true}
+      - CHIRP_TAILSCALE_AUTH_KEY=${CHIRP_TAILSCALE_AUTH_KEY:-}
+      - CHIRP_TAILSCALE_LOGIN_SERVER=${CHIRP_TAILSCALE_LOGIN_SERVER:-https://headscale.ourchirp.com}
+      - CHIRP_TAILSCALE_HOSTNAME=${CHIRP_TAILSCALE_HOSTNAME:-}
+      - CHIRP_SERVER_URL=${CHIRP_SERVER_URL:-}
+      - TZ=${TZ:-America/New_York}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8768/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+
+  # ── Optional: re-sign the iOS app from this server (no Mac needed) ──────
+  # Off unless COMPOSE_PROFILES=ios-resign is in .env. See ios-resign/README.md.
+  anisette:
+    image: dadoum/anisette-v3-server:latest
+    container_name: chirp-anisette
+    profiles: ["ios-resign"]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6969:6969"
+    volumes:
+      # Named volume: the image runs as its own user, which can't write to
+      # a root-owned appdata folder.
+      - anisette-data:/home/Alcoholic/.config/anisette-v3/lib/
+
+  ios-resign:
+    build:
+      context: ./ios-resign
+      args:
+        ALTSERVER_URL: ${ALTSERVER_URL:-https://github.com/jaakkopalvaila/AltServer-Linux/releases/latest/download/AltServer-x86_64}
+        NETMUXD_URL: ${NETMUXD_URL:-https://github.com/jkcoxson/netmuxd/releases/latest/download/netmuxd-x86_64-unknown-linux-gnu.tar.gz}
+    container_name: chirp-ios-resign
+    profiles: ["ios-resign"]
+    restart: unless-stopped
+    # Host network: netmuxd finds iPhones by mDNS on the LAN.
+    network_mode: host
+    depends_on:
+      - anisette
+    labels:
+      - "net.unraid.docker.webui=http://[IP]:[PORT:8099]/"
+      - "net.unraid.docker.name=Chirp iOS re-sign"
+    volumes:
+      - ${RESIGN_APPDATA:-/mnt/user/appdata/chirp-ios-resign}/data:/data
+      - ${RESIGN_APPDATA:-/mnt/user/appdata/chirp-ios-resign}/lockdown:/var/lib/lockdown
+      - ${RESIGN_APPDATA:-/mnt/user/appdata/chirp-ios-resign}/ipa:/ipa:ro
+    environment:
+      - APPLE_ID=${APPLE_ID:-}
+      - APPLE_PASSWORD=${APPLE_PASSWORD:-}
+      - RESIGN_EVERY_DAYS=${RESIGN_EVERY_DAYS:-5}
+      - RESIGN_POLL_MINUTES=${RESIGN_POLL_MINUTES:-5}
+      - RESIGN_DEVICES=${RESIGN_DEVICES:-}
+      # UDID=IP pairs (comma list) for phones reached by IP, e.g. over Tailscale
+      - RESIGN_EXTRA_DEVICES=${RESIGN_EXTRA_DEVICES:-}
+      - RESIGN_CODE_WAIT_MINUTES=${RESIGN_CODE_WAIT_MINUTES:-15}
+      - RESIGN_WEB_TOKEN=${RESIGN_WEB_TOKEN:-}
+      - RESIGN_PUBLIC_URL=${RESIGN_PUBLIC_URL:-https://iosresign.ourchirp.com/}
+      - ALTSERVER_ANISETTE_SERVER=http://127.0.0.1:6969
+      - CHIRP_URL=http://127.0.0.1:8768
+      - CHIRP_DEVICE_API_KEY=${CHIRP_DEVICE_API_KEY:-chirp-device-key-change-me}
+
+  # Puts the re-sign page on https://iosresign.ourchirp.com (behind Cloudflare
+  # Access) so the two-factor link in the email works away from home.
+  # Tunnel, DNS and Access are set up by ios-resign/cloudflare_setup.py,
+  # which prints RESIGN_TUNNEL_TOKEN.
+  resign-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: chirp-resign-tunnel
+    profiles: ["ios-resign"]
+    restart: unless-stopped
+    network_mode: host
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${RESIGN_TUNNEL_TOKEN:-}
+
+  # Self-hosted Headscale — a real, open-source reimplementation of
+  # Tailscale's own control plane. No external Tailscale.com account,
+  # no key that quietly expires while nobody's looking: this generates
+  # its own long-lived reusable key on first boot (entrypoint.sh) and
+  # chirp-server-instances picks it up automatically via the shared
+  # volume below. IMPORTANT: edit headscale/config.yaml's server_url
+  # before first boot — see that file's own comment; it defaults to a
+  # placeholder that won't work until changed to your Unraid box's real
+  # LAN IP. To also point chirp-server or a remote chirp-device at this
+  # same private tailnet later, read the key out with:
+  #   docker compose exec headscale cat /shared/authkey
+  # and use it as their own CHIRP_TAILSCALE_AUTH_KEY / config.yaml
+  # tailscale.auth_key, with login_server set to this same server_url —
+  # one manual copy, not a new key every time.
+  headscale:
+    build:
+      context: ./headscale
+      dockerfile: Dockerfile
+    container_name: chirp-headscale
+    restart: unless-stopped
+    ports:
+      - "9877:9877"
+      # Loopback-only — the small HTTP wrapper around headscale's own
+      # CLI (see headscale/api-wrapper.py), used by chirp-server-instances
+      # for Global Admin's "who's connected" panel. Reachable from
+      # chirp-server-instances itself (network_mode: host puts it on
+      # the host's own network namespace) but never from the LAN or
+      # internet.
+      - "127.0.0.1:50444:50444"
+    volumes:
+      - ./headscale/config.yaml:/etc/headscale/config.yaml:ro
+      - /mnt/user/data/media/miscellaneous/chirp-headscale-data:/var/lib/headscale
+      - /mnt/user/data/media/miscellaneous/chirp-headscale-run:/var/run/headscale
+      - headscale-shared:/shared
+    healthcheck:
+      # Deliberately checks for the shared key file, not just that
+      # headscale is responding — chirp-server-instances' depends_on
+      # (service_healthy) waits on THIS healthcheck before it starts,
+      # so this is what actually guarantees the key exists by the time
+      # main.py's own startup reads it, with no restart needed on a
+      # completely fresh `docker compose up`.
+      test: ["CMD", "test", "-s", "/shared/authkey"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # Real TLS + public reachability for Headscale, now that Cloudflare
+  # Tunnel is confirmed unable to carry its protocol (see Caddyfile's
+  # own comment — this is Headscale's own documented limitation, not
+  # something fixable in any of our own config).
+  #
+  # Port 8443 on the host (not 443) because Unraid's own management UI
+  # already owns 443 — forward your ROUTER's public port 443 to this
+  # host's port 8443 (external port can differ from the internal one;
+  # most routers support that kind of remapping), not to 443 directly.
+  caddy:
+    build:
+      context: ./caddy
+      dockerfile: Dockerfile
+    container_name: chirp-caddy
+    restart: unless-stopped
+    ports:
+      - "8443:443"
+      # Caddy's own admin API — 0.0.0.0 inside the container (see
+      # CADDY_ADMIN below for why: its documented default is
+      # localhost:2019, which — the same lesson already learned twice
+      # this session for headscale's own grpc_listen_addr and the
+      # node-list wrapper — Docker's port-publishing can never reach,
+      # since it operates on a container's external interface, not its
+      # own loopback), published to the HOST's loopback only
+      # (127.0.0.1:2019:2019, never 0.0.0.0), reachable from
+      # chirp-server-instances (network_mode: host) but never the LAN
+      # or internet. This lets Global Admin push live Caddyfile changes
+      # (see app/services/caddy_config_manager.py) without a restart.
+      - "127.0.0.1:2019:2019"
+    environment:
+      # A Cloudflare API token scoped to Zone:DNS:Edit for ourchirp.com
+      # only — NOT your Cloudflare account's global API key, which has
+      # far broader access than this needs. Generate one at
+      # https://dash.cloudflare.com/profile/api-tokens → Create Token →
+      # "Edit zone DNS" template, scoped to just this zone.
+      - CF_API_TOKEN=${CF_API_TOKEN:-}
+      # See the ports: comment above — this is what actually moves the
+      # admin API off its default localhost-only bind.
+      - CADDY_ADMIN=0.0.0.0:2019
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - /mnt/user/data/media/miscellaneous/chirp-caddy-data:/data
+      - /mnt/user/data/media/miscellaneous/chirp-caddy-config:/config
+    depends_on:
+      headscale:
+        condition: service_healthy
+
+  # Keeps headscale.ourchirp.com's DNS record pointed at this home
+  # network's current public IP, automatically — added directly
+  # because a dynamic (non-static) home IP means that record would
+  # otherwise silently go stale the next time the IP changes (could be
+  # tomorrow, could be months from now — genuinely unpredictable),
+  # quietly breaking every device's ability to reach Headscale again
+  # until someone notices and fixes the record by hand. This checks
+  # every 5 minutes (favonia/cloudflare-ddns's own default) and only
+  # actually calls Cloudflare's API when the IP has genuinely changed
+  # — reuses the exact same CF_API_TOKEN Caddy already has above, no
+  # new secret needed, since updating this one DNS record is already
+  # inside that same token's Zone:DNS:Edit scope.
+  #
+  # PROXIED=false is not optional — see Caddyfile's own comment on why
+  # a proxied (orange-cloud) record breaks Headscale's protocol
+  # exactly the way Cloudflare Tunnel already did.
+  cloudflare-ddns:
+    image: favonia/cloudflare-ddns:latest
+    container_name: chirp-cloudflare-ddns
+    restart: unless-stopped
+    environment:
+      - CLOUDFLARE_API_TOKEN=${CF_API_TOKEN:-}
+      - DOMAINS=headscale.ourchirp.com
+      - PROXIED=false
+      - IP6_PROVIDER=none  # this setup only ever uses the IPv4 record — no IPv6 A/AAAA to keep in sync
+
+volumes:
+  anisette-data:
+  headscale-shared:

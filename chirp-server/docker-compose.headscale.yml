@@ -1,0 +1,93 @@
+# Chirp Remote Device Mesh — self-hosted Headscale
+#
+# Solves: managing a chirp-device (Raspberry Pi) that is NOT on the same LAN
+# as chirp-server (e.g. server in Natick, device in Virginia), without asking
+# anyone to open router ports or expose a device's WAN IP directly — neither
+# of which is a real, reliable answer for a device sitting behind a home
+# router's NAT, especially once CGNAT (common with many residential ISPs)
+# makes even port forwarding impossible on the device's end.
+#
+# What this is: Headscale is a real, open-source, self-hosted coordination
+# server that speaks the same protocol as Tailscale's own commercial
+# service — meaning every device (and the chirp-server itself) runs the
+# standard, mature, cross-platform Tailscale CLIENT software, but that
+# client points at THIS self-hosted Headscale instance instead of
+# Tailscale's own cloud service. You get Tailscale's genuinely
+# well-engineered NAT traversal (STUN-based hole-punching, with a DERP
+# relay fallback for the cases where direct hole-punching can't succeed —
+# e.g. two devices both behind strict/symmetric NAT) without any
+# third-party company sitting in the loop as your device fleet's
+# coordination point. This is deliberately NOT raw WireGuard — raw
+# WireGuard still requires a static IP/DDNS and, in the general case,
+# port forwarding, which is exactly the thing this is meant to avoid.
+#
+# Chirp-server already has a real public HTTPS address (see IOS_BUILD.md's
+# architecture notes) — this uses that same server as the mesh's
+# coordination hub, since server operators control their own inbound
+# firewall/port config in a way individual device owners' home routers
+# generally can't be relied on for.
+#
+# This is an OPT-IN addition — most deployments where every device is on
+# the same LAN as the server don't need this at all. Only bring this up
+# if you have (or plan to have) a device somewhere other than the server's
+# own local network.
+#
+# Usage: docker compose -f docker-compose.yml -f docker-compose.headscale.yml up -d
+#
+# Setup steps after first start:
+#   1. docker exec -it chirp-headscale headscale users create chirp
+#   2. On the server itself, join it to its own mesh (so the chirp-server
+#      container can reach devices by their private mesh IP for the
+#      diagnostics/SSH features already in Settings → Devices):
+#        docker exec -it chirp-headscale headscale preauthkeys create --user chirp --reusable --expiration 24h
+#      (copy the printed key, then run the tailscale client — see
+#      docs/REMOTE_DEVICES.md for the full device-side walkthrough)
+#   3. On each remote chirp-device (the Raspberry Pi), install the
+#      Tailscale client and join using a key generated the same way —
+#      one command, no router configuration on the device's own network
+#      at all. Full steps in docs/REMOTE_DEVICES.md.
+
+services:
+  chirp-headscale:
+    image: headscale/headscale:0.23.0
+    container_name: chirp-headscale
+    restart: unless-stopped
+    # Headscale's own control-plane traffic is plain HTTP/gRPC (TCP) —
+    # this is NOT the actual device-to-device tunnel traffic (that's
+    # WireGuard UDP, negotiated directly between peers once Headscale has
+    # coordinated the handshake, or relayed through the DERP fallback
+    # below if direct negotiation fails). Exposed on a distinct port from
+    # chirp-server's own 8765 so both can run on the same host without
+    # conflict.
+    ports:
+      - "8090:8080"    # Headscale's own HTTP control API
+      - "3478:3478/udp"  # STUN, used during NAT-traversal negotiation
+    volumes:
+      - /mnt/user/data/media/miscellaneous/chirp-headscale-data:/etc/headscale
+      - /mnt/user/data/media/miscellaneous/chirp-headscale-data/lib:/var/lib/headscale
+    command: headscale serve
+    environment:
+      - TZ=${TZ:-America/New_York}
+
+  # Embedded DERP relay — the fallback path used only when two peers can't
+  # establish a direct P2P WireGuard tunnel (both behind strict/symmetric
+  # NAT, which does happen with some residential routers/CGNAT setups).
+  # Running this yourself, rather than relying on Tailscale's own public
+  # DERP servers, keeps the entire mesh — control plane AND relay fallback
+  # — genuinely self-hosted end to end. Even when traffic does pass through
+  # this relay, it stays WireGuard-encrypted the whole way through; the
+  # relay only ever sees ciphertext, never anything it can read.
+  chirp-derper:
+    image: fredliang/derper:latest
+    container_name: chirp-derper
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - DERP_DOMAIN=${CHIRP_HEADSCALE_DOMAIN:-}
+      - DERP_CERT_MODE=letsencrypt
+      - DERP_ADDR=:3340
+      - DERP_HTTP_PORT=3341
+      - DERP_STUN=true
+      - DERP_VERIFY_CLIENTS=false
+    volumes:
+      - /mnt/user/data/media/miscellaneous/chirp-headscale-data/derper:/app/certs

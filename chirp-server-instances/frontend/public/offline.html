@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chirp</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; background: #0a160c; color: #f5efe6;
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  main { min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; padding: 24px; box-sizing: border-box; text-align: center; }
+  img { width: 72px; height: auto; opacity: .9; }
+  h1 { margin: 0; font-size: 20px; font-weight: 600; }
+  p { margin: 0; max-width: 300px; color: #b8b0a3; font-size: 14px; }
+  button { margin-top: 6px; padding: 10px 22px; border: 0; border-radius: 12px; background: #fb923c;
+    color: #1a0f05; font: 600 15px -apple-system, sans-serif; }
+  button:active { opacity: .8; }
+</style>
+</head>
+<body>
+<main>
+  <img src="logo.svg" alt="">
+  <h1>Can't reach Chirp</h1>
+  <p>Check your Wi-Fi or cellular connection. If it's fine, the server may be restarting.</p>
+  <button type="button" id="retry">Try again</button>
+</main>
+<script>
+  var HOME = 'https://ourchirp.com/';
+  document.getElementById('retry').onclick = function () { location.href = HOME; };
+  // Retry on its own when the connection comes back.
+  window.addEventListener('online', function () { location.href = HOME; });
+</script>
+</body>
+</html>

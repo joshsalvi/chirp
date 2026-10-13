@@ -1,0 +1,37 @@
+# Chirp — Additional Dependencies for Google Coral Edge TPU
+# Run AFTER requirements.txt, AFTER running install-coral.sh
+#
+# install-coral.sh installs one of THREE Python backends automatically,
+# tried in this order (lightest install first):
+#
+#   1. pycoral        — only has wheels for Python 3.9-3.11. Officially
+#                        abandoned upstream (google-coral/pycoral#137, #149);
+#                        no realistic path to a newer-Python build exists.
+#   2. tflite-runtime  — last release (2.14.0, Oct 2023) ships wheels for
+#                        Python 3.8-3.11 on aarch64. No wheel at all for
+#                        Python 3.12+ — same dead end as pycoral, just one
+#                        Python version later.
+#   3. tensorflow      — the only currently-viable path on Python 3.12+.
+#                        Actively maintained, ships real Python 3.13/aarch64
+#                        wheels. EdgeTPU acceleration works identically via
+#                        tf.lite.Interpreter + tf.lite.experimental.
+#                        load_delegate('libedgetpu.so.1') — pycoral was
+#                        always just a thin convenience wrapper around the
+#                        same underlying interpreter, never a strict
+#                        requirement. Tradeoff: ~270+ MB install vs a few MB
+#                        for the other two, slower import/startup, more RAM.
+#
+# birdnet_coral.py's load() tries all three automatically at runtime and
+# uses whichever succeeds — nothing to configure by hand. This file exists
+# for reference only; none of these are pip-installed from this file
+# directly (install-coral.sh handles it, since the right choice depends on
+# the Python version actually running on the device).
+#
+# The EdgeTPU runtime itself (libedgetpu.so.1, via the apt package
+# libedgetpu1-std) is separate from all of the above and is never
+# Python-version-sensitive — it's an OS-level shared library, not a wheel.
+
+# NumPy (already in requirements.txt, listed here for clarity — used by all
+# three backend paths for tensor prep/postprocessing regardless of which
+# interpreter backend ends up loaded)
+numpy>=1.24.0

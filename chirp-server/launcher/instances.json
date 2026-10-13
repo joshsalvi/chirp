@@ -1,0 +1,8 @@
+[
+  {
+    "name": "main",
+    "display_name": "Chirp (main)",
+    "port": 8765,
+    "public_url": null
+  }
+]

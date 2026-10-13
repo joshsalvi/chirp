@@ -1,0 +1,59 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  build:
+    strategy:
+      # fail-fast: false — a broken chirp-server-instances build shouldn't
+      # cancel an otherwise-passing chirp-server build (and vice versa);
+      # both results are independently useful.
+      fail-fast: false
+      matrix:
+        include:
+          - service: chirp-server
+            context: chirp-server
+            dockerfile: chirp-server/Dockerfile
+          - service: chirp-server-instances
+            context: chirp-server-instances
+            dockerfile: chirp-server-instances/Dockerfile
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Buildx (not the legacy `docker build` used directly) — enables the
+      # GitHub Actions cache backend below, which matters here specifically:
+      # both Dockerfiles' first stage does `npm install` for a real,
+      # sizeable frontend (see chirp-server/Dockerfile's own comments on
+      # its multi-stage layout) — without layer caching, every push
+      # re-downloads and reinstalls the entire npm dependency tree from
+      # scratch, which is slow and pointless when package.json hasn't
+      # changed.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build the ${{ matrix.service }} Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          # push: false (the default) — this is a build-verification CI
+          # check, not a deploy pipeline. It confirms the Dockerfile still
+          # builds cleanly on every push/PR to main; it does not publish
+          # anywhere. Wiring up a real push-to-registry step needs
+          # registry credentials as repo secrets (e.g. Docker Hub
+          # DOCKERHUB_USERNAME/DOCKERHUB_TOKEN) that don't exist yet here —
+          # straightforward to add once those are set up, but not
+          # something to silently assume.
+          push: false
+          tags: |
+            ${{ matrix.service }}:ci-${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}

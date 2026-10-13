@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <!-- maximum-scale stops iOS zooming in when a text field is focused (it
+       zooms for text under 16px, and the fixed app shell can't pan back);
+       iOS still allows pinch-zoom in Safari. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a160c" />
+  <meta name="description" content="Automated bird call detection and identification" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <!-- Translucent: the page runs under the status bar, edge to edge.
+       iOS 26.1+/27 leave its layout viewport short by the status bar
+       ("black" did not avoid it on iOS 27); src/lib/viewportFix.js
+       measures the shortfall and the shell makes it up. -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Chirp" />
+  <title>Chirp — Bird Call Detection</title>
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" href="/favicon.ico?v=0.5.12.p" sizes="16x16 32x32 48x48" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=0.5.12.p" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png?v=0.5.12.p" />
+  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png?v=0.5.12.p" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=0.5.12.p" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=JetBrains+Mono:wght@400;500&family=Crimson+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&family=Archivo+Narrow:wght@500;600;700&family=Work+Sans:wght@300;400;500&family=Nunito:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Source+Serif+4:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Kalam:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    /* Inline, zero network dependency — prevents a white/blank flash on
+       a slow connection before the real stylesheet arrives. Not an
+       exact match for every one of the 26 themes (that would mean
+       duplicating every theme's color and keeping it in sync forever),
+       but a close, safe dark default covers the overwhelming majority
+       of the actual problem: going from browser-default white/black to
+       roughly the right tone, rather than a stark flash either way. */
+    html, body { background: #0a0f0a; margin: 0; }
+    #splash {
+      position: fixed; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 12px;
+      background: #0a0f0a; z-index: 9999;
+    }
+    #splash-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #fb923c; animation: splash-pulse 1.1s ease-in-out infinite;
+    }
+    #splash-label {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 13px; color: rgba(255,255,255,.35); letter-spacing: .04em;
+    }
+    @keyframes splash-pulse {
+      0%, 100% { opacity: .3; transform: scale(0.85); }
+      50%      { opacity: 1;  transform: scale(1); }
+    }
+    /* Removed the instant the real app has mounted (see main.jsx) —
+       this is a placeholder for the blank-screen gap, not a real loading
+       bar, since actual load progress isn't knowable from plain HTML. */
+    #root:not(:empty) ~ #splash { display: none; }
+  </style>
+  <script>
+    // Apply the stored theme attribute synchronously, before first paint —
+    // avoids a second flash (right background color, then a jump to the
+    // user's actual chosen theme) once the real stylesheet and JS load.
+    // Read-only, best-effort: falls through silently if anything's
+    // unavailable (private browsing, storage disabled, etc.) rather than
+    // blocking the page on it.
+    try {
+      var t = localStorage.getItem('chirp_theme')
+      if (t) document.documentElement.setAttribute('data-theme', t)
+    } catch (e) {}
+    // ourchirp.com's front page is the About page for visitors: a browser
+    // tab that isn't signed in, at "/", goes to /about. The iPhone app,
+    // home-screen installs and signed-in people get the app as before.
+    try {
+      if (/(^|\.)ourchirp\.com$/.test(location.hostname) && location.pathname === '/' && !location.search
+          && !window.Capacitor && !/\bChirpApp\//.test(navigator.userAgent)
+          && window.navigator.standalone !== true && !matchMedia('(display-mode: standalone)').matches
+          && !localStorage.getItem('chirp_token')) location.replace('/about')
+    } catch (e) {}
+    // Snapshot before the app writes anything: whether this install has
+    // been used before, and on which version. HomeIconNotice uses it to
+    // tell an old iOS home-screen install from a fresh one.
+    // Safari home-screen web app (not the iOS app, not a browser tab).
+    try { if (window.navigator.standalone === true) document.documentElement.classList.add('ios-pwa') } catch (e) {}
+    try {
+      window.__chirpInstall = {
+        returning: localStorage.length > 0,
+        lastVersion: localStorage.getItem('chirp_app_version'),
+      }
+    } catch (e) { window.__chirpInstall = { returning: false, lastVersion: null } }
+  </script>
+</head>
+<body class="antialiased">
+  <div id="root"></div>
+  <div id="splash">
+    <div id="splash-dot"></div>
+    <div id="splash-label">Chirp</div>
+  </div>
+  <script type="module" src="/src/main.jsx"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {})
+      })
+    }
+  </script>
+</body>
+</html>

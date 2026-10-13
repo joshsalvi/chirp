@@ -1,0 +1,85 @@
+# Chirp Server — Python Dependencies
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+python-multipart>=0.0.9
+aiofiles>=23.2.1
+sqlalchemy>=2.0.0
+alembic>=1.13.0
+
+# Audio processing & spectrograms
+librosa>=0.10.1
+soundfile>=0.12.1
+scipy>=1.11.0
+numpy>=1.24.0
+matplotlib>=3.8.0
+Pillow>=10.0.0
+
+# Bird-call audio enhancement (bandpass filter + spectral-gating noise reduction)
+noisereduce>=3.0.0
+tifffile>=2023.4.0      # Multi-band GeoTIFF reading for eBird S&T range maps
+pyproj>=3.6.0           # Coordinate reprojection — eBird S&T GeoTIFFs use Equal Earth (EPSG:8857),
+                        # needed to correctly align the lat/lon coastline basemap onto the raster
+
+# BirdNET re-analysis on server
+# tensorflow-cpu is required: tflite-runtime 2.14 has a known incompatibility with
+# birdnetlib's bundled BirdNET model files (CreateWrapperFromFile PyCapsule error).
+# tensorflow-cpu is the CPU-only build (~230MB) — no GPU deps, works reliably.
+tensorflow-cpu>=2.14.0
+birdnetlib>=0.9.0
+
+# HTTP client for bird enrichment APIs
+httpx>=0.27.0
+h2>=4.1.0
+pybirdbuddy>=0.0.20
+requests>=2.31.0
+
+# Data & utilities
+python-dateutil>=2.8.2
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+PyYAML>=6.0
+python-jose[cryptography]>=3.3.0
+passlib>=1.7.4
+bcrypt>=4.0.0            # app/api/auth.py imports this directly (bypassing passlib's own
+                         # bcrypt backend, which has real version-compatibility issues with
+                         # bcrypt 4.x — see that file's own comment). Previously only arrived
+                         # transitively via paramiko's own dependency chain, not because it
+                         # was actually declared here — a real gap: if paramiko were ever
+                         # removed, auth would have silently broken with no obvious cause.
+
+# System monitoring (used by diagnostics endpoint)
+psutil>=5.9.0
+
+# Web Push notifications (PWA) — VAPID-authenticated push to subscribed
+# devices, distinct from the existing SMTP email digest above
+pywebpush>=2.0.0
+
+# WebSockets
+websockets>=12.0
+
+# Headless browser for JavaScript-rendered range maps
+playwright>=1.44.0
+paramiko>=3.4.0
+
+# OPTIONAL, NOT installed by default: bat species classification via
+# BatDetect2 (services/bat_species_id.py). Pulled in by PyTorch, which adds
+# several hundred MB to the image — not worth the build-time/size cost for
+# everyone when the feature it powers (bat_species_id_enabled) defaults to
+# off and the bundled model is UK-trained / unvalidated outside the UK (see
+# that module's docstring). Uncomment if you've enabled the setting and
+# want species-guess inference to actually run, or install manually in the
+# running container:
+#   pip install "batdetect2>=1.3.1,<2"
+# batdetect2>=1.3.1,<2
+
+# AI Enhance neural-network denoising (services/ai_enhance.py), a separate
+# alternative to the noisereduce-based Enhanced toggle above. Needs PyTorch —
+# several hundred MB, same tradeoff as batdetect2 above, but installed by
+# default here per direct request so AI Enhance works out of the box once
+# enabled in Settings, rather than needing a manual rebuild step first. The
+# CPU-only build (via the extra index below) is plenty — this runs one short
+# clip at a time, not real-time/streaming (roughly 0.2-0.3x realtime measured
+# on a normal server CPU) — and is far smaller than the GPU build.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+torchaudio

@@ -1,0 +1,45 @@
+# Chirp Server — parallel instance "B"
+# Identical in every way to instance A except name, port, and data
+# directory — see docker-compose.instance-a.yml for the full explanation
+# of why these three exist and how to run them.
+#
+# Run this one on its own:
+#   docker compose -f docker-compose.instance-b.yml up -d
+#
+# Access: http://localhost:8766
+
+name: chirp-instance-b
+
+services:
+  chirp-server-b:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chirp-server-b
+    restart: unless-stopped
+    network_mode: host
+    labels:
+      - "net.unraid.docker.webui=http://[IP]:[PORT:8766]/"
+      - "net.unraid.docker.shell=bash"
+      - "net.unraid.docker.name=Chirp (Instance B)"
+      - "com.centurylinklabs.watchtower.enable=false"
+    volumes:
+      - ${CHIRP_INSTANCE_B_DATA_DIR:-/mnt/user/data/media/miscellaneous/chirp-data-instance-b}:/app/data
+    environment:
+      - CHIRP_SECRET_KEY=${CHIRP_INSTANCE_B_SECRET_KEY:-changeme-instance-b-use-a-real-secret}
+      - CHIRP_DEVICE_API_KEY=${CHIRP_INSTANCE_B_DEVICE_API_KEY:-chirp-device-key-instance-b-change-me}
+      - CHIRP_EBIRD_API_KEY=${CHIRP_EBIRD_API_KEY:-}
+      - CHIRP_DATA_DIR=/app/data
+      - CHIRP_RECORDINGS_DIR=/app/data/recordings
+      - CHIRP_MEDIA_DIR=/app/data/media/birds
+      - CHIRP_DB_URL=sqlite:////app/data/chirp.db
+      - CHIRP_HOST=0.0.0.0
+      - CHIRP_PORT=8766
+      - CHIRP_SERVER_URL=${CHIRP_INSTANCE_B_SERVER_URL:-}
+      - TZ=${TZ:-America/New_York}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8766/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s

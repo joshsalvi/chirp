@@ -1,0 +1,5 @@
+name: "Chirp"
+description: "Automated bird & bat call detection — edge AI acoustic monitoring"
+icon: "http://192.168.1.224:8765/icon.svg"
+webui: "http://192.168.1.224:8765/"
+autostart: true

@@ -1,0 +1,56 @@
+# Reverse proxy for the bundled Headscale, terminating real TLS —
+# this is what makes Headscale reachable from the internet at all,
+# now that Cloudflare Tunnel is confirmed unable to carry its
+# WebSocket-over-POST handshake (Headscale's own documentation says
+# this plainly: Cloudflare, proxy or tunnel, is not supported for
+# this protocol — not a Chirp-specific issue, and not something any
+# config on our side can work around).
+#
+# Uses the DNS-01 certificate challenge (proving domain ownership via
+# a Cloudflare DNS TXT record) instead of the usual HTTP-01 challenge,
+# because HTTP-01 needs port 80 reachable from the internet — and on
+# this host, port 80 is already Unraid's own management UI. DNS-01
+# needs no inbound port at all for certificate issuance/renewal, only
+# outbound access to Cloudflare's API (CF_API_TOKEN below) — the
+# actual served traffic afterward still needs port 443 forwarded, see
+# docker-compose.yml's own comment on that.
+#
+# IMPORTANT — this only works if headscale.ourchirp.com's DNS record
+# is "DNS only" (grey cloud), NOT proxied (orange cloud) in Cloudflare's
+# dashboard. A proxied record routes traffic back through Cloudflare's
+# edge — the exact same thing Tunnel was doing — and breaks this the
+# same way all over again. DNS-01 challenge lookups work regardless of
+# proxy status; it's specifically the real client traffic afterward
+# that must bypass Cloudflare's proxy entirely.
+headscale.ourchirp.com {
+    tls {
+        dns cloudflare {env.CF_API_TOKEN}
+    }
+
+    # Optional: password-protect Headscale's own human-facing helper
+    # pages (/apple, /windows, /linux — each shows setup instructions,
+    # with this server's own URL pre-filled) so a random visitor who
+    # finds this subdomain can't see them. Deliberately scoped to ONLY
+    # these specific paths via the matcher below, not the whole
+    # domain — gating everything would also catch the actual
+    # coordination API paths real Tailscale/Headscale clients use to
+    # register and check in (/machine/*, /ts2021, /key, /register/*,
+    # etc.), and those clients speak plain API calls, not a browser's
+    # Basic Auth prompt, so they'd simply fail to connect at all.
+    #
+    # To enable: generate a password hash with
+    #   docker compose exec caddy caddy hash-password
+    # (prompts for the password interactively, prints a bcrypt hash),
+    # then uncomment the block below and replace both YOUR_USERNAME and
+    # the hash with your own. Leave it commented out (as shipped) if
+    # you're not worried about these pages being found — they don't
+    # expose anything that lets someone join your tailnet on their own,
+    # only setup instructions.
+    #
+    # @helperpages path /apple /apple/* /windows /windows/* /linux /linux/*
+    # basic_auth @helperpages {
+    #     YOUR_USERNAME YOUR_BCRYPT_HASH_HERE
+    # }
+
+    reverse_proxy headscale:9877
+}

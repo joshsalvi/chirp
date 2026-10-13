@@ -1,0 +1,49 @@
+[Unit]
+Description=Chirp - Automated Bird Call Detection
+Documentation=https://github.com/YOUR_USERNAME/chirp
+After=network.target sound.target
+Wants=network.target
+# Wait a moment after boot for USB devices to enumerate
+After=systemd-udev-settle.service
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/chirp
+ExecStart=/home/pi/chirp/venv/bin/python /home/pi/chirp/main.py --config /home/pi/chirp/config.yaml
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Auto-restart on failure with backoff
+Restart=on-failure
+RestartSec=15s
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=chirp
+
+# Give audio group access
+SupplementaryGroups=audio
+
+# Environment
+Environment="PYTHONUNBUFFERED=1"
+
+# Resource limits — leave headroom for OS
+CPUQuota=80%
+MemoryMax=1500M
+TasksMax=64
+
+# Security hardening (optional, comment out if causing issues)
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/home/pi/chirp
+ProtectHome=read-only
+ReadWritePaths=/home/pi/chirp/recordings
+ReadWritePaths=/home/pi/chirp/logs
+
+[Install]
+WantedBy=multi-user.target

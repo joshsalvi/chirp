@@ -1,0 +1,56 @@
+# Chirp Server — parallel instance "A"
+#
+# One of three original example instances of the multi-instance pattern
+# now documented fully in MULTI_INSTANCE.md — each location/tenant gets
+# its own complete, independent chirp-server instance rather than a
+# separate multi-tenant application. scripts/new-instance.sh generates
+# new ones the same shape as this file for any new location, so this
+# doesn't need to be hand-copied for a fourth, fifth, etc. instance.
+#
+# Run this one on its own:
+#   docker compose -f docker-compose.instance-a.yml up -d
+#
+# Or bring up all three together:
+#   docker compose -f docker-compose.instance-a.yml -f docker-compose.instance-b.yml -f docker-compose.instance-c.yml up -d
+#
+# Access: http://localhost:8765 (or http://<host-ip>:8765 from another
+# device on the LAN — network_mode: host is kept here, same as the main
+# docker-compose.yml, specifically so each instance retains real LAN
+# device auto-discovery for testing actual device pairing, not just API
+# behavior in isolation).
+
+name: chirp-instance-a
+
+services:
+  chirp-server-a:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chirp-server-a
+    restart: unless-stopped
+    network_mode: host
+    labels:
+      - "net.unraid.docker.webui=http://[IP]:[PORT:8765]/"
+      - "net.unraid.docker.shell=bash"
+      - "net.unraid.docker.name=Chirp (Instance A)"
+      - "com.centurylinklabs.watchtower.enable=false"
+    volumes:
+      - ${CHIRP_INSTANCE_A_DATA_DIR:-/mnt/user/data/media/miscellaneous/chirp-data-instance-a}:/app/data
+    environment:
+      - CHIRP_SECRET_KEY=${CHIRP_INSTANCE_A_SECRET_KEY:-changeme-instance-a-use-a-real-secret}
+      - CHIRP_DEVICE_API_KEY=${CHIRP_INSTANCE_A_DEVICE_API_KEY:-chirp-device-key-instance-a-change-me}
+      - CHIRP_EBIRD_API_KEY=${CHIRP_EBIRD_API_KEY:-}
+      - CHIRP_DATA_DIR=/app/data
+      - CHIRP_RECORDINGS_DIR=/app/data/recordings
+      - CHIRP_MEDIA_DIR=/app/data/media/birds
+      - CHIRP_DB_URL=sqlite:////app/data/chirp.db
+      - CHIRP_HOST=0.0.0.0
+      - CHIRP_PORT=8765
+      - CHIRP_SERVER_URL=${CHIRP_INSTANCE_A_SERVER_URL:-}
+      - TZ=${TZ:-America/New_York}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8765/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s

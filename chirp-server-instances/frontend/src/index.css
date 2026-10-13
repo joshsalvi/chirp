@@ -1,0 +1,2214 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════
+   CHIRP DESIGN SYSTEM
+   Themes: forest (default) · dawn · midnight · ocean · ember · slate
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Theme: Forest (warm amber on deep forest green-black) ─── */
+:root, [data-theme="forest"] {
+  /* Shared semantic-pastel-text variables — used by inline JSX styles
+     across many components for status/badge/accent text (success green,
+     warning amber, error red, info blue). These are CSS custom
+     properties, not Tailwind classes, so they can't be fixed with a
+     class-based override the way text-gray and text-chirp variants
+     were — instead each affected component's inline style with a
+     hardcoded hex color was changed to reference one of these 8
+     variables, so the fix lives in one place. Defaults here match the
+     light-pastel hex values already hardcoded everywhere (correct for
+     dark themes, confirmed via real contrast math: 8.4–12:1 against a
+     dark card background); only the 5 light themes below override these
+     to a darker tier, since a light pastel measured 1.0–1.8:1 against
+     every light theme's background — failing badly regardless of which
+     dark-theme-tuned shade was originally chosen. */
+  --pastel-green:  #86efac;
+  --pastel-blue:   #93c5fd;
+  --pastel-sky:    #7dd3fc;
+  --pastel-amber:  #fbbf24;
+  --pastel-amber-light: #fde68a;
+  --pastel-amber-soft:  #fcd34d;
+  --pastel-yellow: #fde047;
+  --pastel-red:    #fca5a5;
+  --accent-50:  #fefce8; --accent-100: #fef9c3; --accent-200: #fef08a;
+  --accent-300: #fde047; --accent-400: #facc15; --accent-500: #eab308;
+  --accent-500-rgb: 234 179 8;
+  --accent-600: #ca8a04; --accent-700: #a16207; --accent-800: #854d0e;
+  --accent-900: #713f12;
+  --s950: #030a06; --s900: #071009; --s800: #0d1a0f;
+  --s700: #142316; --s600: #1e3020; --s500: #2a3f2c;
+  --s400: #4a6650; --s300: #7a9a7f;
+  --bg-base:   #051009;
+  --bg-panel:  #0a160c;
+  --bg-card:   #0f1e11;
+  --bg-raised: #162419;
+  --border-subtle: rgba(234,179,8,.08);
+  --border-default: rgba(234,179,8,.13);
+  --border-focus:  rgba(234,179,8,.5);
+  --text-primary:   #f5f0e8;
+  --text-secondary: #a89f8c;
+  --text-tertiary:  #5a5346;
+  --glow-color: rgba(234,179,8,.2);
+  --nav-active-bg: rgba(234,179,8,.1);
+  --nav-active-text: #fde047;
+  --gradient-hero: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(101,83,0,.25) 0%, transparent 70%);
+  /* Structural theme variables — overridden by "different feel" themes
+     (Paper, Mono, Terminal) below; every other theme inherits these
+     defaults unchanged, so this introduces zero visual change for them. */
+  --radius-card: 14px;
+  --shadow-card: 0 1px 3px rgba(0,0,0,.4), 0 4px 12px rgba(0,0,0,.15);
+  --shadow-card-hover: 0 4px 16px rgba(0,0,0,.35), 0 1px 4px rgba(0,0,0,.2);
+  /* Tutorial page section pills/badges use a fixed per-topic color as a
+     visual legend by default ("multi"). Themes built around strict
+     single-ink-color discipline (Plate, Mono) set this to "mono" instead,
+     so Tutorial.jsx falls back to the theme's own --accent-400 for every
+     pill rather than breaking that discipline with unrelated hues. Read
+     via getComputedStyle in JS, not hardcoded theme-id checks, so this
+     stays data-driven the same way every other theme override does. */
+  --legend-mode: multi;
+}
+
+/* ── Theme: Dawn (rose gold on soft warm dark) ─────────────── */
+[data-theme="dawn"] {
+  --accent-50:  #fff1f2; --accent-100: #ffe4e6; --accent-200: #fecdd3;
+  --accent-300: #fda4af; --accent-400: #fb7185; --accent-500: #f43f5e;
+  --accent-500-rgb: 244 63 94;
+  --accent-600: #e11d48; --accent-700: #be123c; --accent-800: #9f1239;
+  --accent-900: #881337;
+  --s950: #0d080a; --s900: #140c0e; --s800: #1e1113;
+  --s700: #2a1619; --s600: #391d21; --s500: #4a262b;
+  --s400: #6e3a41; --s300: #9a6068;
+  --bg-base:   #0e0709;
+  --bg-panel:  #17090c;
+  --bg-card:   #1e0d10;
+  --bg-raised: #261115;
+  --border-subtle: rgba(244,63,94,.08);
+  --border-default: rgba(244,63,94,.14);
+  --border-focus:  rgba(244,63,94,.55);
+  --text-primary:   #f8f0f1;
+  --text-secondary: #b09498;
+  --text-tertiary:  #5c3d41;
+  --glow-color: rgba(244,63,94,.2);
+  --nav-active-bg: rgba(244,63,94,.1);
+  --nav-active-text: #fda4af;
+  --gradient-hero: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(120,20,40,.3) 0%, transparent 70%);
+}
+
+/* ── Theme: Midnight (electric blue on true black) ─────────── */
+[data-theme="midnight"] {
+  --accent-50:  #eff6ff; --accent-100: #dbeafe; --accent-200: #bfdbfe;
+  --accent-300: #93c5fd; --accent-400: #60a5fa; --accent-500: #3b82f6;
+  --accent-500-rgb: 59 130 246;
+  --accent-600: #2563eb; --accent-700: #1d4ed8; --accent-800: #1e40af;
+  --accent-900: #1e3a8a;
+  --s950: #020408; --s900: #050912; --s800: #080f1e;
+  --s700: #0e1729; --s600: #152035; --s500: #1e2d47;
+  --s400: #3a4f6e; --s300: #607898;
+  --bg-base:   #030610;
+  --bg-panel:  #070c1a;
+  --bg-card:   #0b1222;
+  --bg-raised: #101829;
+  --border-subtle: rgba(59,130,246,.08);
+  --border-default: rgba(59,130,246,.14);
+  --border-focus:  rgba(59,130,246,.55);
+  --text-primary:   #eef2ff;
+  --text-secondary: #8ea4c8;
+  --text-tertiary:  #3a5070;
+  --glow-color: rgba(59,130,246,.22);
+  --nav-active-bg: rgba(59,130,246,.1);
+  --nav-active-text: #93c5fd;
+  --gradient-hero: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(10,30,100,.4) 0%, transparent 70%);
+}
+
+/* ── Theme: Ocean (teal on deep navy) ──────────────────────── */
+[data-theme="ocean"] {
+  --accent-50:  #f0fdfa; --accent-100: #ccfbf1; --accent-200: #99f6e4;
+  --accent-300: #5eead4; --accent-400: #2dd4bf; --accent-500: #14b8a6;
+  --accent-500-rgb: 20 184 166;
+  --accent-600: #0d9488; --accent-700: #0f766e; --accent-800: #115e59;
+  --accent-900: #134e4a;
+  --s950: #010d0d; --s900: #041414; --s800: #081d1c;
+  --s700: #0e2826; --s600: #163533; --s500: #1f4240;
+  --s400: #376361; --s300: #5f9290;
+  --bg-base:   #030f0f;
+  --bg-panel:  #061818;
+  --bg-card:   #0a1f1e;
+  --bg-raised: #0f2826;
+  --border-subtle: rgba(20,184,166,.08);
+  --border-default: rgba(20,184,166,.14);
+  --border-focus:  rgba(20,184,166,.5);
+  --text-primary:   #ecfdf5;
+  --text-secondary: #7bb5ae;
+  --text-tertiary:  #2e5954;
+  --glow-color: rgba(20,184,166,.2);
+  --nav-active-bg: rgba(20,184,166,.1);
+  --nav-active-text: #5eead4;
+  --gradient-hero: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(0,60,58,.4) 0%, transparent 70%);
+}
+
+/* ── Theme: Ember (orange on charcoal) ─────────────────────── */
+[data-theme="ember"] {
+  --accent-50:  #fff7ed; --accent-100: #ffedd5; --accent-200: #fed7aa;
+  --accent-300: #fdba74; --accent-400: #fb923c; --accent-500: #f97316;
+  --accent-500-rgb: 249 115 22;
+  --accent-600: #ea580c; --accent-700: #c2410c; --accent-800: #9a3412;
+  --accent-900: #7c2d12;
+  --s950: #0c0704; --s900: #140b05; --s800: #1e1007;
+  --s700: #291609; --s600: #361d0c; --s500: #452611;
+  --s400: #683c1c; --s300: #90602e;
+  --bg-base:   #0e0804;
+  --bg-panel:  #180d06;
+  --bg-card:   #201108;
+  --bg-raised: #2a160a;
+  --border-subtle: rgba(249,115,22,.08);
+  --border-default: rgba(249,115,22,.14);
+  --border-focus:  rgba(249,115,22,.5);
+  --text-primary:   #fdf4ec;
+  --text-secondary: #b5916e;
+  --text-tertiary:  #5c3a20;
+  --glow-color: rgba(249,115,22,.2);
+  --nav-active-bg: rgba(249,115,22,.1);
+  --nav-active-text: #fdba74;
+  --gradient-hero: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(100,30,0,.35) 0%, transparent 70%);
+}
+
+/* ── Theme: Slate (cool purple on near-black) ──────────────── */
+[data-theme="slate"] {
+  --accent-50:  #faf5ff; --accent-100: #f3e8ff; --accent-200: #e9d5ff;
+  --accent-300: #d8b4fe; --accent-400: #c084fc; --accent-500: #a855f7;
+  --accent-500-rgb: 168 85 247;
+  --accent-600: #9333ea; --accent-700: #7e22ce; --accent-800: #6b21a8;
+  --accent-900: #581c87;
+  --s950: #0a0810; --s900: #110d19; --s800: #191224;
+  --s700: #22182f; --s600: #2d2040; --s500: #3d2c52;
+  --s400: #5c4478; --s300: #856ca0;
+  --bg-base:   #080611;
+  --bg-panel:  #100c1c;
+  --bg-card:   #171125;
+  --bg-raised: #1f172d;
+  --border-subtle: rgba(168,85,247,.08);
+  --border-default: rgba(168,85,247,.14);
+  --border-focus:  rgba(168,85,247,.5);
+  --text-primary:   #f5f0ff;
+  --text-secondary: #a892c4;
+  --text-tertiary:  #4e3868;
+  --glow-color: rgba(168,85,247,.2);
+  --nav-active-bg: rgba(168,85,247,.1);
+  --nav-active-text: #d8b4fe;
+  --gradient-hero: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(60,0,120,.35) 0%, transparent 70%);
+}
+
+
+/* ── Theme: Sage (soft muted green, easy on eyes) ─────────── */
+[data-theme="sage"] {
+  --accent-50:  #f0fdf4; --accent-100: #dcfce7; --accent-200: #bbf7d0;
+  --accent-300: #86efac; --accent-400: #4ade80; --accent-500: #22c55e;
+  --accent-500-rgb: 34 197 94;
+  --accent-600: #16a34a; --accent-700: #15803d; --accent-800: #166534;
+  --accent-900: #14532d;
+  --s950: #060c08; --s900: #0c1610; --s800: #121f15;
+  --s700: #192a1c; --s600: #213826; --s500: #2d4832;
+  --s400: #4a704e; --s300: #739a77;
+  --bg-base:   #070d09;
+  --bg-panel:  #0d1a10;
+  --bg-card:   #121f15;
+  --bg-raised: #192a1c;
+  --border-subtle: rgba(34,197,94,.07);
+  --border-default: rgba(34,197,94,.12);
+  --border-focus:  rgba(34,197,94,.45);
+  --text-primary:   #ecf5ee;
+  --text-secondary: #8aad8e;
+  --text-tertiary:  #3d5e41;
+  --glow-color: rgba(34,197,94,.15);
+  --nav-active-bg: rgba(34,197,94,.08);
+  --nav-active-text: #86efac;
+  --gradient-hero: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(10,60,18,.3) 0%, transparent 70%);
+}
+
+/* ── Theme: Dusk (warm lavender, soft & relaxing) ──────────── */
+[data-theme="dusk"] {
+  --accent-50:  #fdf4ff; --accent-100: #fae8ff; --accent-200: #f5d0fe;
+  --accent-300: #f0abfc; --accent-400: #e879f9; --accent-500: #d946ef;
+  --accent-500-rgb: 217 70 239;
+  --accent-600: #c026d3; --accent-700: #a21caf; --accent-800: #86198f;
+  --accent-900: #701a75;
+  --s950: #0c080e; --s900: #150d18; --s800: #1e1224;
+  --s700: #281830; --s600: #341f3e; --s500: #422a4e;
+  --s400: #624272; --s300: #8e6ea0;
+  --bg-base:   #0d080f;
+  --bg-panel:  #160d1a;
+  --bg-card:   #1e1224;
+  --bg-raised: #271830;
+  --border-subtle: rgba(217,70,239,.07);
+  --border-default: rgba(217,70,239,.13);
+  --border-focus:  rgba(217,70,239,.45);
+  --text-primary:   #f8f0fc;
+  --text-secondary: #b08ec0;
+  --text-tertiary:  #5a3d6a;
+  --glow-color: rgba(217,70,239,.18);
+  --nav-active-bg: rgba(217,70,239,.09);
+  --nav-active-text: #f0abfc;
+  --gradient-hero: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(80,10,100,.3) 0%, transparent 70%);
+}
+
+/* ── Theme: Sand (warm neutral, cream on brown-black) ──────── */
+[data-theme="sand"] {
+  --accent-50:  #fdf8f0; --accent-100: #faebd7; --accent-200: #f5d5a8;
+  --accent-300: #edb97a; --accent-400: #e09450; --accent-500: #c8722f;
+  --accent-500-rgb: 200 114 47;
+  --accent-600: #a85826; --accent-700: #88421e; --accent-800: #6d3218;
+  --accent-900: #5a2912;
+  --s950: #0e0a06; --s900: #1a1208; --s800: #251a0c;
+  --s700: #312310; --s600: #3f2e14; --s500: #503c1c;
+  --s400: #78592c; --s300: #a07c4a;
+  --bg-base:   #100c07;
+  --bg-panel:  #1a1209;
+  --bg-card:   #22180c;
+  --bg-raised: #2d2010;
+  --border-subtle: rgba(200,114,47,.07);
+  --border-default: rgba(200,114,47,.13);
+  --border-focus:  rgba(200,114,47,.45);
+  --text-primary:   #f5ede0;
+  --text-secondary: #b09070;
+  --text-tertiary:  #5a4030;
+  --glow-color: rgba(200,114,47,.18);
+  --nav-active-bg: rgba(200,114,47,.09);
+  --nav-active-text: #edb97a;
+  --gradient-hero: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(80,40,0,.3) 0%, transparent 70%);
+}
+
+/* ── Theme: Arctic (cool grey, near-white surface) ─────────── */
+[data-theme="arctic"] {
+  --accent-50:  #f0f9ff; --accent-100: #e0f2fe; --accent-200: #bae6fd;
+  --accent-300: #7dd3fc; --accent-400: #38bdf8; --accent-500: #0ea5e9;
+  --accent-500-rgb: 14 165 233;
+  --accent-600: #0284c7; --accent-700: #0369a1; --accent-800: #075985;
+  --accent-900: #0c4a6e;
+  --s950: #040d12; --s900: #081520; --s800: #0d1f2e;
+  --s700: #122a3e; --s600: #183650; --s500: #1f4464;
+  --s400: #38637e; --s300: #618faa;
+  --bg-base:   #040e18;
+  --bg-panel:  #081620;
+  --bg-card:   #0d1e2c;
+  --bg-raised: #122838;
+  --border-subtle: rgba(14,165,233,.07);
+  --border-default: rgba(14,165,233,.13);
+  --border-focus:  rgba(14,165,233,.45);
+  --text-primary:   #e8f4fb;
+  --text-secondary: #7aaec8;
+  --text-tertiary:  #2e5a78;
+  --glow-color: rgba(14,165,233,.18);
+  --nav-active-bg: rgba(14,165,233,.09);
+  --nav-active-text: #7dd3fc;
+  --gradient-hero: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(0,40,80,.4) 0%, transparent 70%);
+}
+
+/* ── Theme: High Contrast (WCAG AA — white on true black) ──── */
+[data-theme="contrast"] {
+  --accent-50:  #ffffcc; --accent-100: #ffff99; --accent-200: #ffff66;
+  --accent-300: #ffff33; --accent-400: #ffff00; --accent-500: #eeee00;
+  --accent-500-rgb: 238 238 0;
+  --accent-600: #cccc00; --accent-700: #aaaa00; --accent-800: #888800;
+  --accent-900: #666600;
+  --s950: #000000; --s900: #000000; --s800: #0a0a0a;
+  --s700: #111111; --s600: #1a1a1a; --s500: #222222;
+  --s400: #444444; --s300: #888888;
+  --bg-base:   #000000;
+  --bg-panel:  #050505;
+  --bg-card:   #0c0c0c;
+  --bg-raised: #141414;
+  --border-subtle: rgba(255,255,255,.2);
+  --border-default: rgba(255,255,255,.35);
+  --border-focus:  rgba(255,255,0,1);
+  --text-primary:   #ffffff;
+  --text-secondary: #cccccc;
+  --text-tertiary:  #999999;
+  --glow-color: rgba(255,255,0,.25);
+  --nav-active-bg: rgba(255,255,0,.15);
+  --nav-active-text: #ffff00;
+  --gradient-hero: none;
+  /* Arbitrary per-topic hex colors (Tutorial.jsx's pill legend) have no
+     guaranteed contrast ratio against this theme's background — letting
+     them through would undermine the one thing this theme exists to
+     guarantee. Fall back to the theme's own (verified AA) accent instead. */
+  --legend-mode: mono;
+}
+
+/* High contrast overrides — ensure nothing is ever low-contrast */
+[data-theme="contrast"] .card,
+[data-theme="contrast"] .card-hover,
+[data-theme="contrast"] .card-glass {
+  border-color: rgba(255,255,255,.4) !important;
+}
+[data-theme="contrast"] .btn-primary { color: #000 !important; font-weight: 700 !important; }
+[data-theme="contrast"] .nav-item { border-color: transparent; }
+[data-theme="contrast"] .nav-item:hover { border-color: rgba(255,255,255,.3); }
+[data-theme="contrast"] .skeleton { background: #1a1a1a !important; }
+[data-theme="contrast"] body::before { display: none; } /* no grain on high-contrast */
+
+/* ═══════════════════════════════════════════════════════════════
+   DISTINCT LOOKS — these go beyond a color swap: different card
+   shape, shadow style, body font, and texture per theme.
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Theme: Paper (light mode — field-journal aesthetic) ────── */
+[data-theme="paper"] {
+  color-scheme: light;
+  --accent-50:  #f0fdf4; --accent-100: #dcfce7; --accent-200: #bbf7d0;
+  --accent-300: #86efac; --accent-400: #4ade80; --accent-500: #16a34a;
+  --accent-500-rgb: 22 163 74;
+  --accent-600: #15803d; --accent-700: #166534; --accent-800: #14532d;
+  --accent-900: #052e16;
+  --s950: #faf7f0; --s900: #f3eee1; --s800: #e8e0cc;
+  --s700: #dcd2b8; --s600: #c9bc9a; --s500: #aa9d7d;
+  --s400: #7d735a; --s300: #574f3c;
+  --bg-base:   #f7f3e8;
+  --bg-panel:  #f0eadb;
+  --bg-card:   #fbf8ef;
+  --bg-raised: #efe8d6;
+  --border-subtle: rgba(21,128,61,.12);
+  --border-default: rgba(21,128,61,.22);
+  --border-focus:  rgba(21,128,61,.55);
+  --text-primary:   #1c1a14;
+  --text-secondary: #4a4538;
+  --text-tertiary:  #847b62;
+  --glow-color: rgba(21,128,61,0);
+  --nav-active-bg: rgba(21,128,61,.1);
+  --nav-active-text: #15803d;
+  --gradient-hero: none;
+  --radius-card: 4px;
+  --shadow-card: 0 1px 2px rgba(28,26,20,.08), 0 1px 1px rgba(28,26,20,.04);
+  --shadow-card-hover: 0 2px 6px rgba(28,26,20,.12);
+  --radius-btn: 3px;
+  --btn-primary-text: #fdfcf7;
+}
+[data-theme="paper"] body::before { display: none; } /* no grain on light paper */
+[data-theme="paper"] .card,
+[data-theme="paper"] .card-hover,
+[data-theme="paper"] .card-glass { border-width: 1px; }
+[data-theme="paper"] .card-hover:hover { transform: none; } /* paper doesn't float */
+[data-theme="paper"] .card-hover:active { transform: none; } /* paper doesn't press either */
+[data-theme="paper"] h1, [data-theme="paper"] h2, [data-theme="paper"] h3 {
+  font-family: 'Lora', Georgia, serif; letter-spacing: -0.01em;
+}
+
+/* ── Theme: Mono (flat minimal — sharp corners, no glow) ─────── */
+[data-theme="mono"] {
+  color-scheme: dark;
+  --accent-50:  #fafafa; --accent-100: #f0f0f0; --accent-200: #e0e0e0;
+  --accent-300: #c4c4c4; --accent-400: #a8a8a8; --accent-500: #e8e8e8;
+  --accent-500-rgb: 232 232 232;
+  --accent-600: #b8b8b8; --accent-700: #8a8a8a; --accent-800: #5c5c5c;
+  --accent-900: #2e2e2e;
+  --s950: #000000; --s900: #0a0a0a; --s800: #131313;
+  --s700: #1c1c1c; --s600: #282828; --s500: #383838;
+  --s400: #606060; --s300: #909090;
+  --bg-base:   #0a0a0a;
+  --bg-panel:  #101010;
+  --bg-card:   #161616;
+  --bg-raised: #1e1e1e;
+  --border-subtle: rgba(255,255,255,.08);
+  --border-default: rgba(255,255,255,.14);
+  --border-focus:  rgba(255,255,255,.4);
+  --text-primary:   #f0f0f0;
+  --text-secondary: #a0a0a0;
+  --text-tertiary:  #606060;
+  --glow-color: rgba(255,255,255,0);
+  --nav-active-bg: rgba(255,255,255,.08);
+  --nav-active-text: #f0f0f0;
+  --gradient-hero: none;
+  --radius-card: 2px;
+  --shadow-card: none;
+  --shadow-card-hover: none;
+  --radius-btn: 2px;
+  --btn-primary-text: #0a0a0a;
+  --legend-mode: mono;
+}
+[data-theme="mono"] body::before { display: none; } /* flat — no texture */
+[data-theme="mono"] .card-hover:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--text-primary);
+}
+[data-theme="mono"] .live-dot { animation: none; opacity: 1; } /* no pulse — flat is flat */
+
+/* ── Theme: Terminal (retro CRT — phosphor green, monospace, scanlines) ── */
+[data-theme="terminal"] {
+  color-scheme: dark;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  --accent-50:  #e8fff0; --accent-100: #c0ffd8; --accent-200: #80ffb0;
+  --accent-300: #40ff88; --accent-400: #1aff6a; --accent-500: #00ff41;
+  --accent-500-rgb: 0 255 65;
+  --accent-600: #00cc34; --accent-700: #009927; --accent-800: #00661a;
+  --accent-900: #00330d;
+  --s950: #000000; --s900: #020a04; --s800: #051405;
+  --s700: #081f08; --s600: #0c2e0c; --s500: #134313;
+  --s400: #2a7a2a; --s300: #4fb84f;
+  --bg-base:   #010401;
+  --bg-panel:  #020a02;
+  --bg-card:   #030f03;
+  --bg-raised: #051405;
+  --border-subtle: rgba(0,255,65,.15);
+  --border-default: rgba(0,255,65,.3);
+  --border-focus:  rgba(0,255,65,.8);
+  --text-primary:   #aaffaa;
+  --text-secondary: #00ff41;
+  --text-tertiary:  #008f25;
+  --glow-color: rgba(0,255,65,.35);
+  --nav-active-bg: rgba(0,255,65,.12);
+  --nav-active-text: #00ff41;
+  --gradient-hero: none;
+  --radius-card: 0px;
+  --shadow-card: 0 0 12px rgba(0,255,65,.08), inset 0 0 0 1px rgba(0,255,65,.1);
+  --shadow-card-hover: 0 0 20px rgba(0,255,65,.18), inset 0 0 0 1px rgba(0,255,65,.2);
+  --radius-btn: 0px;
+  --btn-primary-text: #000000;
+}
+[data-theme="terminal"] body,
+[data-theme="terminal"] h1, [data-theme="terminal"] h2, [data-theme="terminal"] h3 {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+}
+[data-theme="terminal"] .text-primary,
+[data-theme="terminal"] * { text-shadow: none; }
+[data-theme="terminal"] body::before { display: none; } /* replaced by scanlines below */
+[data-theme="terminal"] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    to bottom, rgba(0,255,65,.04) 0px, rgba(0,255,65,.04) 1px,
+    transparent 1px, transparent 3px
+  );
+  pointer-events: none;
+  z-index: 40;
+  opacity: 0.5;
+}
+[data-theme="terminal"] .card-hover:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: none;
+}
+
+/* ── Theme: Plate (engraved field-guide plate — ink on aged paper) ──
+   Reference point: the printed specimen plates in 19th-century
+   ornithological field guides (Audubon, Gould) — aged paper stock,
+   a single deep ink color (never the expected terracotta/sage),
+   hairline rules standing in for engraving lines, small-caps
+   captions like a plate's specimen label. Minimalist in restraint
+   (no gradients, no glow, no texture beyond the paper tone itself),
+   realist in referencing an actual physical printed artifact rather
+   than an abstract "light mode." */
+[data-theme="plate"] {
+  color-scheme: light;
+  --accent-50:  #f3f0fb; --accent-100: #e3ddf2; --accent-200: #c7bbe6;
+  --accent-300: #a594d1; --accent-400: #4a3d6b; --accent-500: #2b2440;
+  --accent-600: #211b32; --accent-700: #181425; --accent-800: #0f0c18;
+  --accent-900: #08060d;
+  --accent-500-rgb: 43 36 64;
+  --s950: #f7f3e9; --s900: #ece5d3; --s800: #ddd2b4;
+  --s700: #c7b890; --s600: #a8966a; --s500: #847451;
+  --s400: #5d513a; --s300: #3a3326;
+  --bg-base:   #ece5d3;
+  --bg-panel:  #e4dcc6;
+  --bg-card:   #f3eedd;
+  --bg-raised: #e0d7bf;
+  --border-subtle: rgba(43,36,64,.14);
+  --border-default: rgba(43,36,64,.28);
+  --border-focus:  rgba(43,36,64,.6);
+  --text-primary:   #221c33;
+  --text-secondary: #4d4460;
+  --text-tertiary:  #8a7f64;
+  --glow-color: rgba(43,36,64,0);
+  --nav-active-bg: rgba(43,36,64,.08);
+  --nav-active-text: #2b2440;
+  --gradient-hero: none;
+  --radius-card: 0px;
+  --shadow-card: 0 1px 0 rgba(43,36,64,.18);
+  --shadow-card-hover: 0 1px 0 rgba(43,36,64,.3);
+  --radius-btn: 0px;
+  --btn-primary-text: #f3eedd;
+  --legend-mode: mono;
+}
+[data-theme="plate"] body::before { display: none; } /* paper tone is the texture — no grain layer on top */
+[data-theme="plate"] .card,
+[data-theme="plate"] .card-hover,
+[data-theme="plate"] .card-glass {
+  border-width: 1px;
+  border-style: solid;
+}
+[data-theme="plate"] .card-hover:hover { transform: none; box-shadow: var(--shadow-card-hover); }
+[data-theme="plate"] .card-hover:active { transform: none; box-shadow: var(--shadow-card-hover); }
+[data-theme="plate"] h1, [data-theme="plate"] h2, [data-theme="plate"] h3 {
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+[data-theme="plate"] .text-xs, [data-theme="plate"] label,
+[data-theme="plate"] .nav-item {
+  font-family: 'Inter', sans-serif;
+  letter-spacing: 0.04em;
+}
+[data-theme="plate"] .stat-value { font-family: 'Crimson Pro', Georgia, serif; }
+
+/* ── Theme: Oscilloscope (instrument panel — amber phosphor, calibrated ticks) ──
+   Reference point: a real spectrum-analyzer / oscilloscope faceplate —
+   the same family of instrument this app's own spectrograms and
+   waveform displays evoke, but rendered as the UI's own skin rather
+   than left as a generic dark theme. Amber phosphor (not Terminal's
+   green — a different instrument era and tone entirely), a subtle
+   CRT-glass vignette instead of scanlines, numerals tracked wide like
+   a 7-segment readout. */
+[data-theme="oscilloscope"] {
+  color-scheme: dark;
+  --accent-50:  #fff8e8; --accent-100: #ffedc2; --accent-200: #ffdb85;
+  --accent-300: #ffc847; --accent-400: #ffb800; --accent-500: #ffb000;
+  --accent-600: #cc8c00; --accent-700: #996900; --accent-800: #664600;
+  --accent-900: #332300;
+  --accent-500-rgb: 255 176 0;
+  --s950: #000000; --s900: #0c0a06; --s800: #16120a;
+  --s700: #221c10; --s600: #332916; --s500: #4d3e22;
+  --s400: #8a6f3c; --s300: #c4a05c;
+  --bg-base:   #0a0805;
+  --bg-panel:  #0f0c08;
+  --bg-card:   #15110a;
+  --bg-raised: #1d170d;
+  --border-subtle: rgba(255,176,0,.14);
+  --border-default: rgba(255,176,0,.26);
+  --border-focus:  rgba(255,176,0,.7);
+  --text-primary:   #ffd980;
+  --text-secondary: #c99a3f;
+  --text-tertiary:  #6e5527;
+  --glow-color: rgba(255,176,0,.3);
+  --nav-active-bg: rgba(255,176,0,.1);
+  --nav-active-text: #ffb000;
+  --gradient-hero: none;
+  --radius-card: 1px;
+  --shadow-card: inset 0 0 0 1px rgba(255,176,0,.08), 0 0 18px rgba(255,176,0,.05);
+  --shadow-card-hover: inset 0 0 0 1px rgba(255,176,0,.18), 0 0 28px rgba(255,176,0,.12);
+  --radius-btn: 1px;
+  --btn-primary-text: #0a0805;
+}
+[data-theme="oscilloscope"] body::before { display: none; } /* replaced by the vignette below */
+[data-theme="oscilloscope"] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  /* CRT-glass curvature: a faint vignette darkening toward the corners,
+     standing in for scanlines (which would just read as a Terminal
+     re-skin) — this is what a curved phosphor tube actually looks like. */
+  background: radial-gradient(ellipse 140% 110% at 50% 45%, transparent 55%, rgba(0,0,0,.35) 100%);
+  pointer-events: none;
+  z-index: 40;
+}
+[data-theme="oscilloscope"] .card-hover:hover {
+  transform: none;
+  box-shadow: var(--shadow-card-hover);
+}
+[data-theme="oscilloscope"] .stat-value,
+[data-theme="oscilloscope"] .live-dot + span {
+  font-family: 'Space Mono', monospace;
+  letter-spacing: 0.06em;
+}
+[data-theme="oscilloscope"] h1, [data-theme="oscilloscope"] h2, [data-theme="oscilloscope"] h3 {
+  font-family: 'Space Mono', monospace;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* ── Theme: Aviary (museum gallery — warm stone, clay accent, no borders) ──
+   Reference point: a natural-history museum specimen-tag label and
+   gallery wall — warm stone grey (not white, not cream-paper — a
+   third, distinct light value), a single confident clay-rust accent
+   like a museum tag, generous whitespace, zero borders on cards (shadow
+   alone separates them, the way a label sits unframed on a wall), thin
+   condensed caps for structural labels. The airiest and most restrained
+   of the three — deliberately the opposite pole from Oscilloscope's
+   density. */
+[data-theme="aviary"] {
+  color-scheme: light;
+  --accent-50:  #fdf1ec; --accent-100: #fad9cb; --accent-200: #f3b89c;
+  --accent-300: #e3936a; --accent-400: #c76a3f; --accent-500: #b5552e;
+  --accent-600: #964526; --accent-700: #76371f; --accent-800: #582918;
+  --accent-900: #3a1b10;
+  --accent-500-rgb: 181 85 46;
+  --s950: #faf8f5; --s900: #e8e2d8; --s800: #d8d0c2;
+  --s700: #c2b7a4; --s600: #a89c86; --s500: #847862;
+  --s400: #5c5345; --s300: #3a352c;
+  --bg-base:   #e8e2d8;
+  --bg-panel:  #ece6dc;
+  --bg-card:   #f5f1e9;
+  --bg-raised: #ddd5c7;
+  --border-subtle: rgba(58,53,44,.06);
+  --border-default: rgba(58,53,44,.1);
+  --border-focus:  rgba(181,85,46,.5);
+  --text-primary:   #2b2620;
+  --text-secondary: #5c5345;
+  --text-tertiary:  #8c8270;
+  --glow-color: rgba(181,85,46,0);
+  --nav-active-bg: rgba(181,85,46,.1);
+  --nav-active-text: #b5552e;
+  --gradient-hero: none;
+  --radius-card: 10px;
+  --shadow-card: 0 1px 3px rgba(43,38,32,.06), 0 6px 16px rgba(43,38,32,.05);
+  --shadow-card-hover: 0 2px 6px rgba(43,38,32,.08), 0 10px 24px rgba(43,38,32,.08);
+  --radius-btn: 8px;
+  --btn-primary-text: #faf8f5;
+}
+[data-theme="aviary"] body::before { display: none; } /* gallery walls don't have grain */
+[data-theme="aviary"] .card,
+[data-theme="aviary"] .card-hover,
+[data-theme="aviary"] .card-glass { border: none; }
+[data-theme="aviary"] .card-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-card-hover);
+}
+[data-theme="aviary"] h1, [data-theme="aviary"] h2, [data-theme="aviary"] h3 {
+  font-family: 'Work Sans', sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+[data-theme="aviary"] .text-xs, [data-theme="aviary"] label,
+[data-theme="aviary"] .nav-item {
+  font-family: 'Archivo Narrow', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+[data-theme="aviary"] body, [data-theme="aviary"] p, [data-theme="aviary"] .text-sm {
+  font-family: 'Work Sans', sans-serif;
+}
+
+/* ── Theme: Cornell Lab (ornithology institute — carnelian, cream, friendly geometric type) ──
+   Reference point: the Cornell Lab of Ornithology's actual current
+   brand identity (2015 Pentagram redesign, refined since by IDEO) — a
+   colorful, rounded, friendly mark replacing the institution's older,
+   austere blue "everybird" logo, paired with Avenir (geometric-humanist
+   sans) and Mercury (editorial serif). Avenir and Mercury are commercial
+   typefaces with no Google Fonts release; this theme uses the two
+   substitutes most consistently recommended for exactly this situation
+   — Nunito for Avenir (closest free geometric-humanist match across
+   multiple independent type-comparison sources) and Source Serif 4 for
+   Mercury (the same substitute Ithaca College's own brand guide
+   recommends in place of Mercury for community members without a
+   license). Carnelian red (#B31B1B) is Cornell University's own
+   official, trademarked color — confirmed against the university's
+   Brand Center, which specifies it as the dominant primary color,
+   typically paired with white/cream and dark grey, which is exactly
+   this theme's structure. */
+[data-theme="cornell"] {
+  color-scheme: light;
+  --accent-50:  #fdeaea; --accent-100: #f9caca; --accent-200: #f09b9b;
+  --accent-300: #de6b6b; --accent-400: #c63d3d; --accent-500: #b31b1b;
+  --accent-600: #8f1515; --accent-700: #6b1010; --accent-800: #470b0b;
+  --accent-900: #2c0707;
+  --accent-500-rgb: 179 27 27;
+  --s950: #fdf8f0; --s900: #f7eee0; --s800: #ece0cb;
+  --s700: #d9c9a8; --s600: #b8a784; --s500: #8f8066;
+  --s400: #5f5648; --s300: #38332b;
+  --bg-base:   #f7eee0;
+  --bg-panel:  #fbf4e8;
+  --bg-card:   #fdf8f0;
+  --bg-raised: #f0e4d2;
+  --border-subtle: rgba(58,16,16,.08);
+  --border-default: rgba(58,16,16,.16);
+  --border-focus:  rgba(179,27,27,.55);
+  --text-primary:   #2b2420;
+  --text-secondary: #5c4f44;
+  --text-tertiary:  #938572;
+  --glow-color: rgba(179,27,27,0);
+  --nav-active-bg: rgba(179,27,27,.1);
+  --nav-active-text: #b31b1b;
+  --gradient-hero: none;
+  --radius-card: 14px;
+  --shadow-card: 0 1px 3px rgba(58,16,16,.06), 0 6px 16px rgba(58,16,16,.05);
+  --shadow-card-hover: 0 3px 8px rgba(179,27,27,.1), 0 10px 24px rgba(58,16,16,.08);
+  --radius-btn: 10px;
+  --btn-primary-text: #fdf8f0;
+}
+[data-theme="cornell"] body::before { display: none; } /* clean institutional look — no grain */
+[data-theme="cornell"] .card-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-card-hover);
+}
+[data-theme="cornell"] h1, [data-theme="cornell"] h2, [data-theme="cornell"] h3 {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-weight: 600;
+}
+[data-theme="cornell"] body, [data-theme="cornell"] p, [data-theme="cornell"] .text-sm,
+[data-theme="cornell"] .text-xs, [data-theme="cornell"] label, [data-theme="cornell"] .nav-item {
+  font-family: 'Nunito', sans-serif;
+}
+[data-theme="cornell"] .stat-value { font-family: 'Source Serif 4', Georgia, serif; }
+
+/* ── Theme: Field Notebook (real paper — ruled lines, pencil grey, dog-eared warmth) ──
+   Reference point: an actual field-ornithology notebook page — ruled
+   horizontal lines (a real CSS repeating-gradient texture, not just a
+   beige tint standing in for "paper"), a warm aged-paper background,
+   pencil-grey ink rather than true black, and a small handwriting-style
+   accent font (Kalam) used sparingly for headers/labels only — body
+   text stays in a legible sans, since a full handwriting font for body
+   copy would hurt readability, which would cut against this app's
+   stated sleek/modern/readable goals even within a "real paper" concept. */
+[data-theme="fieldnotebook"] {
+  color-scheme: light;
+  --accent-50:  #eaf3ee; --accent-100: #cce4d8; --accent-200: #9bc9b1;
+  --accent-300: #6ba888; --accent-400: #437d63; --accent-500: #2c4a3e;
+  --accent-600: #233c32; --accent-700: #1a2d26; --accent-800: #121f1a;
+  --accent-900: #0a120f;
+  --accent-500-rgb: 44 74 62;
+  --s950: #f5efd9; --s900: #f0ead8; --s800: #e2d8b8;
+  --s700: #cbbd8e; --s600: #ad9d68; --s500: #847448;
+  --s400: #564c30; --s300: #332c1c;
+  --bg-base:   #f0ead8;
+  --bg-panel:  #ece4cd;
+  --bg-card:   #f6f0dd;
+  --bg-raised: #e6dcc0;
+  --border-subtle: rgba(44,74,62,.12);
+  --border-default: rgba(44,74,62,.22);
+  --border-focus:  rgba(44,74,62,.6);
+  --text-primary:   #2e2c1f;
+  --text-secondary: #4f4a36;
+  --text-tertiary:  #837a5e;
+  --glow-color: rgba(44,74,62,0);
+  --nav-active-bg: rgba(44,74,62,.1);
+  --nav-active-text: #2c4a3e;
+  --gradient-hero: none;
+  --radius-card: 2px;
+  --shadow-card: 0 1px 2px rgba(46,44,31,.12), 1px 2px 4px rgba(46,44,31,.06);
+  --shadow-card-hover: 0 2px 5px rgba(46,44,31,.18), 2px 4px 8px rgba(46,44,31,.1);
+  --radius-btn: 3px;
+  --btn-primary-text: #f6f0dd;
+}
+[data-theme="fieldnotebook"] body::before { display: none; } /* replaced by the ruled-paper texture below */
+[data-theme="fieldnotebook"] .card,
+[data-theme="fieldnotebook"] .card-hover,
+[data-theme="fieldnotebook"] .card-glass {
+  border: 1px solid var(--border-subtle);
+  /* Ruled notebook lines — a real repeating horizontal-line texture
+     rather than a flat tint standing in for "paper." 28px spacing
+     approximates a standard narrow-ruled notebook page at this zoom. */
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 27px,
+    rgba(44,74,62,.12) 27px,
+    rgba(44,74,62,.12) 28px
+  );
+}
+[data-theme="fieldnotebook"] .card-hover:hover { transform: none; box-shadow: var(--shadow-card-hover); }
+[data-theme="fieldnotebook"] .card-hover:active { transform: none; box-shadow: var(--shadow-card-hover); }
+[data-theme="fieldnotebook"] h1, [data-theme="fieldnotebook"] h2, [data-theme="fieldnotebook"] h3 {
+  font-family: 'Kalam', cursive;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+[data-theme="fieldnotebook"] .nav-item, [data-theme="fieldnotebook"] label {
+  font-family: 'Kalam', cursive;
+}
+[data-theme="fieldnotebook"] body, [data-theme="fieldnotebook"] p,
+[data-theme="fieldnotebook"] .text-sm, [data-theme="fieldnotebook"] .text-xs {
+  font-family: 'Inter', sans-serif;
+}
+
+/* ── Theme: Dracula (the classic developer palette — purple, pink, cyan on slate) ──
+   Built from the official, published Dracula color specification
+   (github.com/dracula/dracula-theme — MIT licensed, exact hex values
+   below match that source precisely): Background #282a36, Current
+   Line/Selection #44475a, Foreground #f8f8f2, Comment #6272a4, Purple
+   #bd93f9, Pink #ff79c6, Cyan #8be9fd, Green #50fa7b, Orange #ffb86c,
+   Red #ff5555, Yellow #f1fa8c. Dracula's own spec defines colors only,
+   not a typeface — this theme leaves body type as the app's existing
+   default rather than imply a typographic choice the source theme
+   never made. Note: "Dracula Pro" specifically is a paid commercial
+   product with a refined, not-publicly-published palette (softer
+   purples, normalized lightness/saturation per its own changelog) — this
+   theme is built from the real, official, freely-published Dracula
+   palette, which is the actual basis of Dracula Pro and is what's
+   unmistakably recognizable as "the Dracula theme" to anyone familiar
+   with it, rather than guessed-at proprietary values that can't be
+   verified against any public source. */
+[data-theme="dracula"] {
+  color-scheme: dark;
+  --accent-50:  #f3edff; --accent-100: #e3d4ff; --accent-200: #d3baff;
+  --accent-300: #c3a0fc; --accent-400: #cb98fb; --accent-500: #bd93f9;
+  --accent-600: #9a72e0; --accent-700: #7a57c4; --accent-800: #5c3fa0;
+  --accent-900: #402b78;
+  --accent-500-rgb: 189 147 249;
+  --s950: #1e1f29; --s900: #282a36; --s800: #353746;
+  --s700: #44475a; --s600: #565970; --s500: #6272a4;
+  --s400: #9aa3c4; --s300: #c7cce0;
+  --bg-base:   #282a36;
+  --bg-panel:  #21222c;
+  --bg-card:   #2d2f3d;
+  --bg-raised: #353746;
+  --border-subtle: rgba(98,114,164,.25);
+  --border-default: rgba(98,114,164,.4);
+  --border-focus:  rgba(189,147,249,.7);
+  --text-primary:   #f8f8f2;
+  --text-secondary: #c7cce0;
+  --text-tertiary:  #9aa3c4;
+  --glow-color: rgba(189,147,249,.28);
+  --nav-active-bg: rgba(189,147,249,.14);
+  --nav-active-text: #ff79c6;
+  --gradient-hero: linear-gradient(135deg, rgba(189,147,249,.1), rgba(255,121,198,.06));
+  --radius-card: 10px;
+  --shadow-card: 0 1px 3px rgba(0,0,0,.4), 0 4px 12px rgba(0,0,0,.2);
+  --shadow-card-hover: 0 4px 16px rgba(189,147,249,.18), 0 1px 4px rgba(0,0,0,.3);
+  --radius-btn: 8px;
+  --btn-primary-text: #282a36;
+}
+[data-theme="dracula"] body::before { display: none; }
+[data-theme="dracula"] .card-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* ── Theme: NEXRAD (weather-radar bird migration tracking — green returns, warm intensity ramp) ──
+   Reference point: a real NEXRAD/BirdCast radar mosaic — the same
+   weather-radar network birders genuinely watch overnight during
+   migration season to forecast "good flight nights" (Cornell Lab's own
+   BirdCast project is built on exactly this). Verified the actual
+   reflectivity convention rather than guessing: low-intensity returns
+   render green, with yellow→orange→red marking increasing intensity, all
+   on a dark "scope" background — confirmed against multiple independent
+   radar-reading references, not just one source. This theme's accent
+   ramp follows that real progression (green base, with the brighter
+   glow/hover states pulling warmer) instead of inventing a generic
+   "radar green" that ignores the actual color science the instrument is
+   built on. Distinct from Terminal's phosphor green (a CRT readout, flat
+   single-hue) and Sage's muted green (a calm, desaturated accent) by
+   being explicitly an intensity GRADIENT, plus a genuine sweep-line
+   animation standing in for the radar's actual rotating beam. */
+[data-theme="nexrad"] {
+  color-scheme: dark;
+  --accent-50:  #eafff2; --accent-100: #c3ffd9; --accent-200: #8cffb3;
+  --accent-300: #4dff8a; --accent-400: #22e066; --accent-500: #0fbf52;
+  --accent-600: #0c9941; --accent-700: #097532; --accent-800: #065224;
+  --accent-900: #033316;
+  --accent-500-rgb: 15 191 82;
+  --s950: #02060a; --s900: #050d12; --s800: #0a161d;
+  --s700: #11212b; --s600: #1a323f; --s500: #2a4a58;
+  --s400: #5c8a96; --s300: #9bc4cc;
+  --bg-base:   #030a0d;
+  --bg-panel:  #061216;
+  --bg-card:   #0a1a20;
+  --bg-raised: #102530;
+  --border-subtle: rgba(15,191,82,.16);
+  --border-default: rgba(15,191,82,.3);
+  --border-focus:  rgba(34,224,102,.75);
+  --text-primary:   #d6fce4;
+  --text-secondary: #7fc9a0;
+  --text-tertiary:  #3f7a5c;
+  --glow-color: rgba(34,224,102,.32);
+  --nav-active-bg: rgba(15,191,82,.14);
+  --nav-active-text: #4dff8a;
+  --gradient-hero: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(15,191,82,.1), transparent 70%);
+  --radius-card: 4px;
+  --shadow-card: inset 0 0 0 1px rgba(15,191,82,.1), 0 0 16px rgba(15,191,82,.04);
+  --shadow-card-hover: inset 0 0 0 1px rgba(34,224,102,.22), 0 0 26px rgba(34,224,102,.14);
+  --radius-btn: 4px;
+  --btn-primary-text: #02060a;
+}
+[data-theme="nexrad"] body::before { display: none; }
+[data-theme="nexrad"] body::after {
+  /* The radar's rotating sweep beam — a real instrument behavior, not
+     decoration. A thin bright wedge rotates continuously across the
+     whole viewport, the same way a real PPI radar display sweeps. */
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: conic-gradient(from 0deg at 50% 50%,
+    rgba(34,224,102,.1) 0deg, rgba(34,224,102,0) 18deg, rgba(34,224,102,0) 360deg);
+  animation: nexradSweep 6s linear infinite;
+  pointer-events: none;
+  z-index: 40;
+  mix-blend-mode: screen;
+}
+@keyframes nexradSweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+[data-theme="nexrad"] .card-hover:hover {
+  transform: none;
+  box-shadow: var(--shadow-card-hover);
+}
+[data-theme="nexrad"] .stat-value {
+  font-family: 'Space Mono', monospace;
+  letter-spacing: 0.04em;
+}
+[data-theme="nexrad"] h1, [data-theme="nexrad"] h2, [data-theme="nexrad"] h3 {
+  font-family: 'Space Mono', monospace;
+  letter-spacing: 0.01em;
+}
+
+/* ── Theme: Moth Trap (nocturnal field recording — UV blacklight glow on true black) ──
+   Reference point: a real moth-sheet/UV-light trap — the exact piece of
+   nocturnal field equipment that shares Chirp's own use case (recording
+   what's active after dark, just for insects via light instead of birds
+   via sound). True black background (genuinely dark-adapted, the way a
+   field naturalist actually works at night rather than a "dark UI" that
+   merely looks moody), a single saturated UV-violet glow standing in for
+   a blacklight tube, and an actual moth-wing fold animation on hover —
+   distinct from Slate's bright violet (flat single accent, not a glow
+   metaphor) and Dracula's lavender (a desaturated developer palette, not
+   nocturnal-equipment-specific) by being built around the light source
+   itself: text glows like it's lit FROM the violet, not just colored
+   violet. */
+[data-theme="mothtrap"] {
+  color-scheme: dark;
+  --accent-50:  #fbeeff; --accent-100: #f3d2ff; --accent-200: #e8a8ff;
+  --accent-300: #d978ff; --accent-400: #c63dff; --accent-500: #a91fef;
+  --accent-600: #8716bf; --accent-700: #650f8f; --accent-800: #460a63;
+  --accent-900: #2c0640;
+  --accent-500-rgb: 169 31 239;
+  --s950: #000000; --s900: #07040a; --s800: #0e0814;
+  --s700: #170d20; --s600: #251533; --s500: #3a2150;
+  --s400: #7d5aa3; --s300: #c0a6dc;
+  --bg-base:   #030103;
+  --bg-panel:  #060209;
+  --bg-card:   #0a0410;
+  --bg-raised: #120a1c;
+  --border-subtle: rgba(169,31,239,.16);
+  --border-default: rgba(169,31,239,.3);
+  --border-focus:  rgba(198,61,255,.75);
+  --text-primary:   #efe0ff;
+  --text-secondary: #b78fdb;
+  --text-tertiary:  #5e4178;
+  --glow-color: rgba(198,61,255,.4);
+  --nav-active-bg: rgba(169,31,239,.15);
+  --nav-active-text: #d978ff;
+  --gradient-hero: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(169,31,239,.16), transparent 70%);
+  --radius-card: 14px;
+  --shadow-card: 0 0 1px rgba(169,31,239,.12), 0 0 24px rgba(169,31,239,.05);
+  --shadow-card-hover: 0 0 1px rgba(198,61,255,.3), 0 0 36px rgba(198,61,255,.16);
+  --radius-btn: 10px;
+  --btn-primary-text: #030103;
+}
+[data-theme="mothtrap"] body::before { display: none; }
+[data-theme="mothtrap"] .card-hover {
+  transition: border-color 200ms ease, box-shadow 300ms ease, transform 200ms ease;
+}
+[data-theme="mothtrap"] .card-hover:hover {
+  transform: translateY(-1px) scale(1.005);
+  box-shadow: var(--shadow-card-hover);
+}
+[data-theme="mothtrap"] h1, [data-theme="mothtrap"] h2, [data-theme="mothtrap"] h3 {
+  text-shadow: 0 0 12px rgba(198,61,255,.35);
+}
+[data-theme="mothtrap"] .stat-value {
+  text-shadow: 0 0 18px rgba(198,61,255,.45);
+}
+
+/* ── Theme: Spectrogram (styled after Chirp's own audio spectrograms) ──
+   Reference point: the actual spectrogram image every single recording in
+   this app already generates and displays — a scrolling frequency-vs-time
+   heatmap, colored low-to-high intensity in a viridis-style purple → teal
+   → green → yellow ramp. No other theme is built around Chirp's own core
+   visual output; NEXRAD (weather radar) and Oscilloscope (instrument
+   panel) are both "borrowed instrument" metaphors, whereas this one is
+   literally the interface reusing the exact colormap the app's own
+   spectrograms use. The background carries a subtle horizontal frequency-
+   band texture that slowly drifts sideways — a spectrogram scrolls
+   left-to-right as time passes, so the drift is a real behavior reference,
+   not decoration for its own sake. */
+[data-theme="spectrogram"] {
+  color-scheme: dark;
+  --accent-50:  #eafcf1; --accent-100: #c4f5d7; --accent-200: #8ee8b3;
+  --accent-300: #5ecb6f; --accent-400: #35b779; --accent-500: #269963;
+  --accent-600: #1d7a4f; --accent-700: #175f3f; --accent-800: #10432c;
+  --accent-900: #0a2b1c;
+  --accent-500-rgb: 38 153 99;
+  --s950: #050214; --s900: #0a0524; --s800: #120a38;
+  --s700: #1c1250; --s600: #2b1c70; --s500: #3f2a94;
+  --s400: #6f57c4; --s300: #a999de;
+  --bg-base:   #08031a;
+  --bg-panel:  #0d0524;
+  --bg-card:   #130a30;
+  --bg-raised: #1c1240;
+  --border-subtle: rgba(53,183,121,.16);
+  --border-default: rgba(53,183,121,.3);
+  --border-focus:  rgba(94,220,160,.75);
+  --text-primary:   #e3f7ec;
+  --text-secondary: #8fd6ae;
+  --text-tertiary:  #4f7d68;
+  --glow-color: rgba(53,183,121,.35);
+  --nav-active-bg: rgba(53,183,121,.14);
+  --nav-active-text: #6fe0a0;
+  --gradient-hero: radial-gradient(ellipse 85% 65% at 50% 0%, rgba(63,42,148,.24), rgba(53,183,121,.08) 55%, transparent 80%);
+  --radius-card: 10px;
+  --shadow-card: inset 0 0 0 1px rgba(53,183,121,.1), 0 0 18px rgba(53,183,121,.05);
+  --shadow-card-hover: inset 0 0 0 1px rgba(94,220,160,.24), 0 0 28px rgba(94,220,160,.15);
+  --radius-btn: 8px;
+  --btn-primary-text: #050214;
+}
+[data-theme="spectrogram"] body::before { display: none; }
+[data-theme="spectrogram"] body::after {
+  /* Horizontal frequency-intensity bands, viridis-style, slowly drifting
+     sideways — the actual visual language of the spectrograms this app
+     generates for every recording, not an abstract texture. */
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(63,42,148,.10) 0px, rgba(63,42,148,.10) 3px,
+    rgba(43,111,142,.09) 3px, rgba(43,111,142,.09) 6px,
+    rgba(31,154,131,.08) 6px, rgba(31,154,131,.08) 9px,
+    rgba(53,183,121,.07) 9px, rgba(53,183,121,.07) 12px,
+    rgba(143,217,79,.05) 12px, rgba(143,217,79,.05) 15px,
+    transparent 15px, transparent 18px
+  );
+  background-size: 220% 100%;
+  animation: spectrogramDrift 40s linear infinite;
+  pointer-events: none;
+  z-index: 40;
+  mix-blend-mode: screen;
+  opacity: .5;
+}
+@keyframes spectrogramDrift { from { background-position: 0% 0; } to { background-position: -100% 0; } }
+[data-theme="spectrogram"] .card-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-card-hover);
+}
+[data-theme="spectrogram"] .stat-value {
+  font-family: 'Space Mono', monospace;
+  letter-spacing: 0.02em;
+}
+[data-theme="spectrogram"] h1, [data-theme="spectrogram"] h2, [data-theme="spectrogram"] h3 {
+  text-shadow: 0 0 10px rgba(53,183,121,.25);
+}
+
+/* ── Theme: Migration (night-sky starfield — nocturnal migration tracking) ──
+   Reference point: real nocturnal bird migration — most songbirds migrate
+   at night and orient partly by the stars, and tools like BirdCast's live
+   migration maps are built on exactly this dark-sky-with-bright-points
+   visual language. Distinct from Midnight (flat electric blue, no
+   texture) and NEXRAD (a rotating radar sweep, not a static sky) by being
+   built around a genuinely sparse, gently-twinkling star field rather
+   than a beam, glow, or scanline effect — the one visual motif no other
+   theme here uses. */
+[data-theme="migration"] {
+  color-scheme: dark;
+  --accent-50:  #fefaf0; --accent-100: #fbf0d4; --accent-200: #f8e3ac;
+  --accent-300: #f6d998; --accent-400: #f4d58d; --accent-500: #ecc363;
+  --accent-600: #d1a63f; --accent-700: #a3812f; --accent-800: #755c22;
+  --accent-900: #4a3a15;
+  --accent-500-rgb: 236 195 99;
+  --s950: #02040a; --s900: #050a16; --s800: #0a1424;
+  --s700: #142238; --s600: #21334e; --s500: #34496b;
+  --s400: #6f88a8; --s300: #a9bcd6;
+  --bg-base:   #04060d;
+  --bg-panel:  #070b16;
+  --bg-card:   #0b101e;
+  --bg-raised: #121a2c;
+  --border-subtle: rgba(244,213,141,.14);
+  --border-default: rgba(244,213,141,.28);
+  --border-focus:  rgba(244,213,141,.7);
+  --text-primary:   #eef2fb;
+  --text-secondary: #9fb0cc;
+  --text-tertiary:  #55617d;
+  --glow-color: rgba(244,213,141,.3);
+  --nav-active-bg: rgba(244,213,141,.12);
+  --nav-active-text: #f4d58d;
+  --gradient-hero: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(244,213,141,.08), transparent 70%);
+  --radius-card: 14px;
+  --shadow-card: 0 0 1px rgba(244,213,141,.1), 0 0 20px rgba(244,213,141,.04);
+  --shadow-card-hover: 0 0 1px rgba(244,213,141,.26), 0 0 32px rgba(244,213,141,.13);
+  --radius-btn: 10px;
+  --btn-primary-text: #04060d;
+}
+[data-theme="migration"] body::before { display: none; }
+[data-theme="migration"] body::after {
+  /* Sparse fixed star field with a slow, gentle twinkle — real night sky
+     density, not a dense "space background" effect. */
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(1.4px 1.4px at 8% 12%, #eef2fb 100%, transparent),
+    radial-gradient(1px 1px at 18% 34%, #cdd8ef 100%, transparent),
+    radial-gradient(1.6px 1.6px at 27% 8%, #f4d58d 100%, transparent),
+    radial-gradient(1px 1px at 39% 61%, #eef2fb 100%, transparent),
+    radial-gradient(1.2px 1.2px at 52% 22%, #cdd8ef 100%, transparent),
+    radial-gradient(1px 1px at 61% 78%, #eef2fb 100%, transparent),
+    radial-gradient(1.5px 1.5px at 71% 41%, #f4d58d 100%, transparent),
+    radial-gradient(1px 1px at 83% 15%, #cdd8ef 100%, transparent),
+    radial-gradient(1.3px 1.3px at 91% 66%, #eef2fb 100%, transparent),
+    radial-gradient(1px 1px at 12% 84%, #cdd8ef 100%, transparent),
+    radial-gradient(1.4px 1.4px at 46% 92%, #eef2fb 100%, transparent),
+    radial-gradient(1px 1px at 68% 95%, #f4d58d 100%, transparent);
+  background-repeat: no-repeat;
+  animation: migrationTwinkle 5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 40;
+}
+@keyframes migrationTwinkle { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+[data-theme="migration"] .card-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-card-hover);
+}
+[data-theme="migration"] h1, [data-theme="migration"] h2, [data-theme="migration"] h3 {
+  text-shadow: 0 0 10px rgba(244,213,141,.2);
+}
+[data-theme="migration"] .stat-value {
+  text-shadow: 0 0 14px rgba(244,213,141,.3);
+}
+
+/* ── Theme: Roost (warm wood-grain birdhouse — a little bird hops) ──
+   Reference point: a real wooden birdhouse/nest box — warm varnished-wood
+   tones, a genuine subtle wood-grain texture (not decoration for its own
+   sake — it's the one tactile-material theme in this set that isn't
+   paper), and an actual small bird silhouette that periodically hops in
+   the corner of the screen. Distinct from every paper/print theme (Paper,
+   Plate, Aviary, Cornell, Field Notebook) by being built around wood, not
+   paper, and by having a literal animated character rather than a static
+   illustration style. */
+[data-theme="roost"] {
+  color-scheme: dark;
+  --accent-50:  #fdf3e7; --accent-100: #fae0c0; --accent-200: #f5c98f;
+  --accent-300: #eeaf5c; --accent-400: #e0983e; --accent-500: #c9812f;
+  --accent-600: #a8681f; --accent-700: #7f4e18; --accent-800: #593611;
+  --accent-900: #38220a;
+  --accent-500-rgb: 201 129 47;
+  --s950: #0d0805; --s900: #140d07; --s800: #1e140b;
+  --s700: #2b1d10; --s600: #3d2a17; --s500: #573c22;
+  --s400: #8a6741; --s300: #bd9a6f;
+  --bg-base:   #100a05;
+  --bg-panel:  #17100a;
+  --bg-card:   #1e150d;
+  --bg-raised: #291d11;
+  --border-subtle: rgba(201,129,47,.16);
+  --border-default: rgba(201,129,47,.3);
+  --border-focus:  rgba(224,152,62,.75);
+  --text-primary:   #f5e8d3;
+  --text-secondary: #c9a877;
+  --text-tertiary:  #7a6142;
+  --glow-color: rgba(201,129,47,.32);
+  --nav-active-bg: rgba(201,129,47,.14);
+  --nav-active-text: #e0983e;
+  --gradient-hero: radial-gradient(ellipse 85% 65% at 50% 0%, rgba(201,129,47,.12), transparent 70%);
+  --radius-card: 12px;
+  --shadow-card: inset 0 0 0 1px rgba(201,129,47,.1), 0 0 16px rgba(201,129,47,.04);
+  --shadow-card-hover: inset 0 0 0 1px rgba(224,152,62,.24), 0 0 26px rgba(224,152,62,.14);
+  --radius-btn: 9px;
+  --btn-primary-text: #100a05;
+}
+[data-theme="roost"] body::before {
+  /* Real wood-grain — subtle diagonal banding, the way varnished wood
+     actually reads, not a generic noise texture. */
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    98deg,
+    rgba(0,0,0,.10) 0px, rgba(0,0,0,.10) 2px,
+    transparent 2px, transparent 7px,
+    rgba(255,255,255,.03) 7px, rgba(255,255,255,.03) 9px,
+    transparent 9px, transparent 26px
+  );
+  pointer-events: none;
+  z-index: 5;
+  opacity: .6;
+}
+[data-theme="roost"] body::after {
+  /* A small bird silhouette that hops in the bottom-right corner every
+     few seconds — a real character, not an abstract effect. Staccato
+     keyframe stops (rather than a smooth sine ease) give it an actual
+     hop-hop-pause rhythm instead of a floaty bounce. */
+  content: '';
+  position: fixed;
+  right: 22px;
+  bottom: 18px;
+  width: 26px;
+  height: 22px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 14c0-3 2.5-5 5.5-5 1 0 2 .3 2.5 1 1-2.5 3.5-4 6-3.5-.5-1-1.5-1.5-2.5-1.5 2-1 4.5-.5 5.5 1.5.5 1 .5 2 0 3 1.5.5 2 2 1.5 3.5-2 .5-3.5 0-4.5-1-.5 2-2.5 3.5-5 3.5-3.5 0-6-2-9-1.5z' fill='%23e0983e'/%3E%3Ccircle cx='7' cy='11.5' r='1' fill='%23100a05'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+  z-index: 40;
+  animation: roostHop 4s cubic-bezier(.34,1.8,.64,1) infinite;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,.4));
+}
+@keyframes roostHop {
+  0%, 55%, 100% { transform: translateY(0) rotate(0deg); }
+  62% { transform: translateY(-9px) rotate(-6deg); }
+  70% { transform: translateY(0) rotate(3deg); }
+  76% { transform: translateY(-4px) rotate(-3deg); }
+  82%, 100% { transform: translateY(0) rotate(0deg); }
+}
+[data-theme="roost"] .card-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-card-hover);
+}
+[data-theme="roost"] h1, [data-theme="roost"] h2, [data-theme="roost"] h3 {
+  text-shadow: 0 1px 2px rgba(0,0,0,.4);
+}
+
+/* ── Theme: Echo Cave (rough stone — a bat pings real sonar rings) ──
+   Reference point: a real bat roost — a cave or hollow, rough mottled
+   stone rather than a smooth gradient, and an actual bat silhouette that
+   periodically echolocates: a brief wing-fold flap immediately followed
+   by expanding concentric rings that fade outward, exactly how sonar/echo
+   visualizations depict a real echolocation pulse. This is the
+   tactile/animated counterpart to Roost, built around stone instead of
+   wood and around Chirp's bat-detection side instead of its bird side. */
+[data-theme="echocave"] {
+  color-scheme: dark;
+  --accent-50:  #eafbfa; --accent-100: #c8f3f0; --accent-200: #96e6e0;
+  --accent-300: #63d4cb; --accent-400: #3fc0b6; --accent-500: #29a89e;
+  --accent-600: #1f8880; --accent-700: #196a64; --accent-800: #124b47;
+  --accent-900: #0b302d;
+  --accent-500-rgb: 41 168 158;
+  --s950: #05070a; --s900: #090d12; --s800: #0f151c;
+  --s700: #17212b; --s600: #22323f; --s500: #35505f;
+  --s400: #6d909e; --s300: #a6c1cb;
+  --bg-base:   #06080b;
+  --bg-panel:  #0a0d12;
+  --bg-card:   #0e131a;
+  --bg-raised: #151d26;
+  --border-subtle: rgba(41,168,158,.15);
+  --border-default: rgba(41,168,158,.28);
+  --border-focus:  rgba(63,192,182,.72);
+  --text-primary:   #dde9e8;
+  --text-secondary: #8fb5b0;
+  --text-tertiary:  #4c6b67;
+  --glow-color: rgba(41,168,158,.3);
+  --nav-active-bg: rgba(41,168,158,.13);
+  --nav-active-text: #3fc0b6;
+  --gradient-hero: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(41,168,158,.1), transparent 70%);
+  --radius-card: 8px;
+  --shadow-card: inset 0 0 0 1px rgba(41,168,158,.09), 0 0 16px rgba(41,168,158,.04);
+  --shadow-card-hover: inset 0 0 0 1px rgba(63,192,182,.22), 0 0 26px rgba(63,192,182,.13);
+  --radius-btn: 7px;
+  --btn-primary-text: #06080b;
+}
+[data-theme="echocave"] body::before {
+  /* Rough mottled stone — irregular soft patches, not a smooth gradient
+     or repeating pattern, the way real cave rock actually looks. */
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(ellipse 40% 30% at 15% 20%, rgba(255,255,255,.025), transparent 60%),
+    radial-gradient(ellipse 30% 45% at 80% 15%, rgba(0,0,0,.14), transparent 65%),
+    radial-gradient(ellipse 50% 35% at 60% 70%, rgba(255,255,255,.02), transparent 60%),
+    radial-gradient(ellipse 35% 40% at 25% 85%, rgba(0,0,0,.12), transparent 65%),
+    radial-gradient(ellipse 45% 30% at 90% 60%, rgba(0,0,0,.1), transparent 60%);
+  pointer-events: none;
+  z-index: 5;
+}
+[data-theme="echocave"] body::after {
+  /* The bat: a brief wing-fold flap, then two expanding sonar rings that
+     fade outward — a real echolocation pulse, not a generic pulse/glow
+     effect. Rings are built from radial-gradient "donut" shapes that
+     scale up while fading, the standard CSS sonar-ping technique, timed
+     to fire right after the flap. */
+  content: '';
+  position: fixed;
+  right: 26px;
+  top: 20px;
+  width: 22px;
+  height: 18px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 8c-1.5-2.5-4-3-5.5-1.5C5 8 5.5 10.5 8 12c-2 0-3.5 1-4 2.5 2 .5 3.5 0 4.5-1 .3 1 1.5 2 3.5 2s3.2-1 3.5-2c1 1 2.5 1.5 4.5 1 -.5-1.5-2-2.5-4-2.5 2.5-1.5 3-4 1.5-5.5C16 5 13.5 5.5 12 8z' fill='%233fc0b6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+  z-index: 40;
+  transform-origin: center;
+  animation: echoFlap 4.5s ease-in-out infinite;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.5));
+}
+@keyframes echoFlap {
+  0%, 40%, 100% { transform: scaleX(1); }
+  44% { transform: scaleX(.72); }
+  48% { transform: scaleX(1); }
+  52% { transform: scaleX(.8); }
+  56%, 100% { transform: scaleX(1); }
+}
+[data-theme="echocave"] .card::before,
+[data-theme="echocave"] .card-hover::before {
+  content: none;
+}
+[data-theme="echocave"] .card-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-card-hover);
+}
+[data-theme="echocave"] h1, [data-theme="echocave"] h2, [data-theme="echocave"] h3 {
+  text-shadow: 0 0 10px rgba(63,192,182,.22);
+}
+/* Expanding sonar rings, centered on the bat icon itself (body::after is
+   a small 22×18 box at the bat's fixed position, not the full viewport —
+   box-shadow spreads from that element's own edges, so this genuinely
+   rings outward from the bat, not from the screen). Runs as a second
+   animation alongside echoFlap on the same element — comma-separated
+   animations apply concurrently to one element in CSS, no extra DOM
+   needed. Timed to start right as the flap finishes. */
+[data-theme="echocave"] body::after {
+  animation: echoFlap 4.5s ease-in-out infinite, echoRings 4.5s ease-out infinite;
+}
+@keyframes echoRings {
+  0%, 56% { box-shadow: 0 0 0 0 rgba(63,192,182,0); }
+  62% { box-shadow: 0 0 0 6px rgba(63,192,182,.3), 0 0 0 0 rgba(63,192,182,0); }
+  75% { box-shadow: 0 0 0 16px rgba(63,192,182,.12), 0 0 0 8px rgba(63,192,182,.2); }
+  90%, 100% { box-shadow: 0 0 0 26px rgba(63,192,182,0), 0 0 0 16px rgba(63,192,182,0); }
+}
+
+/* ── Light-theme fix: Tailwind's text-gray-200 utility (a light grey,
+   rgb(229 231 235)) is hardcoded directly in JSX across 32 call sites in
+   7 component files (Settings, RecordingDetail, BirdProfile, Devices,
+   ManualUpload, LikelyBirds, GeomodelDownloadPanel) — almost always for
+   card/section titles and emphasized labels. It reads fine against the
+   app's original dark-themed defaults, but is illegible-to-faint against
+   any light theme's bright background. Rather than touch all 32 JSX call
+   sites (real risk of introducing a subtle JSX error across 7 files for
+   a purely cosmetic fix), override what the utility class resolves to
+   within each light theme's scope. The attribute+class selector below
+   (specificity 0,2,0) naturally wins over Tailwind's own single-class
+   rule (0,1,0) without needing !important — confirmed against the
+   actual built CSS rather than assumed. Covers every current light
+   theme (Paper, Plate, Aviary, Cornell Lab, Field Notebook); any future
+   light theme should be added to this selector list too. */
+/* ── Light-theme fix: several Tailwind grey-text utilities are hardcoded
+   directly in JSX across many call sites (text-gray-200 through -500,
+   320+ occurrences combined across 7+ component files) — almost always
+   for card/section titles, emphasized labels, and secondary text. They
+   read fine against the app's original dark-themed defaults, but
+   computed WCAG contrast ratios against actual light-theme card
+   backgrounds confirm -200/-300/-400 fail outright (1.1–2.4:1, requires
+   3:1 minimum even for large text) and -500 is marginal (4.2–4.6:1,
+   borderline against the 4.5:1 AA threshold for normal text) — not
+   eyeballed, computed directly from each shade's real RGB and each
+   theme's real card background. -600 and darker already pass
+   comfortably (6.6:1+) and are left alone. Rather than touch every JSX
+   call site (real risk of introducing a subtle JSX error across many
+   files for a purely cosmetic fix), override what each utility class
+   resolves to within each light theme's scope. The attribute+class
+   selector below (specificity 0,2,0) naturally wins over Tailwind's own
+   single-class rule (0,1,0) without needing !important — confirmed
+   against the actual built CSS rather than assumed. Covers every
+   current light theme (Paper, Plate, Aviary, Cornell Lab, Field
+   Notebook); any future light theme should be added to this list too. */
+[data-theme="paper"] .text-gray-100, [data-theme="paper"] .text-gray-200, [data-theme="paper"] .text-gray-300,
+[data-theme="paper"] .text-gray-400,
+[data-theme="plate"] .text-gray-100, [data-theme="plate"] .text-gray-200, [data-theme="plate"] .text-gray-300,
+[data-theme="plate"] .text-gray-400,
+[data-theme="aviary"] .text-gray-100, [data-theme="aviary"] .text-gray-200, [data-theme="aviary"] .text-gray-300,
+[data-theme="aviary"] .text-gray-400,
+[data-theme="cornell"] .text-gray-100, [data-theme="cornell"] .text-gray-200, [data-theme="cornell"] .text-gray-300,
+[data-theme="cornell"] .text-gray-400,
+[data-theme="fieldnotebook"] .text-gray-100, [data-theme="fieldnotebook"] .text-gray-200, [data-theme="fieldnotebook"] .text-gray-300,
+[data-theme="fieldnotebook"] .text-gray-400 {
+  color: var(--text-primary);
+}
+[data-theme="paper"] .text-gray-500,
+[data-theme="plate"] .text-gray-500,
+[data-theme="aviary"] .text-gray-500,
+[data-theme="cornell"] .text-gray-500,
+[data-theme="fieldnotebook"] .text-gray-500 {
+  color: var(--text-secondary);
+}
+
+/* ── Light-theme fix: confidence-label text (e.g. "86% High" on a
+   detection card) used fixed Tailwind utility colors — text-chirp-400
+   (a hardcoded yellow, #facc15), text-cyan-400, and text-yellow-400 —
+   none theme-aware. Computed contrast against light-theme backgrounds:
+   1.25–1.71:1, all failing far below even the 3:1 minimum for large
+   text. Mapped each confidence tier to that theme's own accent-600 (the
+   same darker, light-background-safe tier already used elsewhere, e.g.
+   LifeList.jsx/RegionalLibrary.jsx) for the high tier, and to
+   --text-secondary for the medium/low tiers, since this theme system has
+   no separate blue/amber semantic scale to draw from — using
+   --text-secondary keeps them legible without inventing a new variable
+   that would need defining across every theme file for one label. */
+[data-theme="paper"] .text-chirp-400, [data-theme="paper"] .text-cyan-400, [data-theme="paper"] .text-yellow-400,
+[data-theme="plate"] .text-chirp-400, [data-theme="plate"] .text-cyan-400, [data-theme="plate"] .text-yellow-400,
+[data-theme="aviary"] .text-chirp-400, [data-theme="aviary"] .text-cyan-400, [data-theme="aviary"] .text-yellow-400,
+[data-theme="cornell"] .text-chirp-400, [data-theme="cornell"] .text-cyan-400, [data-theme="cornell"] .text-yellow-400,
+[data-theme="fieldnotebook"] .text-chirp-400, [data-theme="fieldnotebook"] .text-cyan-400, [data-theme="fieldnotebook"] .text-yellow-400 {
+  color: var(--text-secondary);
+}
+[data-theme="paper"] .text-chirp-400,
+[data-theme="plate"] .text-chirp-400,
+[data-theme="aviary"] .text-chirp-400,
+[data-theme="cornell"] .text-chirp-400,
+[data-theme="fieldnotebook"] .text-chirp-400 {
+  color: var(--accent-600);
+}
+
+/* ── Light-theme fix: the badge-X utility classes (badge-green,
+   badge-blue, badge-purple, badge-yellow, badge-red, badge-teal) all use
+   light pastel text colors meant for a dark card background — computed
+   contrast against light-theme backgrounds: 1.0–1.5:1, failing as badly
+   as every other case in this block. Confirmed the ORIGINAL colors are
+   genuinely good against the default dark theme (8.4–12:1), so they're
+   correctly left untouched there — this only overrides them for light
+   themes, using each color family's 700-shade tier, individually
+   verified via the same WCAG math to pass 4.5:1+ against Cornell's cream
+   (the lightest of the five light themes, so the others pass with more
+   margin still). badge-gray and badge-accent already use theme
+   variables and need no fix. */
+[data-theme="paper"] .badge-green, [data-theme="plate"] .badge-green,
+[data-theme="aviary"] .badge-green, [data-theme="cornell"] .badge-green,
+[data-theme="fieldnotebook"] .badge-green {
+  color: #15803d;
+}
+[data-theme="paper"] .badge-blue, [data-theme="plate"] .badge-blue,
+[data-theme="aviary"] .badge-blue, [data-theme="cornell"] .badge-blue,
+[data-theme="fieldnotebook"] .badge-blue {
+  color: #1d4ed8;
+}
+[data-theme="paper"] .badge-purple, [data-theme="plate"] .badge-purple,
+[data-theme="aviary"] .badge-purple, [data-theme="cornell"] .badge-purple,
+[data-theme="fieldnotebook"] .badge-purple {
+  color: #7e22ce;
+}
+[data-theme="paper"] .badge-yellow, [data-theme="plate"] .badge-yellow,
+[data-theme="aviary"] .badge-yellow, [data-theme="cornell"] .badge-yellow,
+[data-theme="fieldnotebook"] .badge-yellow {
+  color: #a16207;
+}
+[data-theme="paper"] .badge-red, [data-theme="plate"] .badge-red,
+[data-theme="aviary"] .badge-red, [data-theme="cornell"] .badge-red,
+[data-theme="fieldnotebook"] .badge-red {
+  color: #b91c1c;
+}
+[data-theme="paper"] .badge-teal, [data-theme="plate"] .badge-teal,
+[data-theme="aviary"] .badge-teal, [data-theme="cornell"] .badge-teal,
+[data-theme="fieldnotebook"] .badge-teal {
+  color: #0f766e;
+}
+
+/* ── Light-theme fix: override the 8 shared pastel-text variables
+   (defined in :root above) to a darker tier for the 5 light themes —
+   each individually verified via the same WCAG math to pass 4.5:1+
+   against Cornell's cream (the lightest of the five, so the others pass
+   with more margin). This is the single fix point for all 56 inline
+   style={{ color: '#86efac' }}-style occurrences across 16 component
+   files, found via a full sweep after the BirdProfile.jsx/
+   RecordingDetail.jsx/InatSubmitButton.jsx fixes turned out to be one
+   instance of a much larger pattern. */
+[data-theme="paper"], [data-theme="plate"], [data-theme="aviary"],
+[data-theme="cornell"], [data-theme="fieldnotebook"] {
+  --pastel-green:       #15803d;
+  --pastel-blue:        #1d4ed8;
+  --pastel-sky:         #0369a1;
+  --pastel-amber:       #a16207;
+  --pastel-amber-light: #92400e;
+  --pastel-amber-soft:  #92400e;
+  --pastel-yellow:      #a16207;
+  --pastel-red:         #b91c1c;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BASE
+═══════════════════════════════════════════════════════════════ */
+@layer base {
+  html { color-scheme: dark; }
+
+  body {
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100dvh;
+  }
+
+  /* Grain texture overlay on body */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 40;
+    opacity: 0.6;
+  }
+
+  * { border-color: var(--border-subtle); }
+
+  ::-webkit-scrollbar        { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track  { background: transparent; }
+  ::-webkit-scrollbar-thumb  { background: var(--s600); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--s500); }
+
+  *:focus-visible {
+    outline: 2px solid var(--accent-500);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  h1, h2, h3 { font-family: 'Lora', Georgia, serif; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   COMPONENTS
+═══════════════════════════════════════════════════════════════ */
+@layer components {
+
+  /* ── Cards ─────────────────────────────────────────────────── */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+  }
+
+  .card-hover {
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    transition: border-color 200ms ease, box-shadow 200ms ease, transform 150ms ease;
+  }
+  .card-hover:hover {
+    border-color: var(--border-focus);
+    box-shadow: var(--shadow-card-hover), 0 0 0 1px var(--border-default), var(--shadow-glow, 0 0 20px var(--glow-color));
+    transform: translateY(-2px);
+  }
+  /* Real press feedback — previously :hover was the only state, which never
+     fires on touch devices, so tapping a card on mobile gave zero feedback
+     at all. A quick scale-down on press (works for both mouse and touch)
+     plus a faster transition so it feels immediate, not laggy. */
+  .card-hover:active {
+    transform: translateY(0) scale(0.98);
+    transition: transform 80ms ease;
+  }
+
+  .card-glass {
+    background: rgba(0,0,0,.4);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-card);
+  }
+
+  .card-raised {
+    background: var(--bg-raised);
+    border: 1px solid var(--border-default);
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.3);
+  }
+
+  /* ── Buttons ───────────────────────────────────────────────────
+     Tactile system: every variant gets (1) a subtle inset top-highlight
+     so it reads as a raised surface, (2) a hover lift, (3) an active
+     state that both scales down AND drops the highlight/shadow so the
+     button visibly "depresses" rather than just shrinking, (4) a
+     focus-visible ring for keyboard users, (5) a faster active
+     transition than hover so presses feel instant. */
+  .btn-primary, .btn-secondary, .btn-ghost, .btn-danger, .btn-icon {
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 150ms cubic-bezier(.2,.9,.3,1), box-shadow 150ms ease, background 150ms ease, border-color 150ms ease, color 150ms ease;
+  }
+  .btn-primary:focus-visible, .btn-secondary:focus-visible, .btn-ghost:focus-visible,
+  .btn-danger:focus-visible, .btn-icon:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
+
+  .btn-primary {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 6px; padding: 9px 18px;
+    background: var(--accent-500);
+    color: var(--btn-primary-text, #000);
+    font-size: 13.5px; font-weight: 600; font-family: 'DM Sans', sans-serif;
+    border-radius: var(--radius-btn, 10px); border: none;
+    cursor: pointer; white-space: nowrap;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 1px 3px rgba(0,0,0,.3), 0 0 16px var(--glow-color);
+  }
+  .btn-primary:hover {
+    background: var(--accent-400);
+    transform: translateY(-1px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 3px 10px rgba(0,0,0,.35), 0 0 24px var(--glow-color);
+  }
+  .btn-primary:active {
+    transform: translateY(0) scale(0.96);
+    transition: transform 80ms ease, box-shadow 80ms ease;
+    box-shadow: inset 0 1px 4px rgba(0,0,0,.35), 0 0 10px var(--glow-color);
+  }
+  .btn-primary:disabled { opacity: .4; pointer-events: none; box-shadow: none; }
+
+  .btn-secondary {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 6px; padding: 8px 16px;
+    background: var(--bg-raised);
+    color: var(--text-primary);
+    font-size: 13.5px; font-weight: 500; font-family: 'DM Sans', sans-serif;
+    border-radius: var(--radius-btn, 10px);
+    border: 1px solid var(--border-default);
+    cursor: pointer; white-space: nowrap;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 1px 2px rgba(0,0,0,.2);
+  }
+  .btn-secondary:hover {
+    background: var(--s700);
+    border-color: var(--border-focus);
+    transform: translateY(-1px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 2px 6px rgba(0,0,0,.25);
+  }
+  .btn-secondary:active {
+    transform: translateY(0) scale(0.96);
+    transition: transform 80ms ease, box-shadow 80ms ease;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,.3);
+  }
+  .btn-secondary:disabled { opacity: .4; pointer-events: none; box-shadow: none; }
+
+  .btn-ghost {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 6px; padding: 7px 12px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 13px; font-weight: 500;
+    border-radius: 8px; border: 1px solid transparent;
+    cursor: pointer;
+  }
+  .btn-ghost:hover {
+    background: var(--bg-raised);
+    color: var(--text-primary);
+    border-color: var(--border-subtle);
+  }
+  .btn-ghost:active {
+    transform: scale(0.95);
+    transition: transform 80ms ease;
+    background: var(--s700);
+  }
+  .btn-ghost:disabled { opacity: .4; pointer-events: none; }
+
+  .btn-danger {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 6px; padding: 8px 16px;
+    background: rgba(239,68,68,.1);
+    color: #fca5a5;
+    font-size: 13.5px; font-weight: 500;
+    border-radius: 10px;
+    border: 1px solid rgba(239,68,68,.25);
+    cursor: pointer;
+  }
+  .btn-danger:hover {
+    background: rgba(239,68,68,.2);
+    border-color: rgba(239,68,68,.4);
+    transform: translateY(-1px);
+  }
+  .btn-danger:active {
+    transform: translateY(0) scale(0.96);
+    transition: transform 80ms ease;
+    background: rgba(239,68,68,.28);
+  }
+  .btn-danger:disabled { opacity: .4; pointer-events: none; }
+
+  .btn-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px;
+    background: var(--bg-raised);
+    border: 1px solid var(--border-default);
+    border-radius: 8px; cursor: pointer;
+    color: var(--text-secondary);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  .btn-icon:hover {
+    color: var(--text-primary);
+    border-color: var(--border-focus);
+    transform: translateY(-1px);
+  }
+  .btn-icon:active {
+    transform: translateY(0) scale(0.90);
+    transition: transform 80ms ease;
+    background: var(--s700);
+  }
+  .btn-icon:disabled { opacity: .4; pointer-events: none; }
+
+  /* ── Inputs ────────────────────────────────────────────────── */
+  .input {
+    width: 100%;
+    background: var(--bg-raised);
+    border: 1px solid var(--border-default);
+    color: var(--text-primary);
+    border-radius: var(--radius-btn, 10px);
+    padding: 9px 14px;
+    font-size: 16px;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 150ms ease;
+    outline: none;
+  }
+  .input::placeholder { color: var(--text-tertiary); }
+  .input:focus {
+    border-color: var(--border-focus);
+    background: var(--bg-card);
+    box-shadow: 0 0 0 3px rgba(var(--accent-500-rgb, 234 179 8), .08);
+  }
+  .input:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* Date and time pickers: iOS (Safari and the app) gives these a native
+     minimum width and centered text, so in a narrow card they ran past the
+     right edge. Let them shrink to the container and read left-aligned. */
+  input[type="date"], input[type="datetime-local"], input[type="time"], input[type="month"] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 2.6em;
+    text-align: left;
+  }
+  input[type="date"]::-webkit-date-and-time-value,
+  input[type="datetime-local"]::-webkit-date-and-time-value,
+  input[type="time"]::-webkit-date-and-time-value,
+  input[type="month"]::-webkit-date-and-time-value { text-align: left; margin: 0; }
+
+  select.input { cursor: pointer; }
+  select.input option { background: var(--bg-card); }
+
+  /* ── Badges ────────────────────────────────────────────────── */
+  .badge {
+    display: inline-flex; align-items: center;
+    padding: 2px 8px; border-radius: 999px;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: .03em; white-space: nowrap;
+  }
+  .badge-accent  { background: rgba(var(--accent-rgb, 234 179 8), .15); color: var(--accent-300); border: 1px solid var(--border-default); }
+  .badge-green   { background: rgba(34,197,94,.12);   color: #86efac; border: 1px solid rgba(34,197,94,.2); }
+  .badge-blue    { background: rgba(59,130,246,.12);  color: #93c5fd; border: 1px solid rgba(59,130,246,.2); }
+  .badge-purple  { background: rgba(168,85,247,.12);  color: #d8b4fe; border: 1px solid rgba(168,85,247,.2); }
+  .badge-yellow  { background: rgba(234,179,8,.12);   color: #fde047; border: 1px solid rgba(234,179,8,.2); }
+  .badge-red     { background: rgba(239,68,68,.12);   color: #fca5a5; border: 1px solid rgba(239,68,68,.2); }
+  .badge-gray    { background: var(--bg-raised);      color: var(--text-secondary); border: 1px solid var(--border-default); }
+  .badge-teal    { background: rgba(20,184,166,.12);  color: #5eead4; border: 1px solid rgba(20,184,166,.2); }
+
+  /* ── Toggle ────────────────────────────────────────────────── */
+  .toggle {
+    appearance: none; -webkit-appearance: none;
+    width: 38px; height: 21px;
+    border-radius: 999px;
+    background: var(--s600);
+    border: 1px solid var(--border-default);
+    cursor: pointer; position: relative; flex-shrink: 0;
+    transition: background 200ms, border-color 200ms;
+  }
+  .toggle::before {
+    content: '';
+    position: absolute;
+    width: 15px; height: 15px;
+    border-radius: 50%;
+    background: var(--text-secondary);
+    top: 2px; left: 2px;
+    transition: transform 200ms cubic-bezier(.34,1.56,.64,1), background 200ms;
+  }
+  .toggle:checked { background: var(--accent-500); border-color: var(--accent-500); }
+  .toggle:checked::before { background: #000; transform: translateX(17px); }
+  .toggle:active::before { width: 18px; transition: width 80ms ease; }
+  .toggle:checked:active::before { transform: translateX(14px); }
+
+  /* ── Navigation ────────────────────────────────────────────── */
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 10px;
+    font-size: 13.5px; font-weight: 500;
+    text-decoration: none; transition: all 150ms ease;
+    color: var(--text-secondary);
+    border: 1px solid transparent;
+  }
+  .nav-item:active {
+    transform: scale(0.97);
+    transition: transform 80ms ease;
+  }
+  .nav-item:hover {
+    background: var(--bg-raised);
+    color: var(--text-primary);
+    border-color: var(--border-subtle);
+  }
+  .nav-item.active {
+    background: var(--nav-active-bg);
+    color: var(--nav-active-text);
+    border-color: var(--border-default);
+    box-shadow: 0 0 0 1px var(--border-default), 0 0 14px var(--glow-color, transparent);
+  }
+
+  /* ── Stat card ─────────────────────────────────────────────── */
+  .stat-value { font-size: 32px; font-weight: 700; color: var(--accent-400); line-height: 1; font-family: 'Lora', serif; letter-spacing: -0.01em; }
+  .stat-label { font-size: 11px; color: var(--text-tertiary); margin-top: 5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; }
+
+  /* Tactile depth for Dashboard stat tiles specifically — a soft inner
+     top highlight plus a touch more shadow than the base .card, giving a
+     subtle "raised tile" feel without changing .card globally (used
+     everywhere else in the app unchanged). */
+  .stat-tile {
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  .stat-tile:hover {
+    box-shadow: var(--shadow-card-hover), inset 0 1px 0 rgba(255,255,255,.06), 0 0 0 1px var(--border-default);
+  }
+  .stat-tile::after {
+    content: '';
+    position: absolute;
+    left: 18px; right: 18px; bottom: 0;
+    height: 2px; border-radius: 2px 2px 0 0;
+    background: var(--tint-color, var(--accent-500));
+    opacity: .85;
+    transform: scaleX(0); transform-origin: left;
+    transition: transform 280ms cubic-bezier(.2,.9,.3,1);
+  }
+  .stat-tile:hover::after { transform: scaleX(1); }
+
+  /* ── Generic press feedback ─────────────────────────────────────
+     For one-off pill/filter buttons that carry bespoke per-item inline
+     colors (season tint, medal tint, etc.) and so can't just adopt
+     .seg-btn wholesale — this adds the same tactile scale-down without
+     touching their existing color logic. */
+  .tactile-press:active {
+    transform: scale(0.94);
+    transition: transform 80ms ease;
+  }
+
+  /* ── Segmented control button (view-mode toggles, etc.) ────────
+     Reusable so every grid/list-style or period-style toggle in the
+     app can share one definition instead of each screen re-deriving
+     its own inline active/inactive style object. */
+  .seg-btn {
+    height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg-raised);
+    color: var(--text-tertiary);
+    border: none; cursor: pointer;
+    transition: background 150ms ease, color 150ms ease;
+  }
+  .seg-btn:hover { color: var(--text-secondary); }
+  .seg-btn.active {
+    background: var(--nav-active-bg);
+    color: var(--nav-active-text);
+  }
+  .seg-btn:active { transform: scale(0.94); transition: transform 80ms ease; }
+
+  /* ── List row (compact recordings list, etc.) ─────────────────
+     Was previously driven by onMouseEnter/onMouseLeave JS mutating
+     inline style.background directly — worked for mouse but gave
+     zero feedback on touch and mixed imperative style-mutation into
+     otherwise-declarative JSX. Plain CSS gets both mouse and touch
+     (:active) for free. */
+  .list-row {
+    display: flex;
+    background: var(--bg-card);
+    transition: background 120ms ease;
+  }
+  .list-row:hover { background: var(--bg-raised); }
+  .list-row:active { background: var(--s700); transition: background 60ms ease; }
+
+  /* ── Section header ────────────────────────────────────────── */
+  .section-title {
+    font-family: 'Lora', Georgia, serif;
+    font-size: 20px; font-weight: 600;
+    color: var(--text-primary);
+  }
+  .section-subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+
+  /* ── Skeleton shimmer ──────────────────────────────────────── */
+  /* Real, pre-existing bug found while testing a new skeleton screen
+     (Dashboard's loading state): this rule references the `shimmer`
+     keyframe by name, but Tailwind's JIT only emits an animation's
+     @keyframes block when the corresponding utility class
+     (`animate-shimmer`) is actually detected in scanned JSX content —
+     and nothing in this app ever applies that class; every .skeleton
+     element just uses this hand-written CSS rule directly instead.
+     Result: @keyframes shimmer never made it into the compiled
+     stylesheet at all, so EVERY skeleton loader across the whole app
+     (LifeList, RecordingsList, Comments, AllNotes, BirdProfile,
+     HaikuboxDetections, and now Dashboard) has been rendering as a
+     static gradient block with zero shimmer motion, this whole time —
+     confirmed directly: grepping the built dist/*.css found no
+     "@keyframes shimmer" anywhere, and a headless-browser check showed
+     background-position never changing over time. Defining the
+     keyframes explicitly here, rather than relying on Tailwind's
+     utility-detection to emit them, fixes it for every one of those
+     pages at once and doesn't depend on any component ever applying an
+     `animate-shimmer` className it currently doesn't. */
+  @keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .skeleton {
+    background: linear-gradient(90deg, var(--s800) 25%, var(--s700) 50%, var(--s800) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.8s linear infinite;
+    border-radius: 6px;
+  }
+
+  /* ── Live indicator ────────────────────────────────────────── */
+  .live-dot { animation: livePulse 2s ease-in-out infinite; }
+
+  /* ── Confidence bar ────────────────────────────────────────── */
+  .confidence-bar { background: linear-gradient(90deg, var(--accent-500), var(--accent-300)); border-radius: 999px; }
+
+  /* ── Page wrapper ──────────────────────────────────────────── */
+  .page-root {
+    padding: 28px 28px 80px;
+    animation: fadeIn .22s ease-out both;
+  }
+  @media (max-width: 640px) { .page-root { padding: 20px 16px 72px; } }
+
+  .tutorial-progress-bar { margin-left: -28px; margin-right: -28px; }
+  @media (max-width: 640px) { .tutorial-progress-bar { margin-left: -16px; margin-right: -16px; } }
+
+  /* ── Hero gradient ─────────────────────────────────────────── */
+  .page-hero {
+    background: var(--gradient-hero);
+    margin: -28px -28px 24px;
+    padding: 32px 28px 24px;
+  }
+  /* .page-root's own padding switches to 16px horizontal on mobile
+     (max-width: 640px, see above) but this negative margin was still
+     hardcoded to the desktop 28px value with no matching override —
+     confirmed real cause of a reported persistent mobile horizontal
+     scroll, since this hero renders on every page load, not just
+     conditionally. Match page-root's mobile horizontal value exactly so
+     the bleed-to-edge effect lands flush with the real viewport edge
+     instead of 12px past it on each side. */
+  @media (max-width: 640px) {
+    .page-hero { margin: -20px -16px 24px; padding: 28px 16px 24px; }
+  }
+
+  /* ── Divider ───────────────────────────────────────────────── */
+  .divider { height: 1px; background: var(--border-subtle); margin: 20px 0; }
+
+  /* ── Safe area ─────────────────────────────────────────────── */
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0); }
+  .pt-safe { padding-top: var(--inset-top); }
+
+  /* ── Audio player ──────────────────────────────────────────── */
+  .audio-player {
+    background: var(--bg-raised);
+    border: 1px solid var(--border-default);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  /* ── Spectrogram ───────────────────────────────────────────── */
+  .spectrogram-container {
+    background: #000;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: zoom-in;
+  }
+  .spectrogram-modal-backdrop {
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(0,0,0,.92);
+    backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+    cursor: zoom-out;
+    animation: fadeIn .18s ease;
+  }
+  .spectrogram-modal-img {
+    max-width: 100%; max-height: 90vh;
+    object-fit: contain; border-radius: 12px;
+    box-shadow: 0 24px 80px rgba(0,0,0,.7);
+    cursor: default;
+    animation: scaleIn .2s cubic-bezier(.16,1,.3,1);
+  }
+
+  /* ── Theme swatch ──────────────────────────────────────────── */
+  .theme-swatch {
+    width: 36px; height: 36px; border-radius: 50%;
+    cursor: pointer; transition: all 150ms ease;
+    border: 2px solid transparent;
+    position: relative; overflow: hidden;
+  }
+  .theme-swatch.active { border-color: var(--text-primary); transform: scale(1.15); }
+  .theme-swatch:hover:not(.active) { transform: scale(1.1); }
+
+  /* ── Bird photo card ───────────────────────────────────────── */
+  .bird-photo-placeholder {
+    background: linear-gradient(135deg, var(--s700) 0%, var(--s800) 100%);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   UTILITIES
+═══════════════════════════════════════════════════════════════ */
+@layer utilities {
+  .text-accent    { color: var(--accent-400); }
+  .text-primary   { color: var(--text-primary); }
+  .text-secondary { color: var(--text-secondary); }
+  .text-tertiary  { color: var(--text-tertiary); }
+  .bg-base        { background: var(--bg-base); }
+  .bg-panel       { background: var(--bg-panel); }
+  .bg-card-color  { background: var(--bg-card); }
+  .bg-raised      { background: var(--bg-raised); }
+  .border-default { border-color: var(--border-default); }
+  .border-subtle  { border-color: var(--border-subtle); }
+  .font-display   { font-family: 'Lora', Georgia, serif; }
+  .glow           { box-shadow: 0 0 20px var(--glow-color); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TECHDOCS MARKDOWN — react-markdown outputs plain unstyled tags;
+   theme-aware styling for the admin-only Technical Docs page.
+═══════════════════════════════════════════════════════════════ */
+.techdocs-markdown {
+  color: var(--text-secondary);
+  line-height: 1.7;
+  font-size: 14.5px;
+}
+.techdocs-markdown h1 {
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 1rem;
+}
+.techdocs-markdown h2 {
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 1.75rem 0 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-subtle);
+}
+.techdocs-markdown h2:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+.techdocs-markdown h3 {
+  color: var(--text-primary);
+  font-size: 1.02rem;
+  font-weight: 600;
+  margin: 1.25rem 0 0.5rem;
+}
+.techdocs-markdown p { margin: 0.75rem 0; }
+.techdocs-markdown strong { color: var(--text-primary); font-weight: 600; }
+.techdocs-markdown a { color: var(--accent-400); text-decoration: underline; text-underline-offset: 2px; }
+.techdocs-markdown ul, .techdocs-markdown ol { margin: 0.75rem 0; padding-left: 1.4rem; }
+.techdocs-markdown li { margin: 0.35rem 0; }
+.techdocs-markdown code {
+  background: var(--bg-raised);
+  color: var(--accent-400);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.88em;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+}
+.techdocs-markdown pre {
+  background: var(--bg-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  overflow-x: auto;
+  margin: 0.9rem 0;
+}
+.techdocs-markdown pre code { background: none; padding: 0; color: var(--text-secondary); }
+.techdocs-markdown blockquote {
+  border-left: 3px solid var(--accent-400);
+  background: var(--bg-raised);
+  border-radius: 0 10px 10px 0;
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  color: var(--text-secondary);
+}
+.techdocs-markdown blockquote p { margin: 0.25rem 0; }
+.techdocs-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 1rem 0;
+  /* Subtle edge fade hints there's more to scroll, without a visible
+     scrollbar track fighting the card's own rounded corners. */
+  border-radius: 8px;
+}
+.techdocs-markdown table {
+  width: 100%;
+  min-width: max-content;
+  border-collapse: collapse;
+  margin: 0;
+  font-size: 0.92em;
+}
+.techdocs-markdown th, .techdocs-markdown td {
+  border: 1px solid var(--border-subtle);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+.techdocs-markdown th { background: var(--bg-raised); color: var(--text-primary); font-weight: 600; }
+.techdocs-markdown hr { border: none; border-top: 1px solid var(--border-subtle); margin: 1.5rem 0; }
+.techdocs-markdown img { max-width: 100%; }
+
+/* ── Chirp logo (SongbirdMark) motion ─────────────────────────────
+   Classes are only present when a mark animates.
+   .cb-anim   Sing (Dashboard): two notes with beak + bars, tail flick, blink
+   .cb-draw   Draw-on (login, launch): plays once
+   .cb-meter  Live meter (Live Detect while listening) */
+.cb-anim, .cb-draw, .cb-meter { --cb-dur: 3.2s; }
+:is(.cb-anim, .cb-draw, .cb-meter) .cb-up   { transform-box: view-box; transform-origin: 71px 42px; }
+:is(.cb-anim, .cb-draw, .cb-meter) .cb-lo   { transform-box: view-box; transform-origin: 71px 49px; }
+:is(.cb-anim, .cb-draw, .cb-meter) .cb-tail { transform-box: view-box; transform-origin: 26.5px 62px; }
+:is(.cb-anim, .cb-draw, .cb-meter) .cb-eye  { transform-box: view-box; transform-origin: 60px 41px; }
+:is(.cb-anim, .cb-draw, .cb-meter) .cb-bob  { transform-box: view-box; transform-origin: 44px 70px; }
+:is(.cb-anim, .cb-draw, .cb-meter) .cb-bar  { transform-box: fill-box; transform-origin: center; }
+
+.cb-anim .cb-up   { animation: cb-up var(--cb-dur) ease-in-out infinite; }
+.cb-anim .cb-lo   { animation: cb-lo var(--cb-dur) ease-in-out infinite; }
+.cb-anim .cb-tail { animation: cb-tail var(--cb-dur) ease-in-out infinite; }
+.cb-anim .cb-eye  { animation: cb-blink var(--cb-dur) linear infinite; }
+.cb-anim .cb-bob  { animation: cb-bob var(--cb-dur) ease-in-out infinite; }
+.cb-anim .cb-bar  { animation: cb-bar var(--cb-dur) ease-in-out infinite; }
+.cb-anim .cb-bar1 { animation-delay: .05s; }
+.cb-anim .cb-bar2 { animation-delay: .1s; }
+.cb-anim.cb-steps .cb-up, .cb-anim.cb-steps .cb-lo, .cb-anim.cb-steps .cb-bar { animation-timing-function: steps(2, end); }
+@keyframes cb-up   { 0%,2% { transform: rotate(0) } 6%,11% { transform: rotate(-20deg) } 15%,17% { transform: rotate(0) }
+                     21%,26% { transform: rotate(-20deg) } 30%,100% { transform: rotate(0) } }
+@keyframes cb-lo   { 0%,2% { transform: rotate(0) } 6%,11% { transform: rotate(16deg) } 15%,17% { transform: rotate(0) }
+                     21%,26% { transform: rotate(16deg) } 30%,100% { transform: rotate(0) } }
+@keyframes cb-bar  { 0%,2% { transform: scaleY(.4) } 7%,11% { transform: scaleY(1) } 15%,17% { transform: scaleY(.5) }
+                     22%,26% { transform: scaleY(1.1) } 33%,100% { transform: scaleY(.4) } }
+@keyframes cb-tail { 0%,52% { transform: rotate(0) } 56% { transform: rotate(-12deg) } 60% { transform: rotate(4deg) } 64%,100% { transform: rotate(0) } }
+@keyframes cb-blink { 0%,78% { transform: scaleY(1) } 80% { transform: scaleY(.1) } 82%,100% { transform: scaleY(1) } }
+@keyframes cb-bob  { 0%,2% { transform: rotate(0) } 8%,26% { transform: rotate(-3deg) } 36%,100% { transform: rotate(0) } }
+
+.cb-draw .cb-ln   { stroke-dasharray: 1; stroke-dashoffset: 1; }
+.cb-draw .cb-tail { animation: cb-draw .35s ease-out .05s forwards; }
+.cb-draw .cb-body { animation: cb-draw .8s ease-in-out .3s forwards; }
+.cb-draw .cb-up, .cb-draw .cb-lo { animation: cb-draw .2s ease-out 1.05s forwards; }
+.cb-draw .cb-wing { animation: cb-draw .3s ease-out 1.15s forwards; }
+.cb-draw .cb-eye  { opacity: 0; animation: cb-pop .25s ease-out 1.3s forwards; }
+.cb-draw .cb-bar  { transform: scaleY(0); animation: cb-rise .3s cubic-bezier(.3,1.6,.5,1) forwards; }
+.cb-draw .cb-bar0 { animation-delay: 1.4s; }
+.cb-draw .cb-bar1 { animation-delay: 1.5s; }
+.cb-draw .cb-bar2 { animation-delay: 1.6s; }
+@keyframes cb-draw { to { stroke-dashoffset: 0 } }
+@keyframes cb-pop  { 0% { opacity: 0; transform: scale(.2) } 100% { opacity: 1; transform: scale(1) } }
+@keyframes cb-rise { to { transform: scaleY(1) } }
+
+.cb-meter .cb-bar0 { animation: cb-meter 1.1s ease-in-out infinite alternate; }
+.cb-meter .cb-bar1 { animation: cb-meter .8s ease-in-out -.3s infinite alternate; }
+.cb-meter .cb-bar2 { animation: cb-meter 1.35s ease-in-out -.6s infinite alternate; }
+.cb-meter .cb-eye  { animation: cb-blink 4.6s linear infinite; }
+@keyframes cb-meter { 0% { transform: scaleY(.35) } 45% { transform: scaleY(.9) } 70% { transform: scaleY(.6) } 100% { transform: scaleY(1.1) } }
+
+:is(.cb-anim, .cb-draw, .cb-meter) .cb-cursor { animation: cb-cursor 1.06s steps(1, end) infinite; }
+@keyframes cb-cursor { 0%,50% { opacity: 1 } 50.01%,100% { opacity: 0 } }
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.cb-anim, .cb-draw, .cb-meter) * { animation: none !important; }
+  .cb-draw .cb-ln { stroke-dashoffset: 0; }
+  .cb-draw .cb-eye { opacity: 1; }
+  .cb-draw .cb-bar { transform: none; }
+}
+
+/* ── Top inset and page lock ───────────────────────────────────────
+   --inset-top is where top-bar content starts: the safe-area inset.
+   Home Screen installs use the translucent status bar (index.html), so
+   the page runs under it; iOS 26.1+/27 misplacing it is corrected by
+   --vp-shift below. */
+:root { --inset-top: env(safe-area-inset-top, 0px); }
+/* App shell mounted: the page never scrolls or rubber-bands; <main> does. */
+html.app-shell, html.app-shell body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+html.app-shell body { min-height: 0; }
+
+/* ── iPhone Home Screen viewport shift (lib/viewportFix.js) ──────────
+   iOS 26.1+/27 pin a translucent Home Screen app's page to the top of the
+   screen, one status bar short. --vp-shift moves the whole page (and its
+   fixed header and bottom bar, which follow a transformed <body>) down
+   into place. 0 everywhere else. */
+:root { --vp-shift: 0px; }
+html.vp-shift body { transform: translateY(var(--vp-shift)); }
+/* Shifted, the page already starts below the status bar, so the header
+   doesn't need the full top inset again; 32px keeps it clear of the
+   Liquid Glass blur under the status bar (which ends ~90pt down). */
+html.vp-shift { --inset-top: calc(max(env(safe-area-inset-top, 0px) - var(--vp-shift), 0px) + 32px); }
+
+/* Keyboard shortcut hints only where there's a keyboard and mouse. */
+@media (hover: none) and (pointer: coarse) {
+  .kbd-hint { display: none; }
+}

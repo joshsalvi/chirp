@@ -1,0 +1,633 @@
+# =============================================================================
+# BirdWatch Configuration
+# Raspberry Pi 5 Bird Call Detection System
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Audio Capture Settings
+# ---------------------------------------------------------------------------
+audio:
+  sample_rate: 48000            # Hz - 48kHz for best BirdNET compatibility
+  channels_per_device: 1        # mono per device (merged to stereo for output)
+  chunk_size: 8192              # samples per callback chunk
+                                # 4800=100ms (may overflow on slow USB); 8192 is safer for USB PnP devices
+                                # Increase to 16384 if you still see 'input overflow' warnings
+  bit_depth: 16                 # bits per sample for WAV output
+
+  # Substring matches to identify USB microphones. Every matched device gets
+  # opened as its own stream (resampled to sample_rate above if its native
+  # rate differs) and merged via snr_weighted_merge() — the channel with the
+  # stronger RMS level automatically dominates the mix, so plugging in a
+  # second mic alongside the ReSpeaker can only help, never dilute, as long
+  # as max_devices below has room for it. This is how "best quality of each"
+  # works for bird-frequency audio: no manual A/B choice needed, the merge
+  # does it continuously, sample by sample.
+  #
+  # NOTE: even a device that matches none of these hints can still get
+  # opened here if max_devices has room — there's a broader fallback scan
+  # (over ALL real input devices, not just hint-matched ones) specifically
+  # so a legitimate mic with an unexpected name isn't silently missed. This
+  # means narrowing this hints list alone does NOT reliably exclude a
+  # specific device from bird detection — use device_name_excludes below
+  # for that instead.
+  device_name_hints:
+    - "USB"
+    - "Microphone"
+    - "microphone"
+    - "Blue"
+    - "Yeti"
+    - "Snowball"
+    - "RØDE"
+    - "Rode"
+    - "Audio"
+    - "audio"
+    - "AudioMoth"
+    - "Mic"
+    - "mic"
+    - "capture"
+    - "Card"
+
+  # Substring matches to EXCLUDE a device from bird detection entirely,
+  # checked independently of device_name_hints above — including against
+  # the broader fallback scan, so a device listed here is reliably
+  # reserved for another use (e.g. the bat detector below) even with
+  # max_devices headroom to spare. Unlike device_name_hints, this list is
+  # empty by default; nothing is excluded unless you add it here.
+  #
+  # Pre-populated with "AudioMoth" — confirmed correct as of this device's
+  # current real configuration: once properly set up via the official
+  # AudioMoth USB Microphone App (not in its default/unconfigured state,
+  # which reported a generic "USB Audio Device" name instead), it
+  # re-enumerates as "<rate>kHz AudioMoth USB Microphone" under the
+  # genuine AudioMoth vendor ID (16d0:06f3), which DOES contain the
+  # literal word "AudioMoth". If you ever see the bird pipeline grab it
+  # again, check `python main.py --list-devices` for its current real
+  # reported name and update this to match — the exact string has
+  # changed at least twice now across this device's configuration
+  # history (generic → configured), so don't assume it's permanently
+  # fixed without checking.
+  device_name_excludes:
+    - "AudioMoth"
+    - "USB Audio Device"  # a separate, real, physically-connected C-Media
+                          # USB audio adapter (confirmed: survived a full
+                          # reboot, ruling out a stale ALSA cache entry) —
+                          # NOT the AudioMoth, which has its own genuine
+                          # name once configured (see above). Confusingly,
+                          # "USB Audio Device" was ALSO the AudioMoth's old
+                          # unconfigured name earlier in this device's
+                          # history — two real, different devices have
+                          # shared this exact generic string at different
+                          # points, which is worth knowing if this list
+                          # ever needs revisiting again.
+  max_devices: 4                # Maximum total input streams (ReSpeaker + extra USB mics)
+                                # ReSpeaker counts as 1; remaining slots filled by USB mic scan
+                                # — covers ReSpeaker + AudioMoth with 2 slots to spare
+  fallback_to_default: true     # Use system default if no USB mics found
+  # Default raised from 0.0 to 6.0 based on real-world tuning — same
+  # reasoning as detection.bat_echolocation.gain_db's own default raise
+  # below: most USB mics' raw level reads quieter than ideal at 0dB.
+  input_gain_db: 6.0            # Software gain applied to all inputs (dB) — restored to 6.0. The 0.0 revert was based on a noise complaint later traced to cicadas and mic-spacing comb filtering, neither caused by gain — but the revert had a real, more serious side effect: Stage 1's energy_filter.threshold_db (-70.0 dB, fixed/absolute — see detector.py) gates on RMS measured AFTER this gain is applied, so removing 6dB of it silently pushed real, moderate-volume calls below that fixed threshold, meaning they never reached Stage 2/BirdNET and never got recorded at all — exactly the "quiet calls, nothing organically in 2h despite Live Detect hearing plenty" symptom reported directly.
+
+  # Which audio source to use for BirdNET analysis (detection):
+  #   "primary"  — only the first/best device; ReSpeaker if present [RECOMMENDED]
+  #                Prevents weak USB mics from diluting the clean ReSpeaker signal.
+  #   "weighted" — all devices, weighted by their current RMS signal level
+  #   "all"      — equal average of all devices (legacy behaviour)
+  detection_source: "primary"
+
+  # Disable Automatic Gain Control on USB microphones at startup.
+  # AGC causes level-pumping: when a bird calls loudly the AGC clamps the level
+  # down, then slowly recovers — making the audio appear to cut out mid-call.
+  # This runs amixer commands at startup; requires alsa-utils to be installed.
+  disable_agc_on_start: true
+
+# ---------------------------------------------------------------------------
+# Detection Pipeline Settings
+# ---------------------------------------------------------------------------
+detection:
+  # Pre-roll buffer: audio captured BEFORE the trigger event
+  pre_roll_seconds: 5.0         # Seconds of audio kept in circular pre-roll buffer
+
+  # Stage 1: Fast energy/frequency filter (runs every chunk, ~microseconds)
+  energy_filter:
+    enabled: true
+    window_seconds: 0.5         # RMS window for energy calculation
+    threshold_db: -90.0         # Minimum RMS energy (dBFS) to reach BirdNET. -90 passes distant owls; the server push (Devices page) overrides this
+    frequency_band_hz: [150, 12000]  # 150 Hz keeps Great Horned Owl hoots (~200-400 Hz)
+                                      # and Barred Owl (~300-600 Hz) inside the gate
+    filter_order: 4             # Butterworth filter order
+
+  # Stage 2: BirdNET deep learning analysis
+  birdnet:
+    enabled: true
+    analysis_window_seconds: 3.0    # BirdNET expects 3-second segments
+    min_confidence: 0.05              # Minimum detection confidence (0.0-1.0) — lowered from 0.25 to match the server's own more-permissive default, per direct request to increase sensitivity. Note: if this device successfully receives server-pushed config (see server_sync.targets — only the PRIMARY target's push applies), the server's own birdnet_min_confidence Settings value wins over this local fallback.
+    overlap_seconds: 2.0              # Overlap between consecutive windows — raised from 0.0 (no overlap at all) so a call landing right at a window boundary isn't missed; matches the server-side default convention (1.5-2.5s typical)
+    sensitivity: 1.5                  # BirdNET sigmoid sensitivity (0.5-1.5); higher lifts faint/distant calls. Server pushes birdnet_sensitivity.
+    night_species_min_confidence: 0.10  # Owls, nightjars, rails, woodcock, bitterns trigger at this even when min_confidence is higher
+    night_global_species: []            # Night callers held to min_confidence instead (set from the server: Settings → Detection → Night-Caller Thresholds)
+    backend: "cpu"                  # "cpu" (default) or "coral" — Coral needs a compiled BirdNET EdgeTPU model, which doesn't exist upstream yet (see install-coral.sh)
+    num_threads: 2                  # TFLite CPU threads for BirdNET (Pi 5 has 4 cores; birdnetlib defaults to 1)
+
+    # Optional: Location-based seasonal species filtering
+    # Set to null to analyze for all possible species
+    # IMPORTANT: Set lat/lon to filter species to those expected at your location.
+    # Without these, BirdNET evaluates all 6000+ global species and will detect
+    # European/tropical birds that don't exist in your area.
+    # Values are auto-pushed from the server's Settings → Location configuration.
+    latitude: null                  # set from the server's Settings → Location
+    longitude: null
+
+    # Species filter: only trigger on these species (empty = all species)
+    # Use BirdNET species labels (e.g., "Song Sparrow_Melospiza melodia")
+    species_whitelist: []
+
+    # Never trigger on these species (e.g., common noise sources)
+    species_blacklist:
+      - "Human_Human"
+      - "Noise_Noise"
+      - "Engine_Engine"          # car/motor noise
+      - "Power tools_Power tools" # power equipment
+
+  # Cooldown: minimum time between trigger events
+  cooldown_seconds: 10.0        # Prevents re-triggering on the same call
+
+  # Minimum number of BirdNET detections to trigger recording
+  min_detections_to_trigger: 1
+
+  # -------------------------------------------------------------------------
+  # EXPERIMENTAL: Bat Echolocation Detection (Beta)
+  # -------------------------------------------------------------------------
+  # Detects ultrasonic pulse trains consistent with bat echolocation calls.
+  # This does NOT identify species — there's no bundled species classifier
+  # for bats the way BirdNET is for birds. It flags "activity consistent
+  # with echolocation" (pulse count, peak frequency, whether the call swept
+  # in frequency) and saves a time-expanded WAV clip so you can listen to it.
+  #
+  # HARDWARE REQUIREMENT — read this before enabling:
+  # Bat calls run ~15-120kHz depending on species. A standard USB mic
+  # (including the ReSpeaker this project otherwise uses) samples at 48kHz,
+  # which can only capture up to 24kHz (the Nyquist limit) — it physically
+  # cannot pick up bat echolocation. You need a separate, purpose-built
+  # ultrasonic USB microphone sampling at 192kHz or higher. Options across
+  # the price range (all standard USB audio class devices — no custom
+  # drivers, all confirmed Linux/Pi-compatible, all run fine alongside the
+  # ReSpeaker since this opens its own independent capture stream):
+  #   - AudioMoth USB Microphone (~$80-100) — cheapest real option, NOT a
+  #     heterodyne toy: genuine full-spectrum to 384kHz, open-source
+  #     hardware from Open Acoustic Devices, explicitly documented to work
+  #     plugged into "a computer or Raspberry Pi". No SD slot (it's a pure
+  #     streaming mic, not a standalone logger) — irrelevant here since the
+  #     Pi is always the host anyway.
+  #   - Dodotronic UltraMic 192K/200K/250K (~$200-275) — the differently-
+  #     numbered models are the same product line at different sample
+  #     rates; higher = better high-frequency coverage. Used in other
+  #     Pi-based open-source bat detector projects (e.g. CloudedBats-WURB).
+  #   - Pettersson M500-384 (~$430-470) — the recommendation used
+  #     throughout this project's docs; full spectrum to 384kHz, the
+  #     safest choice if you want one well-documented mainstream option.
+  #   - Dodotronic UltraMic Evo 384K (~$745-800) — top of the range; dual
+  #     omnidirectional sensors (audio + ultrasonic simultaneously) and the
+  #     lowest self-noise of this lineup. Likely overkill unless you're
+  #     doing more rigorous bioacoustics work than casual backyard detection.
+  # Without one of these (or similar), enabling this does nothing — the
+  # detector checks the configured device's sample rate on startup and
+  # simply won't start if it can't capture at min_sample_rate.
+  #
+  # Runs alongside your existing ReSpeaker (or any other) bird mic without
+  # conflict — this opens its own independent capture stream at the
+  # ultrasonic mic's native rate, entirely separate from the bird pipeline's
+  # 48kHz stream. Both run simultaneously off the same Pi. With both
+  # plugged in, device_name="" (the default) correctly auto-picks the
+  # ultrasonic mic since it reports the higher native sample rate — only
+  # set device_name explicitly if you have a third USB audio device too
+  # and need to disambiguate.
+  bat_echolocation:
+    enabled: true                  # off by default — explicit opt-in (requires
+                                     # the separate ultrasonic mic hardware below;
+                                     # most setups won't have one, so this stays
+                                     # off until you actually have the hardware)
+    device_name: ""                 # substring to match the ultrasonic mic's
+                                     # name, or "" to auto-match whichever
+                                     # input device reports the highest
+                                     # native sample rate (the default —
+                                     # changed from "AudioMoth" after
+                                     # confirming, via real device logs this
+                                     # session, that AudioMoth USB
+                                     # Microphones commonly enumerate with a
+                                     # generic Silicon Labs USBXpress
+                                     # identity like "USB Audio Device", NOT
+                                     # literally containing the word
+                                     # "AudioMoth" — a fixed name-match
+                                     # default would silently never match
+                                     # for many real AudioMoth setups, this
+                                     # one included. Set to "M500"/"UltraMic"
+                                     # if you went with a Pettersson or
+                                     # Dodotronic mic instead, which do
+                                     # report distinctive names.
+    min_sample_rate: 192000         # refuses to start below this
+    events_dir: "~/chirp/bat_events"  # where event log + clips are saved
+
+    # Input gain, in dB — same idea as audio.input_gain_db for the bird mic,
+    # a separate control here since the bat mic is a different, purpose-built
+    # ultrasonic device with its own sensitivity/placement. Positive boosts a
+    # too-quiet signal; negative attenuates a too-hot one. Applied to every
+    # audio chunk before it's used for anything (live level display in the
+    # mic-check UI, pulse-detection analysis, and saved clip audio), so
+    # raising this if the live level reads too quiet to reliably cross the
+    # detection thresholds affects all three consistently. Hot-applies
+    # immediately on a config push — no restart needed.
+    # Default raised from 0.0 to 5.0 based on real-world tuning on an actual
+    # AudioMoth deployment — a genuine ultrasonic mic's raw level tends to
+    # read quiet enough at 0dB that pulse trains sit closer to the detection
+    # thresholds than ideal; 5.0dB gave a healthier margin without clipping.
+    gain_db: 5.0
+
+    # ── Event timing / clip length ───────────────────────────────────────────
+    # Controls how long saved bat clips actually are. All of these were
+    # previously fixed in code with no way to adjust them — now fully
+    # configurable here.
+    #
+    # Minimum pulses required before a pulse train counts as a real event
+    # at all (vs. noise or a single stray pulse). Doesn't directly affect
+    # clip length, but a higher value means only more substantial passes
+    # get recorded in the first place.
+    min_pulses_for_event: 3
+
+    # How long a gap of silence (no new pulse) means a pulse train has
+    # actually ended, vs. just a normal brief pause within one continuous
+    # bat pass. Pulses accumulate into one open event for as long as they
+    # keep arriving within this gap of each other; the event only closes
+    # (capturing the FULL train, first pulse to last) once a real gap of
+    # silence this long confirms the pass has ended.
+    # Raise this to let a single event span longer pauses within one bat's
+    # pass — capturing more of a longer, intermittent encounter as ONE
+    # event instead of splitting it into several shorter ones — at the
+    # cost of delaying when a genuinely-ended event actually gets saved,
+    # and a higher chance that two separate passes a while apart get
+    # merged into one event.
+    event_gap_seconds: 2.0
+
+    # Fixed padding added before the first pulse and after the last pulse
+    # of an event when extracting its audio clip — pure buffer room,
+    # always added regardless of how long the pulse train itself was.
+    # Raise this to add real context to every clip, short or long.
+    snippet_padding_seconds: 0.5
+
+    # If you're still getting short (<1s) clips: this is the setting to
+    # raise. A legitimate pulse train that only just barely reaches
+    # min_pulses_for_event above can genuinely span well under a second on
+    # its own — snippet_padding_seconds alone isn't much once added to
+    # such a brief span. This is a hard FLOOR on total clip length: if the
+    # event's natural span plus padding comes out shorter than this, the
+    # padding window is symmetrically expanded (equally before and after,
+    # not just tacked onto one end) until it reaches this minimum. Raise
+    # this if you specifically want every clip to have more breathing room
+    # regardless of how brief the actual bat pass was; 2.0s comfortably
+    # covers the vast majority of brief passes while staying well under
+    # typical inter-event gaps. Note this only pads with whatever real
+    # audio was already captured before/after the pass in the rolling
+    # buffer — it can't manufacture audio that was never recorded, so
+    # right at startup or right after a previous long event, there may not
+    # always be quite this much real buffer available yet.
+    snippet_min_seconds: 2.0
+
+    # Upper bound on total clip length/memory, regardless of how long a
+    # continuous pulse train runs. A genuine continuous pass can
+    # legitimately run longer than a few seconds — raise this to capture
+    # longer real passes in full, at the cost of more memory per event and
+    # a larger upload; lower it to truncate anything longer to this length
+    # (keeping the most recent portion of the pass, not the earliest).
+    snippet_max_seconds: 20.0
+
+    # ── Machine-noise rejection ──────────────────────────────────────────────
+    # Real bat echolocation calls frequency-modulate (sweep) during each pulse.
+    # Broadband machine noise (lawnmowers, motors, power tools) produces
+    # flat-spectrum bursts with no sweep. This filter rejects events where
+    # too few pulses swept in frequency.
+    # 0.3 = at least 30% of pulses must show FM sweep. Set 0.0 to disable.
+    # Currently 0 (disabled) — set higher once there's a baseline of real
+    # detections to tune against; starting permissive to avoid filtering out
+    # genuine activity before there's data to know where the right threshold is.
+    min_swept_fraction: 0
+
+    # Real bats pulse 5–30 times/second. Continuous noise sources (motors,
+    # fans) produce hundreds of apparent pulses/second. This rejects events
+    # with implausibly high pulse rates.
+    max_pulse_rate_per_sec: 600
+
+    # Minimum peak frequency for a valid bat detection (Hz).
+    min_peak_freq_hz: 15000
+
+    # ── Time-of-day gating ───────────────────────────────────────────────────
+    # Only record bat events during this local-time window.
+    # Bats in northeastern North America (Massachusetts) are active from
+    # ~sunset to ~sunrise. Daytime detections are almost always machine noise.
+    # Format: HH:MM (24-hour). Wraps midnight: 18:00 start, 06:00 end =
+    # 6 PM through 6 AM. Set both to null to disable gating (not recommended).
+    active_hours_start: "18:00"
+    active_hours_end:   "06:00"
+
+    # ── Stalled-sensor detection ──────────────────────────────────────────────
+    # Catches a failure mode a dead-stream check can't: the AudioMoth's USB
+    # audio stream stays healthy (still delivering samples, dBFS still
+    # varying normally) while the sensor itself stops registering any bat
+    # pulses at all, for hours on end, during active_hours — most consistent
+    # with an analog-frontend/ultrasonic-sensitivity fault rather than a
+    # dropped connection. If zero NEW pulses are seen for this many hours
+    # while active_hours says bats should be audible, the stream is closed
+    # and reopened automatically. Set to 0 to disable this check entirely.
+    stuck_pulse_hours: 4.0
+
+    # If stuck-sensor recoveries above keep recurring (this many within
+    # stall_escalation_window_hours), a soft stream reopen clearly isn't
+    # enough — see usb_power_cycle below for an optional hard reset.
+    stall_recoveries_before_hard_reset: 2
+    stall_escalation_window_hours: 12.0
+
+    # Optional HARD power-cycle of the ultrasonic mic's USB port, used only
+    # after repeated stall recoveries (see above) — a soft stream
+    # close/reopen doesn't help if the AudioMoth is wedged at the firmware/
+    # hardware level rather than just at the ALSA layer. OFF by default:
+    # requires a hub that actually supports per-port power switching (many
+    # don't, including most Pi root hubs — a plain USB extension cable
+    # never does) and the `uhubctl` tool installed (sudo apt install
+    # uhubctl). Find real values for hub_location/port by running
+    # `uhubctl` with no arguments on the device itself; it lists every
+    # switchable hub/port it can see. Leave disabled if unsure — the
+    # existing soft-reopen + critical-log path is always the fallback.
+    usb_power_cycle:
+      enabled: false
+      hub_location: ""     # e.g. "1-1" — from `uhubctl`'s own output
+      port: ""              # e.g. "2"   — from `uhubctl`'s own output
+
+    # Note on running one mic in both roles: this detector and the bird-
+    # detection AudioCapture above open the ultrasonic mic through separate,
+    # independent sounddevice streams. Most USB audio class devices (including
+    # AudioMoth) support this fine, but it ultimately depends on your ALSA/
+    # PortAudio setup — if you see "device busy" errors with both enabled,
+    # the AudioMoth is being claimed exclusively by one stream. In that case,
+    # dedicate it to whichever role matters more to you (remove "AudioMoth"
+    # from device_name_hints above to free it for bat-only use, or set
+    # enabled: false here to keep it bird-only) — the ReSpeaker alone already
+    # handles bird detection well, so bat-only is a reasonable default
+    # resolution if a conflict comes up.
+
+
+# ---------------------------------------------------------------------------
+# Recording Settings
+# ---------------------------------------------------------------------------
+recording:
+  duration_seconds: 30.0        # How long to record after trigger (includes pre-roll)
+  extend_on_activity: true      # Extend recording if bird continues calling
+  extension_seconds: 10.0       # Additional time to extend by
+  max_duration_seconds: 120.0   # Hard cap on recording length
+
+  output_dir: "recordings"        # If relative, resolved against your home directory at startup (e.g. ~/recordings) -- never left relative to the process's working directory, which isn't reliably guaranteed across the service's lifetime. Use an absolute path here to be fully explicit.
+  filename_format: "chirp_%Y%m%d_%H%M%S_{confidence:.2f}.wav"
+  include_metadata_sidecar: true  # Save JSON metadata alongside WAV file
+
+  # Disk management
+  max_disk_gb: 20.0             # Stop saving locally if recordings dir exceeds this
+  auto_delete_days: 30          # Delete recordings older than N days (0 = never)
+
+  # Audio format
+  format: "wav"                 # "wav" (lossless) - server can re-encode as needed
+  normalize_output: false       # Normalize audio level before saving
+
+# ---------------------------------------------------------------------------
+# Upload Settings
+# *** PLACEHOLDER: Configure server details before enabling ***
+# ---------------------------------------------------------------------------
+upload:
+  enabled: true                # Set to true once you have a server URL and API key
+
+  # FULL endpoint URL — the uploader POSTs directly to this path.
+  # Format: https://YOUR-SERVER/api/v1/recordings/upload
+  # Example: https://ourchirp.com/api/v1/recordings/upload
+  server_url: "https://ourchirp.com/api/v1/recordings/upload"
+  api_key: "chirp-PASTE_KEY_HERE"          # Generate in server: Settings → Devices → New Key
+  auth_header: "X-API-Key"               # Do not change
+
+  # --- Multiple upload targets — sends every recording to BOTH your
+  # primary chirp-server AND your chirp-server-instances deployment.
+  # Each target gets its own retry queue and its own thread — one being
+  # unreachable never slows down or blocks the other. Local file
+  # deletion (delete_after_upload below) is decided by the FIRST target
+  # only; the second is treated as best-effort/secondary, so a
+  # temporarily-down instances server can never make recordings pile up
+  # on the SD card.
+  #
+  # Both targets use type "chirp-server" — chirp-server-instances is
+  # NOT the old, separate, now-deprecated "chirp-multi" project; it
+  # reuses chirp-server's own /recordings/upload endpoint completely
+  # unmodified, so it speaks the exact same header-based protocol as
+  # your primary server, just at a different URL with a different key.
+
+  # state_dir: "~/.chirp_upload_state"   # only used by a "chirp-multi"-type target's cached device_id — not needed here, both targets above are "chirp-server" type
+
+  # Connection settings
+  timeout_seconds: 60
+  max_retries: 5
+  retry_delay_seconds: 30
+  retry_backoff_factor: 2.0     # Exponential backoff multiplier
+
+  # What to include in upload
+  include_metadata: true        # Send JSON metadata with each file
+  delete_after_upload: true    # Keep local copy after successful upload
+  upload_queue_max_size: 100    # Max files queued for upload
+
+  # If server is down, retry uploads of queued files every N seconds
+  retry_queued_interval_seconds: 300
+
+# ---------------------------------------------------------------------------
+# System Settings
+# ---------------------------------------------------------------------------
+system:
+  # Monitoring
+  health_check_interval_seconds: 30
+  watchdog_timeout_seconds: 120  # Restart threads if hung for longer than this
+
+  # Performance
+  detection_thread_priority: "normal"   # "normal", "high", "realtime"
+
+  # GPS / Time
+  timezone: "local"              # "local", "UTC", or specific e.g. "America/New_York"
+
+# ---------------------------------------------------------------------------
+# Logging Settings
+# ---------------------------------------------------------------------------
+logging:
+  level: "INFO"                  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  log_dir: "logs"                 # relative to chirp-device directory
+  max_mb: 100
+  backup_count: 10
+  console_output: true
+  log_detections: true           # Log every detection event (not just triggers)
+  log_energy_filter: false       # Very verbose - log every energy filter decision
+  window_stats_interval_seconds: 600   # One-line gate summary (levels vs threshold) every N s; 0 = off
+
+# ---------------------------------------------------------------------------
+# Server Sync — Remote Management from Chirp Web UI
+# ---------------------------------------------------------------------------
+server_sync:
+  enabled: true                # Set to true after generating a key in the web UI
+
+  # BASE URL only — no path, no trailing slash.
+  # The sync code appends /api/v1/devices/pair, /heartbeat etc. automatically.
+  # Example: https://ourchirp.com
+  server_url: "https://ourchirp.com"    # e.g. "https://ourchirp.com"
+
+  # API key generated in Settings → Devices → New Device Key
+  api_key: "chirp-PASTE_KEY_HERE"
+
+  # Display name shown in the web UI (defaults to hostname if not set)
+  device_name: ""
+
+  # How often to poll the server for config updates (seconds)
+  config_poll_interval_seconds: 60
+
+  # How often to send a heartbeat to the server (seconds)
+  heartbeat_interval_seconds: 30
+
+  # --- Multiple sync targets — pairs and sends heartbeats to every
+  # server that also has an upload target configured above, not just
+  # one. Without this, a second (or third) server's own Devices page
+  # would never show this device at all — even while recordings were
+  # successfully uploading and being analyzed there — since pairing
+  # and heartbeat had no concept of more than one server. Confirmed
+  # directly from a real report before this was added.
+  #
+  # Uncomment `targets:` below to switch from the single server_url/
+  # api_key above to a list. The FIRST target is the one that actually
+  # controls this device's own running configuration (managed config
+  # pushed from that server's web UI) — every additional target only
+  # pairs and sends heartbeats, so that server's Devices page shows
+  # this device as paired/online, without two servers ever racing to
+  # decide the device's real settings.
+  #
+
+# ---------------------------------------------------------------------------
+# Status Server — local live-levels endpoint for the diagnostics page
+# ---------------------------------------------------------------------------
+# Tailscale / Headscale — Remote Access Beyond the Local Network
+# ---------------------------------------------------------------------------
+# Gives this device a second, stable IP reachable from anywhere on your
+# tailnet, not just the local LAN it shares with the server. This is what
+# makes the server's own SSH terminal (and its "Tailscale" connect option)
+# and Live Detect's device mode work correctly even when the server isn't
+# on the same local network as this Pi.
+#
+# tailscale itself is a real VPN mesh client (WireGuard-based) — installed
+# automatically by install.sh (inert until configured below), but never
+# authenticated or connected by that script. That only happens here, driven
+# by this section.
+#
+# Headscale is a SEPARATE, self-hosted, open-source alternative to
+# Tailscale's own coordination service — it is a SERVER, and does NOT run
+# on this device. If you're self-hosting Headscale (e.g. alongside your
+# Chirp server), set login_server below to its URL; leave it blank to use
+# Tailscale's own cloud service instead.
+tailscale:
+  enabled: false                  # Set true once auth_key below is real
+
+  # Generate this from your Tailscale admin console (https://login.tailscale.com/admin/settings/keys)
+  # or your own Headscale server's own admin CLI/console if self-hosting.
+  # Get this bundled Headscale's own auto-generated reusable key with:
+  #   docker compose exec headscale cat /shared/authkey
+  # (run on the chirp-server-instances host) and paste it in below.
+  auth_key: ""
+
+  # Leave blank to use Tailscale's own cloud coordination service.
+  # Set to your own Headscale server's URL (e.g. "https://headscale.example.com")
+  # to self-host instead.
+  login_server: ""
+
+  # Optional — defaults to this device's own hostname if left blank.
+  hostname: ""
+
+# ---------------------------------------------------------------------------
+# Exposes already-captured audio levels (bird + bat streams) over a tiny local
+# HTTP server so the server's Diagnostics → Microphone Check can show live
+# levels WITHOUT a second process trying to re-open the same ALSA hardware
+# (which fails on most USB audio class devices, including the ReSpeaker and
+# AudioMoth, once chirp-device already has them open). See
+# chirp-device/chirp/status_server.py for the full explanation.
+status_server:
+  enabled: true                # Set false to fall back entirely to SSH-based mic probing
+  port: 8766                   # Must be reachable from the Chirp server over the LAN
+  # shared_key: ""              # Uncomment to override — by default reuses server_sync.api_key above
+  listen_clip_seconds: 4.0      # How many seconds of audio each Listen click fetches per poll
+  # Downshift factor applied automatically to the AudioMoth's Listen clips
+  # only (bird mics are already in human hearing range, untouched) — same
+  # time-expansion technique, and the same default (10x), as the chirp-
+  # server side's own AudioProcessor.downshift_bat_clip() (used for
+  # post-hoc enhanced-clip review), so a live Listen clip and a
+  # downloaded bat recording sound consistent with each other.
+  bat_listen_expansion_factor: 10
+
+# ---------------------------------------------------------------------------
+# OLED Display — Argon ONE v5 Industria 128×32 panel (SSD1306, I²C 0x3C)
+# ---------------------------------------------------------------------------
+display:
+  enabled: true                 # Set false to disable display entirely
+  # Argon ONE v5 Industria OLED: SSD1306 128×32, I²C bus 1, address 0x3C
+  # Chirp auto-scans buses 0-7 if the configured bus fails, so these defaults
+  # work for most setups. To find your bus: sudo i2cdetect -y 1  (or -y 4)
+  i2c_bus: 1                    # I²C bus number (1 for Pi 4/5, 4 on some Argon v5)
+  i2c_address: "0x3C"           # SSD1306 I²C address (0x3C or 0x3D)
+  page_interval_seconds: 5      # Auto-rotate pages every N seconds
+  flash_on_detection: true      # Briefly show detection page on new trigger
+  brightness: 200               # 0-255 contrast/brightness level
+
+# ---------------------------------------------------------------------------
+# Zigbee Integration (disabled by default — configure when ready)
+# Supported: zigbee2mqtt (via MQTT broker) | deconz (planned) | znp_direct (planned)
+# ---------------------------------------------------------------------------
+zigbee:
+  enabled: false                # Set true after configuring your coordinator
+
+  # Integration mode
+  mode: "zigbee2mqtt"           # "zigbee2mqtt" | "deconz" | "znp_direct"
+
+  # Zigbee coordinator device (used for znp_direct mode)
+  coordinator_port: "/dev/ttyUSB0"  # ConBee II, SONOFF dongle, etc.
+
+  # MQTT settings (for zigbee2mqtt mode)
+  mqtt_broker: "localhost"      # IP or hostname of MQTT broker
+  mqtt_port: 1883
+  mqtt_topic_prefix: "chirp"    # Topics: chirp/detection, chirp/status
+  mqtt_username: ""             # Optional MQTT auth
+  mqtt_password: ""
+
+# ---------------------------------------------------------------------------
+# ReSpeaker Microphone Array (USB and HAT variants)
+# ---------------------------------------------------------------------------
+# mode options:
+#   auto      — auto-detect: try USB first (lsusb + sounddevice), then HAT (ALSA)
+#   usb       — only look for USB ReSpeaker (v2.0, v2.1, XVF3800)
+#   hat       — only look for HAT ReSpeaker (2-Mic, 4-Mic, 6-Mic via seeed-voicecard)
+#   disabled  — skip ReSpeaker detection entirely; use standard USB mic scan below
+#
+# USB variants plug straight in — no script needed. Just set mode: auto (default).
+# HAT variants require running ./install-respeaker-hat.sh first, then reboot.
+#
+# When a ReSpeaker is detected its multi-channel audio is automatically extracted
+# and mixed to mono for BirdNET — you do not need to change any other settings.
+#
+# LED flash on detection (USB mic array only):
+#   Requires:  pip install pyusb
+#              (already installed if you ran install.sh)
+respeaker:
+  mode: auto                  # auto | usb | hat | disabled
+  # XVF3800 only: which signal the USB channels carry.
+  #   raw        amplified raw capsules, no AEC/beamforming/noise suppression/AGC
+  #              (keeps faint, low, steady calls such as owl hoots) [default]
+  #   processed  the chip's voice pipeline (beamformed, noise-suppressed)
+  #   unchanged  don't touch the chip's routing
+  # Check on the Pi with:  venv/bin/python -m chirp.xvf3800 status
+  xvf3800_output: raw
+  led_on_detection: true      # Flash USB ring LEDs green when a bird is detected
+  led_color_idle: [0, 0, 0]   # RGB idle color (0,0,0 = off)
+  led_color_detection: [0, 200, 80]   # RGB flash color on detection
+  led_flash_seconds: 3.0      # How long to flash LEDs after detection

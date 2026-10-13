@@ -1,0 +1,56 @@
+# BirdWatch - Python Dependencies (CPU Mode)
+# Install with: pip install -r requirements.txt --break-system-packages
+# OR in a virtual environment: pip install -r requirements.txt
+
+# Audio capture and processing
+sounddevice>=0.4.6
+soundfile>=0.12.1
+scipy>=1.11.0
+numpy>=1.24.0
+librosa>=0.10.1
+
+# BirdNET-Analyzer (bird call identification)
+birdnetlib>=0.9.0
+
+# TFLite inference runtime
+# tflite-runtime has wheels for Python 3.9–3.11 on aarch64.
+# For Python 3.12+ (Debian Trixie), install ai-edge-litert instead.
+# install.sh handles this automatically and creates a tflite_runtime shim.
+# ai-edge-litert>=1.1.0  # uncomment if on Python 3.12+
+
+# Configuration
+PyYAML>=6.0
+
+# Utilities
+requests>=2.31.0
+python-dateutil>=2.8.2
+psutil>=5.9.0
+
+# Optional: rich terminal output for status display
+rich>=13.0.0
+
+# mDNS auto-discovery (allows server to find this device automatically)
+zeroconf>=0.131.0
+pyusb>=1.0.0             # ReSpeaker USB LED control (optional — needed for LED ring)
+
+# OLED display (Argon ONE v5 Industria panel — 128x32 SSD1306)
+luma.oled>=3.13.0
+smbus2>=0.4.3
+Pillow>=10.0.0
+
+# Zigbee/MQTT integration (optional — required if zigbee.enabled = true)
+# paho-mqtt>=1.6.1
+
+# GPIO button support (Argon ONE Industria OLED click-to-cycle)
+# Pinned to the 2.x line: display.py's button watcher uses the gpiod>=2.0
+# Python API (request_lines/LineSettings/Edge/Bias), which is a complete,
+# incompatible rewrite of the 1.x API (Chip.get_line()/LINE_REQ_*). An
+# open-ended ">=1.5.0" pin previously let 2.x install silently against 1.x
+# code, crashing the button watcher with no working fallback.
+gpiod>=2.0.0,<3.0.0
+
+# BLE setup mode (first-time WiFi provisioning when the Pi has no network
+# connection yet — see chirp/ble_provisioning.py). Requires bluez itself
+# to already be installed (standard on Raspberry Pi OS) and bluetoothd
+# running.
+bluezero>=0.9.0

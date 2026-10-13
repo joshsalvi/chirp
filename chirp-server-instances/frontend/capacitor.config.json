@@ -1,0 +1,49 @@
+{
+  "appId": "com.joshuasalvimd.chirp",
+  "appName": "Chirp",
+  "webDir": "dist",
+  "server": {
+    "url": "https://ourchirp.com",
+    "cleartext": false,
+    "allowNavigation": [
+      "ourchirp.com",
+      "www.ourchirp.com"
+    ],
+    "errorPath": "offline.html"
+  },
+  "ios": {
+    "scheme": "Chirp",
+    "scrollEnabled": false,
+    "allowsLinkPreview": false,
+    "contentInset": "never",
+    "backgroundColor": "#0a160c",
+    "preferredContentMode": "mobile",
+    "appendUserAgent": "ChirpApp/1",
+    "limitsNavigationsToAppBoundDomains": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 4000,
+      "backgroundColor": "#0a160c",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false,
+      "splashFullScreen": true,
+      "splashImmersive": true,
+      "launchAutoHide": true,
+      "launchFadeOutDuration": 250
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0a160c",
+      "overlaysWebView": true
+    },
+    "PushNotifications": {
+      "presentationOptions": [
+        "badge",
+        "sound",
+        "alert"
+      ]
+    }
+  }
+}

@@ -1,0 +1,88 @@
+# Headscale config — a self-hosted, open-source Tailscale control plane.
+# This is the CLIENT-FREE side: chirp-server-instances (and optionally
+# chirp-server, chirp-device) are the tailscale CLIENTS that connect TO
+# this. Running your own means no external Tailscale.com account, no
+# key expiring while you're not looking, and everything stays on your
+# own hardware — matching the reasoning that made Cloudflare Tunnel the
+# default for the web UI itself (see the top of docker-compose.yml).
+#
+# server_url is the one thing you MUST edit before first boot: it's the
+# address every client (including remote Pis on chirp-device, and
+# chirp-server if you point it here too) will dial to reach this
+# control plane. localhost only works for a client on this same
+# machine (chirp-server-instances itself, thanks to network_mode: host)
+# — a remote chirp-device needs your Unraid box's real LAN IP or a
+# hostname that resolves to it.
+server_url: https://headscale.ourchirp.com
+
+listen_addr: 0.0.0.0:9877
+metrics_listen_addr: 127.0.0.1:9090
+# grpc_allow_insecure: true is required here, and this isn't about
+# external/REST access at all — reported directly, the hard way: the
+# headscale CLI itself (what the node-list wrapper below shells out
+# to — see headscale/api-wrapper.py) talks to the running server over
+# gRPC via a local unix socket (/var/run/headscale/headscale.sock),
+# even for a same-container command like `headscale nodes list`. That
+# unix-socket transport is still gated by this same setting — with it
+# false (headscale's own default), the CLI's connection attempt hangs
+# waiting for a TLS handshake that never completes (no certificate is
+# configured anywhere in this file), until its own 5s timeout fires
+# with "context deadline exceeded" — confirmed directly: the socket
+# file existed, with correct permissions, and startup logged nothing
+# wrong, yet every CLI command still hung the exact same way. true is
+# safe here specifically because grpc_listen_addr below is loopback-
+# only and never published to the host (confirmed via `docker port`)
+# — nothing outside this one container can ever reach it, insecure or
+# not, whether over the TCP listener or this same unix socket.
+grpc_listen_addr: 127.0.0.1:50443
+grpc_allow_insecure: true
+
+private_key_path: /var/lib/headscale/private.key
+noise:
+  private_key_path: /var/lib/headscale/noise_private.key
+
+# A private /16 just for this tailnet's own virtual IPs (100.x.x.x is
+# Tailscale's reserved CGNAT range — this doesn't touch or conflict
+# with your real home LAN's 192.168.x.x addressing at all).
+prefixes:
+  v4: 100.64.0.0/10
+  v6: fd7a:115c:a1e0::/48
+
+database:
+  type: sqlite
+  sqlite:
+    path: /var/lib/headscale/db.sqlite
+
+# DERP relays — used only when two tailnet devices can't connect to
+# each other directly (NAT traversal fallback); actual traffic between
+# your own devices still goes direct/encrypted whenever it can.
+# Headscale refuses to start with none configured at all — this points
+# at Tailscale's own public DERP map, which is free to use and doesn't
+# require a Tailscale.com account (this whole setup is still 100%
+# self-hosted for the actual control plane, DNS, and node coordination
+# — DERP is the one piece that's genuinely fine to borrow rather than
+# self-host, matching the tradeoff headscale's own docs recommend by
+# default). Self-host your own DERP later if you want full
+# independence from Tailscale's infrastructure entirely.
+derp:
+  server:
+    enabled: false
+  urls:
+    - https://controlplane.tailscale.com/derpmap/default
+  paths: []
+  auto_update_enabled: true
+  update_frequency: 24h
+
+log:
+  level: info
+
+dns:
+  magic_dns: true
+  base_domain: chirp-tailnet.internal
+  nameservers:
+    global:
+      - 1.1.1.1
+      - 8.8.8.8
+
+unix_socket: /var/run/headscale/headscale.sock
+unix_socket_permission: "0770"

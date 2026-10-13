@@ -1,0 +1,414 @@
+{
+ "about": "Labeled clips for tuning and regression-testing Chirp's owl scoring. Audio is not stored in the repo (Xeno-canto licenses, mostly CC BY-NC-SA); fetch.py downloads it. 'label' is the species the recordist tagged as the main subject; owl clips should yield that owl, other clips should yield no owl.",
+ "location": {
+  "lat": 42.28,
+  "lon": -71.35,
+  "note": "Natick, MA: all four owls pass the night-caller location filter here"
+ },
+ "date": "2026-03-15",
+ "first_seconds": 90,
+ "noise_beds": [
+  918734,
+  864111
+ ],
+ "clips": [
+  {
+   "xc": 1004759,
+   "label": "Barred Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2025-06-01",
+   "url": "https://xeno-canto.org/1004759"
+  },
+  {
+   "xc": 986476,
+   "label": "Barred Owl",
+   "owl": true,
+   "license": "CC BY-NC-ND 4.0",
+   "recorded": "2025-04-06",
+   "url": "https://xeno-canto.org/986476"
+  },
+  {
+   "xc": 878848,
+   "label": "Barred Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2023-09-04",
+   "url": "https://xeno-canto.org/878848"
+  },
+  {
+   "xc": 864701,
+   "label": "Barred Owl",
+   "owl": true,
+   "license": "CC BY-SA 4.0",
+   "recorded": "2024-01-30",
+   "url": "https://xeno-canto.org/864701"
+  },
+  {
+   "xc": 838397,
+   "label": "Barred Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2023-10-20",
+   "url": "https://xeno-canto.org/838397"
+  },
+  {
+   "xc": 810513,
+   "label": "Barred Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2022-03-22",
+   "url": "https://xeno-canto.org/810513"
+  },
+  {
+   "xc": 810512,
+   "label": "Barred Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2022-10-09",
+   "url": "https://xeno-canto.org/810512"
+  },
+  {
+   "xc": 749428,
+   "label": "Barred Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2022-04-15",
+   "url": "https://xeno-canto.org/749428"
+  },
+  {
+   "xc": 1048830,
+   "label": "Great Horned Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2022-06-19",
+   "url": "https://xeno-canto.org/1048830"
+  },
+  {
+   "xc": 1048828,
+   "label": "Great Horned Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2022-06-19",
+   "url": "https://xeno-canto.org/1048828"
+  },
+  {
+   "xc": 959367,
+   "label": "Great Horned Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2025-01-06",
+   "url": "https://xeno-canto.org/959367"
+  },
+  {
+   "xc": 872005,
+   "label": "Great Horned Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2024-02-10",
+   "url": "https://xeno-canto.org/872005"
+  },
+  {
+   "xc": 760069,
+   "label": "Great Horned Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2022-11-06",
+   "url": "https://xeno-canto.org/760069"
+  },
+  {
+   "xc": 691461,
+   "label": "Great Horned Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2021-01-01",
+   "url": "https://xeno-canto.org/691461"
+  },
+  {
+   "xc": 680988,
+   "label": "Great Horned Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2021-10-15",
+   "url": "https://xeno-canto.org/680988"
+  },
+  {
+   "xc": 624440,
+   "label": "Great Horned Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2017-07-11",
+   "url": "https://xeno-canto.org/624440"
+  },
+  {
+   "xc": 934236,
+   "label": "Eastern Screech-Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2024-09-08",
+   "url": "https://xeno-canto.org/934236"
+  },
+  {
+   "xc": 1071056,
+   "label": "Eastern Screech-Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2022-12-18",
+   "url": "https://xeno-canto.org/1071056"
+  },
+  {
+   "xc": 833216,
+   "label": "Eastern Screech-Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2023-09-02",
+   "url": "https://xeno-canto.org/833216"
+  },
+  {
+   "xc": 879112,
+   "label": "Eastern Screech-Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2011-08-06",
+   "url": "https://xeno-canto.org/879112"
+  },
+  {
+   "xc": 820866,
+   "label": "Eastern Screech-Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2023-08-05",
+   "url": "https://xeno-canto.org/820866"
+  },
+  {
+   "xc": 833215,
+   "label": "Eastern Screech-Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2023-09-06",
+   "url": "https://xeno-canto.org/833215"
+  },
+  {
+   "xc": 819196,
+   "label": "Eastern Screech-Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2023-07-27",
+   "url": "https://xeno-canto.org/819196"
+  },
+  {
+   "xc": 833214,
+   "label": "Eastern Screech-Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2023-09-06",
+   "url": "https://xeno-canto.org/833214"
+  },
+  {
+   "xc": 1120167,
+   "label": "Northern Saw-whet Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2023-11-02",
+   "url": "https://xeno-canto.org/1120167"
+  },
+  {
+   "xc": 982746,
+   "label": "Northern Saw-whet Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2025-03-24",
+   "url": "https://xeno-canto.org/982746"
+  },
+  {
+   "xc": 1120163,
+   "label": "Northern Saw-whet Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2025-10-29",
+   "url": "https://xeno-canto.org/1120163"
+  },
+  {
+   "xc": 702863,
+   "label": "Northern Saw-whet Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2022-02-10",
+   "url": "https://xeno-canto.org/702863"
+  },
+  {
+   "xc": 949375,
+   "label": "Northern Saw-whet Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2024-11-15",
+   "url": "https://xeno-canto.org/949375"
+  },
+  {
+   "xc": 533407,
+   "label": "Northern Saw-whet Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2020-03-05",
+   "url": "https://xeno-canto.org/533407"
+  },
+  {
+   "xc": 752937,
+   "label": "Northern Saw-whet Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2021-12-19",
+   "url": "https://xeno-canto.org/752937"
+  },
+  {
+   "xc": 207359,
+   "label": "Northern Saw-whet Owl",
+   "owl": true,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2014-12-21",
+   "url": "https://xeno-canto.org/207359"
+  },
+  {
+   "xc": 1059661,
+   "label": "Mourning Dove",
+   "owl": false,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2025-09-10",
+   "url": "https://xeno-canto.org/1059661"
+  },
+  {
+   "xc": 1013493,
+   "label": "Mourning Dove",
+   "owl": false,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2025-05-25",
+   "url": "https://xeno-canto.org/1013493"
+  },
+  {
+   "xc": 1036232,
+   "label": "Mourning Dove",
+   "owl": false,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2025-08-15",
+   "url": "https://xeno-canto.org/1036232"
+  },
+  {
+   "xc": 918734,
+   "label": "Common True Katydid",
+   "owl": false,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2024-06-25",
+   "url": "https://xeno-canto.org/918734"
+  },
+  {
+   "xc": 909735,
+   "label": "Common True Katydid",
+   "owl": false,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2022-08-27",
+   "url": "https://xeno-canto.org/909735"
+  },
+  {
+   "xc": 918733,
+   "label": "Common True Katydid",
+   "owl": false,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2024-06-25",
+   "url": "https://xeno-canto.org/918733"
+  },
+  {
+   "xc": 893912,
+   "label": "Spring Peeper",
+   "owl": false,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2024-03-04",
+   "url": "https://xeno-canto.org/893912"
+  },
+  {
+   "xc": 936293,
+   "label": "Spring Peeper",
+   "owl": false,
+   "license": "CC BY-SA 4.0",
+   "recorded": "2023-09-02",
+   "url": "https://xeno-canto.org/936293"
+  },
+  {
+   "xc": 1081076,
+   "label": "Eastern Whip-poor-will",
+   "owl": false,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2025-05-14",
+   "url": "https://xeno-canto.org/1081076"
+  },
+  {
+   "xc": 1014021,
+   "label": "Eastern Whip-poor-will",
+   "owl": false,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2025-05-30",
+   "url": "https://xeno-canto.org/1014021"
+  },
+  {
+   "xc": 899237,
+   "label": "American Bullfrog",
+   "owl": false,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2018-03-24",
+   "url": "https://xeno-canto.org/899237"
+  },
+  {
+   "xc": 883640,
+   "label": "American Bullfrog",
+   "owl": false,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2014-05-04",
+   "url": "https://xeno-canto.org/883640"
+  },
+  {
+   "xc": 864111,
+   "label": "Snowy Tree Cricket",
+   "owl": false,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2023-07-26",
+   "url": "https://xeno-canto.org/864111"
+  },
+  {
+   "xc": 826385,
+   "label": "Snowy Tree Cricket",
+   "owl": false,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2023-08-29",
+   "url": "https://xeno-canto.org/826385"
+  },
+  {
+   "xc": 460854,
+   "label": "Rock Pigeon",
+   "owl": false,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2019-03-08",
+   "url": "https://xeno-canto.org/460854"
+  },
+  {
+   "xc": 890989,
+   "label": "Gray Treefrog",
+   "owl": false,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2016-03-11",
+   "url": "https://xeno-canto.org/890989"
+  },
+  {
+   "xc": 816554,
+   "label": "Gray Treefrog",
+   "owl": false,
+   "license": "CC BY-NC-SA 4.0",
+   "recorded": "2023-07-02",
+   "url": "https://xeno-canto.org/816554"
+  }
+ ],
+ "expected": {
+  "min_hits": 80,
+  "max_wrong": 10,
+  "max_false_alarms": 2,
+  "note": "Regression floors for tests/test_birdnet_pass.py::test_owl_regression; the 0.5.10.a settings score 81 hits, 8 wrong, 1 false alarm on these clips and mixes."
+ }
+}

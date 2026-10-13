@@ -1,0 +1,74 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.eggs/
+dist/
+build/
+.env
+.venv/
+venv/
+
+# Node
+node_modules/
+chirp-server/frontend/dist/
+
+# Data (never commit user data or secrets)
+chirp-server/data/
+*.db
+*.db-shm
+*.db-wal
+*.wav
+*.opus
+*.flac
+*.mp3
+*.png
+*.jpg
+*.jpeg
+*.svg
+!chirp-logo.svg
+# Real documentation screenshots (README.md's own Screenshots section)
+# are meant to be committed, unlike the blanket rule above (which
+# exists to stop runtime-downloaded bird photos and real user data from
+# ever being committed, not to catch intentional docs). A real bug
+# found from actual GitHub usage, not a hypothetical: these files exist
+# in every local checkout of this repo, but the blanket *.jpg/*.png
+# rule above silently excluded them from every `git add`, so they were
+# never actually committed or pushed — the README's own <img> tags
+# point to files that genuinely don't exist in the real GitHub repo,
+# rendering as broken images there even though they render fine
+# locally (a person's own local file browser or editor doesn't care
+# whether something is git-tracked, so this was invisible outside of
+# actually checking GitHub itself).
+!docs/screenshots/**
+# Same real bug, same fix, recurring: figures/ (renamed from
+# patent_figures/) and every techdocs assets/ copy (the standalone
+# MkDocs site's own copy, plus each server's bundled copy for the
+# in-app admin Tech Docs page — see scripts/sync-techdocs.py) hit this
+# exact blanket rule too. Confirmed directly: README.md's embedded
+# <img> tags for the system architecture / detection pipeline figures
+# rendered as broken images on GitHub for the same reason
+# docs/screenshots did above, before these exceptions existed.
+!figures/**
+!techdocs/docs/assets/**
+!chirp-server/app/techdocs_content/assets/**
+!chirp-server-instances/app/techdocs_content/assets/**
+*.gpkg
+
+# Docker
+.docker/
+
+# Editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Secrets
+.env
+*.env
+secrets.yaml
+chirp-data/

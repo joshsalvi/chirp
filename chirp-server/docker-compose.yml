@@ -1,0 +1,144 @@
+# Chirp Server — Docker Compose for Unraid's Docker Compose Manager.
+#
+# HTTPS: configured for Cloudflare Tunnel by default — no port forwarding,
+# no ports opened on your router, your home IP never directly exposed.
+# Real setup steps are in docs/CLOUDFLARE_TUNNEL.md (in the main Chirp
+# repo, one level up from this file). Genuinely needed, not optional
+# hardening: Web Push and native APNs push both require real HTTPS to
+# function at all.
+#
+# If you'd rather use router port forwarding + Let's Encrypt instead of
+# Cloudflare Tunnel: chirp-server-instances' own docker-compose.yml has
+# a working Caddy example (bundled for its self-hosted Headscale
+# specifically, using the DNS-01 challenge rather than HTTP-01 — see
+# that file and headscale/config.yaml's own comments), which is the
+# closest working reference for that pattern in this repo. This
+# project's default (Cloudflare Tunnel) avoids the whole question of
+# port forwarding and certificate management, which is part of why
+# it's the default here.
+
+name: chirp-server
+
+services:
+  chirp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chirp-server
+    restart: unless-stopped
+    # network_mode: host gives the container access to the host's network interfaces
+    # so device auto-discovery can read the ARP table and ping-sweep the LAN.
+    # The server will still be reachable on port 8765.
+    network_mode: host
+    labels:
+      - "net.unraid.docker.icon=http://192.168.1.224:8765/icon.svg"
+      - "net.unraid.docker.webui=http://[IP]:[PORT:8765]/"
+      - "net.unraid.docker.shell=bash"
+      - "net.unraid.docker.name=Chirp"
+      - "com.centurylinklabs.watchtower.enable=false"
+    volumes:
+      - /mnt/user/data/media/miscellaneous/chirp-data:/app/data
+    # NET_ADMIN + /dev/net/tun are what let the tailscale client inside
+    # this container actually create its own network interface — no-op
+    # (and safe to leave in place) unless CHIRP_TAILSCALE_ENABLED=true
+    # below. network_mode: host above means tailscale runs directly on
+    # the host's network namespace, same as tailscale's own recommended
+    # Docker setup for exactly this reason — no extra NAT/routing needed.
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - CHIRP_SECRET_KEY=${CHIRP_SECRET_KEY:-changeme-use-a-real-secret}
+      - CHIRP_DEVICE_API_KEY=${CHIRP_DEVICE_API_KEY:-chirp-device-key-change-me}
+      - CHIRP_EBIRD_API_KEY=${CHIRP_EBIRD_API_KEY:-}
+      - CHIRP_DATA_DIR=/app/data
+      - CHIRP_RECORDINGS_DIR=/app/data/recordings
+      - CHIRP_MEDIA_DIR=/app/data/media/birds
+      - CHIRP_DB_URL=sqlite:////app/data/chirp.db
+      - CHIRP_HOST=0.0.0.0
+      - CHIRP_PORT=8765
+      - CHIRP_SERVER_URL=${CHIRP_SERVER_URL:-}
+      - TZ=${TZ:-America/New_York}
+      # Reach this server itself over Tailscale/Headscale, not just its
+      # local network — set CHIRP_TAILSCALE_ENABLED=true and a real
+      # CHIRP_TAILSCALE_AUTH_KEY in your .env to enable (see Settings →
+      # Server Network in the app once running, or tailscale_manager.py).
+      - CHIRP_TAILSCALE_ENABLED=${CHIRP_TAILSCALE_ENABLED:-false}
+      - CHIRP_TAILSCALE_AUTH_KEY=${CHIRP_TAILSCALE_AUTH_KEY:-}
+      - CHIRP_TAILSCALE_LOGIN_SERVER=${CHIRP_TAILSCALE_LOGIN_SERVER:-}
+      - CHIRP_TAILSCALE_HOSTNAME=${CHIRP_TAILSCALE_HOSTNAME:-}
+      # Email/SMTP: set CHIRP_SMTP_HOST etc. in your .env file — do NOT put them here.
+      # pydantic-settings reads .env directly; passing blank vars through docker-compose
+      # causes startup failures when the vars are not set.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8765/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+
+  # Cloudflare Tunnel — REMOVED here deliberately. If you already run a
+  # separate cloudflared container for another service, one tunnel can
+  # serve multiple hostnames: in the Cloudflare Zero Trust dashboard,
+  # go to your EXISTING tunnel → Public Hostname → Add a public
+  # hostname, and point it at http://<this-machine's-LAN-IP>:8765
+  # (not localhost — a different container can't reach this one via
+  # localhost the way this container could reach itself). No token,
+  # no second container, no second tunnel needed.
+  #
+  # If you'd rather have chirp-server run its own dedicated tunnel
+  # instead, add a service back here:
+  #   chirp-server-cloudflared:
+  #     image: cloudflare/cloudflared:latest
+  #     container_name: chirp-server-cloudflared
+  #     restart: unless-stopped
+  #     network_mode: host
+  #     command: tunnel --no-autoupdate run --token ${CHIRP_CLOUDFLARE_TUNNEL_TOKEN:-}
+  #   (full setup steps: docs/CLOUDFLARE_TUNNEL.md)
+
+  # A single, real place to land and switch between every instance — a
+  # plain static page (nginx serving launcher/index.html + instances.json,
+  # nothing more), deliberately NOT a shared backend or shared database
+  # with any instance. Each instance's own real chirp-server code is
+  # completely untouched by this; the launcher only ever reads
+  # instances.json to build a list of links, and does its own read-only
+  # health check against each instance's public /api/v1/health — it has
+  # no way to reach into any instance's actual data, by design. See
+  # MULTI_INSTANCE.md for the full reasoning on why this exists instead
+  # of making chirp-server itself switchable within one running process.
+  chirp-launcher:
+    build:
+      context: ./launcher
+    container_name: chirp-launcher
+    restart: unless-stopped
+    ports:
+      - "8760:80"
+    volumes:
+      # A real, confirmed bug fixed here: instances.json used to be
+      # mounted as its OWN separate, nested bind mount inside this
+      # directory — but since this directory is ALSO mounted read-only
+      # as a whole, Docker/runc can't create a mountpoint for a second,
+      # nested mount inside an already-read-only one ("read-only file
+      # system" at container start, every time, on any machine — not
+      # environment-specific). Fixed by moving instances.json to live
+      # inside launcher/ itself, so there's only one mount, not two
+      # conflicting ones. new-instance.sh writes to launcher/instances.json
+      # now — see that script's own comment.
+      #
+      # Mounted to html-src (not directly to html) since a second, real,
+      # confirmed bug showed up later: the host-side launcher/ directory
+      # can end up with restrictive (700/600, owner-only) permissions
+      # depending on how it was extracted, which nginx's own internal
+      # user can't read — genuine "Permission denied" 403s, confirmed
+      # from a real deployment's actual nginx error log. The custom
+      # entrypoint (launcher/docker-entrypoint.sh) copies from this
+      # read-only source into a real, writable, correctly-permissioned
+      # location before nginx starts, rather than requiring a manual
+      # host-side chmod that a future re-extraction would just undo.
+      - ./launcher:/usr/share/nginx/html-src:ro
+    labels:
+      - "net.unraid.docker.icon=http://192.168.1.224:8765/icon.svg"
+      - "net.unraid.docker.webui=http://[IP]:[PORT:8760]/"
+      - "net.unraid.docker.name=Chirp Launcher"
+      - "com.centurylinklabs.watchtower.enable=false"

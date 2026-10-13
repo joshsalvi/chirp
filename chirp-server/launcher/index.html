@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chirp — Locations</title>
+<style>
+  :root {
+    --bg: #051009; --bg-card: #0f1e11; --bg-raised: #162419;
+    --border: rgba(234,179,8,.13); --text: #f5f0e8; --text-dim: #9aa89f;
+    --accent: #eab308;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100vh;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 40px 20px; }
+  h1 { font-size: 1.5rem; margin: 0 0 6px; }
+  .subtitle { color: var(--text-dim); font-size: 0.9rem; margin: 0 0 28px; }
+  .instance {
+    display: block; background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px 20px; margin-bottom: 12px;
+    text-decoration: none; color: var(--text); transition: border-color 0.15s;
+  }
+  .instance:hover { border-color: var(--accent); }
+  .instance-name { font-size: 1.05rem; font-weight: 600; }
+  .instance-detail { font-size: 0.8rem; color: var(--text-dim); margin-top: 4px; }
+  .empty, .error {
+    color: var(--text-dim); font-size: 0.9rem; background: var(--bg-raised);
+    border-radius: 10px; padding: 16px; border: 1px solid var(--border);
+  }
+  .error { color: #ff9a9a; border-color: #7a3030; }
+  .status-dot {
+    display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    margin-right: 6px; background: #555;
+  }
+  .status-dot.online { background: #5cb85c; }
+  .status-dot.offline { background: #e06060; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🐦 Chirp</h1>
+  <p class="subtitle">Pick a location — each one is its own complete, independent Chirp instance.</p>
+  <div id="instances">Loading…</div>
+</div>
+<script>
+async function load() {
+  const container = document.getElementById('instances');
+  let instances;
+  try {
+    const resp = await fetch('/instances.json');
+    if (!resp.ok) throw new Error('instances.json returned ' + resp.status);
+    instances = await resp.json();
+  } catch (e) {
+    container.innerHTML = `<div class="error">Could not load the instance list (${e.message}). Check that instances.json exists and is valid JSON.</div>`;
+    return;
+  }
+
+  if (!Array.isArray(instances) || instances.length === 0) {
+    container.innerHTML = '<div class="empty">No instances configured yet. Run ./scripts/new-instance.sh to add one.</div>';
+    return;
+  }
+
+  // A given instance's real URL: its own public_url (e.g. a Cloudflare
+  // Tunnel hostname) if set, otherwise constructed from THIS launcher
+  // page's own hostname + that instance's port — so this works
+  // correctly whether you're viewing the launcher via localhost, a LAN
+  // IP, or a domain, without any instance needing to know about the
+  // others or the launcher hardcoding a specific address.
+  const currentHost = window.location.hostname;
+  const currentProto = window.location.protocol;
+
+  container.innerHTML = instances.map(inst => {
+    const url = inst.public_url || `${currentProto}//${currentHost}:${inst.port}`;
+    return `
+      <a class="instance" href="${url}" data-port="${inst.port}" data-url="${url}">
+        <div class="instance-name"><span class="status-dot" id="dot-${inst.port}"></span>${inst.display_name || inst.name}</div>
+        <div class="instance-detail">${url}</div>
+      </a>
+    `;
+  }).join('');
+
+  // Best-effort health check per instance — a real fetch, not a guess,
+  // but never blocks rendering the list itself (a slow or unreachable
+  // instance just shows as "offline"/unknown rather than holding up
+  // the whole page). /api/v1/health has no CORS restriction issue here
+  // since this is a plain GET with no credentials.
+  instances.forEach(inst => {
+    const url = inst.public_url || `${currentProto}//${currentHost}:${inst.port}`;
+    const dot = document.getElementById(`dot-${inst.port}`);
+    fetch(url.replace(/\/$/, '') + '/api/v1/health', { mode: 'cors' })
+      .then(r => { if (dot) dot.className = 'status-dot ' + (r.ok ? 'online' : 'offline'); })
+      .catch(() => { if (dot) dot.className = 'status-dot offline'; });
+  });
+}
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+name: Sync README Version
+
+# Runs whenever VERSION changes on main and auto-commits the fix if
+# README.md's own "**Version:**" line has drifted — the actual "auto
+# update" mechanism. The script alone (scripts/sync-readme-version.py)
+# only fixes drift when someone remembers to run it locally; this makes
+# that happen without anyone needing to remember.
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "chirp-server/VERSION"
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync README.md version
+        run: python3 chirp-server/scripts/sync-readme-version.py
+
+      - name: Commit if changed
+        run: |
+          if git diff --quiet; then
+            echo "README already in sync — nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "chore: sync README version to $(cat chirp-server/VERSION) [skip ci]"
+          git push
