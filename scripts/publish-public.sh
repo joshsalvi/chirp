@@ -39,6 +39,12 @@ if grep -rInE 'chirp-[A-Za-z0-9_-]{40,}|chirprelay_[A-Za-z0-9_-]{20,}|tskey-[a-z
 fi
 
 cd "$REPO"
+# The old name redirects to the private repo, so check where origin lands.
+read -r VIS NAME < <(gh repo view "$(git remote get-url origin)" --json visibility,nameWithOwner -q '.visibility+" "+.nameWithOwner')
+if [[ "$VIS" != "PUBLIC" || "$NAME" != "joshsalvi/chirp" ]]; then
+  echo "origin is $NAME ($VIS), not the public joshsalvi/chirp; nothing published." >&2
+  exit 1
+fi
 git fetch -q origin main 2>/dev/null && git reset -q --soft origin/main 2>/dev/null || true
 rsync -a --delete --exclude '.git' "$S"/ "$REPO"/
 git add -A
