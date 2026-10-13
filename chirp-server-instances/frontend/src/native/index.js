@@ -22,6 +22,39 @@ export const isIOS = () =>
 export const isApp = () =>
   isNative() || (typeof navigator !== 'undefined' && /\bChirpApp\//.test(navigator.userAgent || ''))
 
+// Test builds with the server picker add "ChirpApp/2" and start on a bundled
+// page (ios-launcher/index.html) that chooses which Chirp server to open.
+export const hasServerPicker = () =>
+  typeof navigator !== 'undefined' && /\bChirpApp\/2\b/.test(navigator.userAgent || '')
+
+export const openServerPicker = () => { window.location.href = 'capacitor://localhost/?pick=1' }
+
+// Picker builds allow navigation to any host (so any server loads in the
+// app), which would also keep plain links to other sites inside the app.
+// Send those to Safari instead, as the release build does.
+export function installExternalLinkGuard() {
+  if (!hasServerPicker() || window.__chirpLinkGuard) return
+  window.__chirpLinkGuard = true
+  document.addEventListener('click', (e) => {
+    const a = e.target?.closest?.('a[href]')
+    if (!a || a.target === '_blank' || e.defaultPrevented) return
+    let url
+    try { url = new URL(a.href, window.location.href) } catch { return }
+    if (!/^https?:$/.test(url.protocol) || url.origin === window.location.origin) return
+    e.preventDefault()
+    window.open(url.href, '_blank')
+  }, true)
+}
+
+// A push relayed for another server carries that server's address; returns
+// the full URL to open when it isn't the server this page is on.
+export function otherServerUrl(data, path) {
+  try {
+    const origin = data?.server ? new URL(data.server).origin : ''
+    return origin && origin !== window.location.origin ? origin + (path || '/notifications') : ''
+  } catch { return '' }
+}
+
 // ── Haptics ───────────────────────────────────────────────────────────────────
 let _haptics = null
 async function getHaptics() {

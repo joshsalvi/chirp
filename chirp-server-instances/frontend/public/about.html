@@ -360,7 +360,7 @@
       <div class="card">
         <div class="k">Self-hosted</div>
         <h3>Run your own server</h3>
-        <p>Run the Docker server at home. Request a push relay token so the iPhone app gets notifications from your server.</p>
+        <p>Run the Docker server at home. Request a push relay token so the iPhone app gets notifications from your server; it doesn't need to be reachable from the internet.</p>
         <a class="btn btn-ghost" href="https://github.com/joshsalvi/chirp">Chirp on GitHub</a>
         <a class="more" href="#request" data-kind="relay">Request a push relay token →</a>
       </div>
@@ -379,7 +379,7 @@
       <div class="row">
         <div><label for="f-site" data-hosted>Site name (e.g. “Maple Street Yard”)</label><label for="f-site" data-relay hidden>Server name</label>
           <input id="f-site" name="site_name" required></div>
-        <div data-relay hidden><label for="f-url">Server address</label><input id="f-url" name="server_url" inputmode="url" placeholder="https://chirp.example.com" autocapitalize="off"></div>
+        <div data-relay hidden><label for="f-url">Server address (optional)</label><input id="f-url" name="server_url" inputmode="url" placeholder="https://chirp.example.com or 192.168.1.50:8765" autocapitalize="off"></div>
         <div data-hosted><label for="f-loc">Place (shown on your site)</label><input id="f-loc" name="location_name" placeholder="Town, State"></div>
       </div>
       <div data-hosted>

@@ -1,13 +1,23 @@
-# Connect the iPhone app to any Chirp server (plan, not shipped)
+# Connect the iPhone app to any Chirp server
 
 Goal: the app opens ourchirp.com by default, and a person can switch it to any
 Chirp server by URL (`https://chirp.example.com`) or on the home network
 (`http://192.168.1.50:8768`). Nothing here is in the current build; the
 App Store version under review keeps `server.url = https://ourchirp.com`.
 
-Draft files, not wired in yet:
+Status (0.5.12.q): built as a separate test build, not in the App Store version.
 
-- `ios-launcher/index.html` — the bundled start page (below).
+- `PICKER=1 ./build-ios.sh --testflight` builds "Chirp β" (same bundle ID) and
+  uploads it for internal TestFlight testers only; it isn't recorded for
+  testflight-auto.sh, so it never reaches external groups.
+- `ios-launcher/index.html` is the start page: ourchirp.com or a custom server
+  (URL, IP:port or .local name), checked with `/api/v1/health` through native
+  HTTP before saving.
+- The web app recognizes the build by its "ChirpApp/2" user agent: "Change
+  server" on the sign-in screen and in My Profile, links to other sites go to
+  Safari, and a relayed push opens the server it came from.
+- To ship: make these settings the release config, keep ourchirp.com as the
+  default for App Review, and mention the server choice in the review notes.
 
 ## How it would work
 

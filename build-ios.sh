@@ -20,6 +20,10 @@
 #                                  TestFlight (plain bundle ID, push on)
 #   BUNDLE_ID=com.example.chirp    use another bundle ID (if the default is
 #                                  taken by another team)
+#   PICKER=1 ./build-ios.sh --testflight   test build that starts on a server
+#                                  picker (ios-launcher/) instead of opening
+#                                  ourchirp.com; named "Chirp β", uploaded but
+#                                  never handed to external testers
 #   PUSH=1 / PUSH=0                force push notifications on/off (default:
 #                                  on for a paid team, off for a free one,
 #                                  which can't sign the push entitlement)
@@ -74,6 +78,23 @@ if [[ -n "${ASC_KEY_ID:-}" && -n "${ASC_ISSUER_ID:-}" && -f "${ASC_KEY_PATH:-}" 
   info "Using App Store Connect API key $ASC_KEY_ID"
 fi
 
+# ── Server picker test build ────────────────────────────────────────────────
+# Same app and bundle ID, but Capacitor starts on the bundled picker page and
+# may open any server. capacitor.config.json is put back when the script ends.
+PICKER="${PICKER:-0}"
+if [[ "$PICKER" == "1" ]]; then
+  cp capacitor.config.json capacitor.config.json.release
+  trap 'mv -f capacitor.config.json.release capacitor.config.json' EXIT
+  node -e '
+    const fs = require("fs"); const c = JSON.parse(fs.readFileSync("capacitor.config.json"));
+    c.webDir = "dist-picker";
+    c.server = { allowNavigation: ["*"], cleartext: true, errorPath: "offline.html" };
+    c.ios.limitsNavigationsToAppBoundDomains = false;
+    c.ios.appendUserAgent = "ChirpApp/2";
+    fs.writeFileSync("capacitor.config.json", JSON.stringify(c, null, 2) + "\n");'
+  info "Server picker build (Chirp β): starts on ios-launcher/index.html"
+fi
+
 # ── Step 1: npm deps ─────────────────────────────────────────────────────────
 info "Step 1/6: Installing npm dependencies..."
 npm install --silent
@@ -83,6 +104,11 @@ success "npm dependencies installed"
 info "Step 2/6: Building React app..."
 npm run build
 success "Web app built → dist/"
+if [[ "$PICKER" == "1" ]]; then
+  rm -rf dist-picker && mkdir dist-picker
+  cp "$ROOT/ios-launcher/index.html" public/logo.svg public/offline.html dist-picker/
+  success "Picker page → dist-picker/"
+fi
 
 # ── Step 3: Add/sync iOS platform ───────────────────────────────────────────
 info "Step 3/6: Syncing Capacitor iOS project..."
@@ -102,8 +128,20 @@ plutil -replace NSLocationWhenInUseUsageDescription -string "Chirp saves where L
 # App-bound domains let the web view run the service worker (cached app
 # shell: faster launches, works through brief drops). Taken from the
 # config's allowNavigation; localhost serves the offline page.
-BOUND="$(node -e 'const c=require("./capacitor.config.json");console.log(JSON.stringify([...new Set([...(c.server.allowNavigation||[]),new URL(c.server.url).hostname,"localhost"])]))')"
-plutil -replace WKAppBoundDomains -json "$BOUND" "$PLIST"
+if [[ "$PICKER" == "1" ]]; then
+  # Any server, including plain http:// on the home network.
+  BOUND="(none: any server)"
+  plutil -remove WKAppBoundDomains "$PLIST" 2>/dev/null || true
+  plutil -replace NSAppTransportSecurity -json '{"NSAllowsArbitraryLoadsInWebContent":true,"NSAllowsLocalNetworking":true}' "$PLIST"
+  plutil -replace NSLocalNetworkUsageDescription -string "Chirp connects to a Chirp server on your home network when you choose one." "$PLIST"
+  plutil -replace CFBundleDisplayName -string "Chirp β" "$PLIST"
+else
+  BOUND="$(node -e 'const c=require("./capacitor.config.json");console.log(JSON.stringify([...new Set([...(c.server.allowNavigation||[]),new URL(c.server.url).hostname,"localhost"])]))')"
+  plutil -replace WKAppBoundDomains -json "$BOUND" "$PLIST"
+  plutil -remove NSAppTransportSecurity "$PLIST" 2>/dev/null || true
+  plutil -remove NSLocalNetworkUsageDescription "$PLIST" 2>/dev/null || true
+  plutil -replace CFBundleDisplayName -string "Chirp" "$PLIST"
+fi
 # iOS 27 ends apps built with its SDK at launch unless they use the UIScene
 # lifecycle. Capacitor's template doesn't, so add a scene manifest and a
 # SceneDelegate (in AppDelegate.swift, so the Xcode project needs no edits).
@@ -341,6 +379,12 @@ PLIST
     grep -q -E "EXPORT SUCCEEDED|Upload succeeded|Uploaded" "$EXPORT_DIR/upload.log" \
       || error "Upload to App Store Connect failed (log: $EXPORT_DIR/upload.log). If it says the app record is missing, create the app in App Store Connect with bundle ID $APP_ID."
     success "Uploaded $MARKETING_VERSION ($BUILD_NUMBER) to App Store Connect. It appears in TestFlight after Apple processes it (usually 5-30 minutes)."
+    if [[ "$PICKER" == "1" ]]; then
+      # Not recorded for testflight-auto.sh, so it never reaches external testers.
+      echo "$BUILD_NUMBER" > "$ROOT/build/last-picker-build"
+      success "Picker build $BUILD_NUMBER: internal testers only. Install \"Chirp β\" from TestFlight; it replaces Chirp on that iPhone."
+      exit 0
+    fi
     # testflight-auto.sh counts the 40 days from this.
     mkdir -p "$ROOT/build" && date +%s > "$ROOT/build/last-testflight"
     # testflight-auto.sh hands this build to scripts/asc.py distribute.

@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef } from 'react'
-import { User, Lock, Bell, Check, AlertCircle, Eye, EyeOff, Save, Shield, Feather, Leaf, RefreshCw, LogOut, Camera, Trash2, UserX } from 'lucide-react'
+import { User, Lock, Bell, Check, AlertCircle, Eye, EyeOff, Save, Shield, Feather, Leaf, RefreshCw, LogOut, Camera, Trash2, UserX, Server } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { api, mediaUrl } from '../lib/api'
 import { format } from 'date-fns'
 import UnifiedCard from './UnifiedCard'
 import { InatRefreshInline } from './Settings'
+import { hasServerPicker, openServerPicker } from '../native'
 
 // ── Field wrapper ─────────────────────────────────────────────────────────────
 function Field({ label, hint, error, children }) {
@@ -262,6 +263,21 @@ export function PushNotificationSection() {
           {testResult && testResult !== 'ok' && <p className="text-xs" style={{ color: '#f87171' }}>{testResult}</p>}
         </div>
       )}
+    </Section>
+  )
+}
+
+// ── Server (picker builds only) ───────────────────────────────────────────────
+function ServerSection() {
+  return (
+    <Section id="me:server" fallbackOpen={false} icon={Server} title="Server" color="#60a5fa">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{window.location.host}</p>
+          <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>You stay signed in here when you switch.</p>
+        </div>
+        <button onClick={openServerPicker} className="btn-secondary text-xs px-3 py-1.5 flex-shrink-0">Change server</button>
+      </div>
     </Section>
   )
 }
@@ -700,6 +716,7 @@ export default function UserProfile() {
         <span style={{ color: 'var(--text-tertiary)' }}>›</span>
       </button>
 
+      {hasServerPicker() && <ServerSection/>}
       <BlockedPeopleSection/>
       <DeleteAccountSection/>
 

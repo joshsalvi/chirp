@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { createWebSocket, api, tokenStore, markNavigation } from './lib/api'
 import { getStoredTheme, applyTheme } from './lib/theme'
-import { native, isNative } from './native'
+import { native, isNative, otherServerUrl } from './native'
 import { useUnread, refreshUnread } from './lib/unread'
 import { installHaptics, hapticEvent } from './lib/haptics'
 import { appPath } from './lib/appPath'
@@ -576,8 +576,10 @@ export default function App() {
       },
       onNotification: (notification) => {
         window.dispatchEvent(new Event('chirp-notification'))
-        const url = notification?.data?.url || notification?.notification?.data?.url
-        navigate(appPath(url) || '/notifications')
+        const data = notification?.data || notification?.notification?.data || {}
+        const elsewhere = otherServerUrl(data, appPath(data.url))
+        if (elsewhere) { window.location.href = elsewhere; return }
+        navigate(appPath(data.url) || '/notifications')
       },
     })
   }, [navigate])

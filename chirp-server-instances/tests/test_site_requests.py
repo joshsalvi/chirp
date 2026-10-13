@@ -102,7 +102,8 @@ def test_relay_request_token_and_send(api, monkeypatch):
     from app.services import apns_push
     c, mails = api
     bad = {"kind": "relay", "full_name": "Bo", "email": "bo@example.com", "site_name": "Bo's server"}
-    assert c.post("/api/v1/site-requests", json=bad).status_code == 400              # needs server address
+    assert c.post("/api/v1/site-requests", json={**bad, "server_url": "not a url"}).status_code == 400
+    assert c.post("/api/v1/site-requests", json={**bad, "username": "x1"}).status_code == 201       # address optional
     rid = c.post("/api/v1/site-requests", json={**bad, "server_url": "https://bo.example.com/"}).json()["id"]
     mails.clear()
     out = c.post(f"/api/v1/admin/site-requests/{rid}/approve").json()

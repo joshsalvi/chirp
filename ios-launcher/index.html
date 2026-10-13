@@ -1,114 +1,168 @@
 <!doctype html>
-<!-- DRAFT, not in any build yet. See docs/SERVER_PICKER_PLAN.md.
-     Bundled start page for the iPhone app: opens the saved Chirp server
-     (default https://ourchirp.com) after a health check, or shows a picker. -->
+<!-- Start page for iPhone builds with the server picker (PICKER=1 ./build-ios.sh).
+     Opens the saved Chirp server after a health check, or lets the person
+     choose ourchirp.com or a custom server. See docs/SERVER_PICKER_PLAN.md. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Chirp</title>
 <style>
-  :root { color-scheme: dark; }
-  body { margin: 0; min-height: 100vh; background: #0a160c; color: #f5efe6;
+  :root { color-scheme: dark; --bg: #0a160c; --card: #13261a; --line: rgba(245,239,230,.12);
+          --ink: #f5efe6; --ink2: #d8d1c5; --ink3: #9fb0a2; --amber: #fbbf24; --orange: #fb923c; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--ink);
          font: 16px/1.5 -apple-system, BlinkMacSystemFont, sans-serif;
-         display: flex; align-items: center; justify-content: center; }
-  main { width: 100%; max-width: 380px; padding: 28px 22px; }
-  img { width: 64px; display: block; margin: 0 auto 10px; }
-  h1 { text-align: center; font: 600 26px ui-serif, Georgia, serif; margin: 0 0 4px; }
-  .muted { color: #9fb0a2; font-size: 14px; text-align: center; }
-  #picker { display: none; margin-top: 22px; }
-  label { font-size: 13px; color: #9fb0a2; }
-  input { width: 100%; box-sizing: border-box; margin: 6px 0 10px; padding: 13px 14px; border-radius: 12px;
-          border: 1px solid rgba(245,239,230,.15); background: #13261a; color: #f5efe6; font-size: 16px; }
-  button { width: 100%; padding: 13px; border-radius: 999px; border: 0; font-weight: 600; font-size: 16px; margin-top: 6px; }
-  .primary { background: #fbbf24; color: #1a1405; }
-  .ghost { background: transparent; color: #f5efe6; border: 1px solid rgba(245,239,230,.15); }
-  .recent button { text-align: left; background: #13261a; color: #f5efe6; font-weight: 500; }
-  #msg { min-height: 22px; font-size: 14px; color: #fb923c; text-align: center; margin-top: 8px; }
+         display: flex; align-items: center; justify-content: center;
+         padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+  main { width: 100%; max-width: 420px; padding: 28px 20px; }
+  .logo { width: 64px; display: block; margin: 0 auto 10px; }
+  h1 { text-align: center; font: 600 28px ui-serif, Georgia, serif; margin: 0 0 4px; }
+  .muted { color: var(--ink3); font-size: 14px; text-align: center; margin: 0; }
+  #picker { display: none; margin-top: 24px; }
+  .opt { display: block; background: var(--card); border: 1.5px solid var(--line); border-radius: 18px;
+         padding: 14px 16px; margin-bottom: 12px; cursor: pointer; }
+  .opt.on { border-color: var(--amber); background: rgba(251,191,36,.07); }
+  .opt input[type=radio] { accent-color: var(--amber); margin: 0 8px 0 0; vertical-align: -2px; }
+  .opt b { font-size: 16px; }
+  .opt p { margin: 4px 0 0 26px; color: var(--ink3); font-size: 13.5px; }
+  #custom { display: none; margin: 10px 0 0 26px; }
+  .opt.on #custom { display: block; }
+  input[type=url], input[type=text] { width: 100%; padding: 12px 13px; border-radius: 12px; border: 1px solid var(--line);
+         background: var(--bg); color: var(--ink); font-size: 16px; }
+  .note { font-size: 12.5px; color: var(--ink3); margin: 8px 0 0; }
+  button.primary { width: 100%; padding: 14px; border-radius: 999px; border: 0; font-weight: 600; font-size: 16px;
+         background: var(--amber); color: #1a1405; margin-top: 6px; }
+  button.primary:disabled { opacity: .6; }
+  button.link { background: none; border: 0; color: var(--orange); font-size: 14px; padding: 8px; }
+  #recent { margin-top: 8px; }
+  #recent button { display: inline-block; margin: 6px 6px 0 0; padding: 6px 12px; border-radius: 999px;
+         border: 1px solid var(--line); background: transparent; color: var(--ink2); font-size: 13.5px; }
+  #msg { min-height: 22px; font-size: 14px; color: var(--orange); text-align: center; margin: 12px 0 0; }
+  #other { display: none; text-align: center; margin-top: 18px; }
 </style>
 </head>
 <body>
 <main>
-  <img src="logo.svg" alt="" id="logo">
+  <img src="logo.svg" alt="" class="logo">
   <h1>Chirp</h1>
   <p class="muted" id="status">Connecting…</p>
-  <div id="picker">
-    <label for="url">Chirp server</label>
-    <input id="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false"
-           placeholder="ourchirp.com, chirp.example.com or 192.168.1.50:8768">
-    <button class="primary" id="connect">Connect</button>
-    <button class="ghost" id="default">Use ourchirp.com</button>
-    <div class="recent" id="recent"></div>
-    <p id="msg"></p>
-  </div>
+  <div id="other"><button class="link" id="choose">Choose another server</button></div>
+
+  <form id="picker" novalidate>
+    <label class="opt" id="opt-managed">
+      <input type="radio" name="kind" value="managed"><b>ourchirp.com</b>
+      <p>Hosted Chirp sites. Join one with an invite code or request your own.</p>
+    </label>
+    <label class="opt" id="opt-custom">
+      <input type="radio" name="kind" value="custom"><b>Custom server</b>
+      <p>A Chirp server you or someone you know runs.</p>
+      <div id="custom">
+        <input id="url" type="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false"
+               placeholder="chirp.example.com or 192.168.1.50:8765">
+        <p class="note">An address on your home network works only while this iPhone is on that network
+          or a VPN such as Tailscale. Notifications arrive anywhere once the server has a push relay token.</p>
+        <div id="recent"></div>
+      </div>
+    </label>
+    <button class="primary" id="go" type="submit">Continue</button>
+    <p id="msg" role="status"></p>
+  </form>
 </main>
 <script>
-  const DEFAULT = 'https://ourchirp.com'
-  const KEY = 'chirp_server', RECENT = 'chirp_recent_servers'
-  const get = (k, d) => { try { return localStorage.getItem(k) || d } catch { return d } }
-  const set = (k, v) => { try { localStorage.setItem(k, v) } catch {} }
+  var DEFAULT = 'https://ourchirp.com'
+  var KEY = 'chirp_server', RECENT = 'chirp_recent_servers'
+  function get(k, d) { try { return localStorage.getItem(k) || d } catch (e) { return d } }
+  function set(k, v) { try { localStorage.setItem(k, v) } catch (e) {} }
+  function recent() { try { return JSON.parse(get(RECENT, '[]')) } catch (e) { return [] } }
+  function $(id) { return document.getElementById(id) }
+  function host(o) { return o.replace(/^https?:\/\//, '') }
 
-  // "chirp.example.com" -> https://…; a bare IP or host:port on the LAN -> http://…
+  // "chirp.example.com" -> https://…; an IP, a .local name or host:port -> http://…
   function normalize(raw) {
-    let s = (raw || '').trim().replace(/\/+$/, '')
+    var s = (raw || '').trim().replace(/\/+$/, '')
     if (!s) return null
     if (!/^https?:\/\//i.test(s)) {
-      const lan = /^(\d{1,3}\.){3}\d{1,3}(:\d+)?$/.test(s) || /\.local(:\d+)?$/i.test(s) || /^[^.]+:\d+$/.test(s)
+      var lan = /^(\d{1,3}\.){3}\d{1,3}(:\d+)?$/.test(s) || /\.local(:\d+)?$/i.test(s) || /^[^.\/]+:\d+$/.test(s)
       s = (lan ? 'http://' : 'https://') + s
     }
-    try { const u = new URL(s); return u.origin } catch { return null }
+    try { return new URL(s).origin } catch (e) { return null }
   }
 
-  async function check(origin) {
-    const ctl = new AbortController()
-    const t = setTimeout(() => ctl.abort(), 4000)
-    try {
-      const r = await fetch(origin + '/api/v1/health', { signal: ctl.signal, cache: 'no-store' })
-      const j = await r.json()
-      return r.ok && j && j.version ? j : null
-    } catch { return null } finally { clearTimeout(t) }
+  // Native HTTP when the bridge has it: no CORS, and http:// works from this page.
+  function check(origin) {
+    var url = origin + '/api/v1/health'
+    var http = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.CapacitorHttp
+    var timeout = new Promise(function (r) { setTimeout(function () { r(null) }, 5000) })
+    var req = http
+      ? http.get({ url: url, connectTimeout: 4500, readTimeout: 4500 }).then(function (r) {
+          var d = typeof r.data === 'string' ? JSON.parse(r.data) : r.data
+          return r.status === 200 && d && d.version ? d : null
+        })
+      : fetch(url, { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null })
+          .then(function (d) { return d && d.version ? d : null })
+    return Promise.race([req.catch(function () { return null }), timeout])
   }
 
   function open(origin) {
     set(KEY, origin)
-    const recent = [origin, ...JSON.parse(get(RECENT, '[]')).filter(x => x !== origin)].slice(0, 5)
-    set(RECENT, JSON.stringify(recent))
+    set(RECENT, JSON.stringify([origin].concat(recent().filter(function (x) { return x !== origin && x !== DEFAULT })).slice(0, 5)))
+    $('status').textContent = 'Opening ' + host(origin) + '…'
     location.replace(origin + '/')
   }
 
+  function select(kind) {
+    document.querySelectorAll('input[name=kind]').forEach(function (r) { r.checked = r.value === kind })
+    $('opt-managed').classList.toggle('on', kind === 'managed')
+    $('opt-custom').classList.toggle('on', kind === 'custom')
+    if (kind === 'custom') setTimeout(function () { $('url').focus() }, 50)
+  }
+
   function showPicker(message) {
-    document.getElementById('status').textContent = 'Choose the Chirp server to open.'
-    document.getElementById('picker').style.display = 'block'
-    document.getElementById('msg').textContent = message || ''
-    document.getElementById('url').value = get(KEY, DEFAULT).replace(/^https:\/\//, '')
-    const box = document.getElementById('recent')
-    box.innerHTML = ''
-    for (const o of JSON.parse(get(RECENT, '[]'))) {
-      const b = document.createElement('button'); b.textContent = o.replace(/^https?:\/\//, '')
-      b.onclick = () => tryOpen(o); box.appendChild(b)
-    }
+    $('status').textContent = 'Choose the Chirp server to open.'
+    $('other').style.display = 'none'
+    $('picker').style.display = 'block'
+    $('msg').textContent = message || ''
+    var saved = get(KEY, '')
+    if (saved && saved !== DEFAULT) { $('url').value = host(saved); select('custom') } else select('managed')
+    var box = $('recent'); box.innerHTML = ''
+    recent().forEach(function (o) {
+      var b = document.createElement('button'); b.type = 'button'; b.textContent = host(o)
+      b.onclick = function (e) { e.preventDefault(); $('url').value = host(o) }
+      box.appendChild(b)
+    })
   }
 
-  async function tryOpen(raw) {
-    const origin = normalize(raw)
-    if (!origin) return showPicker('That doesn’t look like a server address.')
-    document.getElementById('msg').textContent = 'Checking ' + origin + '…'
-    if (await check(origin)) open(origin)
-    else showPicker('No Chirp server answered at ' + origin + '.')
-  }
+  document.querySelectorAll('input[name=kind]').forEach(function (r) {
+    r.addEventListener('change', function () { select(r.value) })
+  })
+  $('choose').onclick = function () { picking = true; showPicker() }
+  $('picker').addEventListener('submit', function (e) {
+    e.preventDefault()
+    var kind = (document.querySelector('input[name=kind]:checked') || {}).value
+    var origin = kind === 'custom' ? normalize($('url').value) : DEFAULT
+    if (!origin) { $('msg').textContent = 'Enter an address such as chirp.example.com or 192.168.1.50:8765.'; return }
+    $('go').disabled = true
+    $('msg').textContent = 'Checking ' + host(origin) + '…'
+    check(origin).then(function (ok) {
+      $('go').disabled = false
+      if (ok) open(origin)
+      else $('msg').textContent = 'No Chirp server answered at ' + host(origin) + '. Check the address and that this iPhone can reach it.'
+    })
+  })
 
-  document.getElementById('connect').onclick = () => tryOpen(document.getElementById('url').value)
-  document.getElementById('default').onclick = () => tryOpen(DEFAULT)
-  // Hold the logo for a second at launch to pick a server instead of auto-connecting.
-  let hold = null, picking = new URLSearchParams(location.search).has('pick')
-  document.getElementById('logo').addEventListener('touchstart', () => { hold = setTimeout(() => { picking = true; showPicker() }, 800) })
-  document.getElementById('logo').addEventListener('touchend', () => clearTimeout(hold))
-
-  ;(async () => {
-    if (picking) return showPicker()
-    const saved = get(KEY, DEFAULT)
-    if (await check(saved)) { if (!picking) open(saved) }
-    else if (!picking) showPicker('Couldn’t reach ' + saved + '.')
+  var picking = new URLSearchParams(location.search).has('pick')
+  ;(function start() {
+    var saved = get(KEY, '')
+    if (picking || !saved) return showPicker()
+    $('status').textContent = 'Connecting to ' + host(saved) + '…'
+    var t = setTimeout(function () { $('other').style.display = 'block' }, 1500)
+    check(saved).then(function (ok) {
+      clearTimeout(t)
+      if (picking) return
+      if (ok) open(saved)
+      else showPicker('Couldn’t reach ' + host(saved) + '.')
+    })
   })()
 </script>
 </body>

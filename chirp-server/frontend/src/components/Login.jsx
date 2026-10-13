@@ -3,6 +3,7 @@ import { RefreshCw, Eye, EyeOff } from 'lucide-react'
 import ChirpLogo from './ChirpLogo'
 import { api } from '../lib/api'
 import { hapticEvent } from '../lib/haptics'
+import { hasServerPicker, openServerPicker } from '../native'
 
 function InputField({ label, type = 'text', value, onChange, placeholder, required, autoFocus, autoComplete }) {
   const [show, setShow] = useState(false)
@@ -158,6 +159,12 @@ export default function Login({ onLogin }) {
         <p className="text-xs text-center mt-3">
           <a href="/about" style={{ color: 'var(--accent-400)' }}>What is Chirp?</a>
         </p>
+        {hasServerPicker() && (
+          <p className="text-xs text-center mt-2" style={{ color: 'var(--text-tertiary)' }}>
+            Server: {window.location.host} ·{' '}
+            <button type="button" onClick={openServerPicker} style={{ color: 'var(--accent-400)' }}>Change</button>
+          </p>
+        )}
       </div>
     </div>
   )

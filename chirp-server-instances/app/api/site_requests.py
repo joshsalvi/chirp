@@ -125,10 +125,12 @@ def submit_request(body: SiteRequestIn, request: Request):
             from .auth import _get_crypt
             row.username, row.hashed_pw = username, _get_crypt().hash(body.password)
         else:
+            # For reference only: the relay never connects to the server, so a
+            # home-network address is fine.
             url = (body.server_url or "").strip().rstrip("/")
-            if not re.match(r"^https?://[^\s/]+", url):
-                raise HTTPException(400, "Enter your server's address, e.g. https://chirp.example.com")
-            row.server_url = url[:200]
+            if url and not re.match(r"^(https?://)?[^\s/]+(/\S*)?$", url):
+                raise HTTPException(400, "Enter an address such as https://chirp.example.com or 192.168.1.50:8765")
+            row.server_url = url[:200] or None
         reg.add(row)
         reg.commit()
         reg.refresh(row)

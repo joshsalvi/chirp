@@ -6,9 +6,11 @@ import './index.css'
 import './lib/theme'  // apply theme before first render
 import { migrateLegacySettingsCollapse } from './lib/cardState'
 import { installViewportFix } from './lib/viewportFix'
+import { installExternalLinkGuard } from './native'
 
 migrateLegacySettingsCollapse()
 installViewportFix()
+installExternalLinkGuard()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <BrowserRouter>

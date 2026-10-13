@@ -1,3 +1,10 @@
+## 0.5.12.q — 2026-10-13 — ENHANCEMENT — Server picker test build
+
+- PICKER=1 ./build-ios.sh --testflight builds "Chirp β": same app, starts on ios-launcher/index.html to choose ourchirp.com or a custom server (address or IP:port), uploaded for internal testers only.
+- Picker builds allow any server, plain http:// on the home network (with iOS's local-network prompt), and send links to other sites to Safari; the release build is unchanged.
+- In picker builds, the sign-in screen and My Profile → Server have "Change server"; tapping a relayed push opens the server it came from.
+- Push relay requests: the server address is optional; the relay never connects to the server.
+
 ## 0.5.12.p — 2026-10-12 — ENHANCEMENT — Site requests and push relay
 
 - ourchirp.com/about takes requests for a hosted site or a push relay token; ourchirp.com's front page opens /about for visitors who aren't signed in.
