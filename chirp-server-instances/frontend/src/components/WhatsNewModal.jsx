@@ -6,6 +6,7 @@ import { WHATS_NEW } from '../lib/whatsNew'
 import { useAppInfo } from '../lib/appVersion'
 
 const ANON_STORAGE_KEY = 'chirp_whats_new_seen_version'
+const POPUP = WHATS_NEW.popup || WHATS_NEW.version
 
 /**
  * Shows once per version, per user (or per browser, for an anon/no-auth
@@ -36,13 +37,13 @@ export default function WhatsNewModal() {
       if (u.username && u.auth_required !== false) {
         // Real authenticated user — use the per-account field
         setMode('user')
-        if (u.last_seen_whats_new_version !== WHATS_NEW.version) setVisible(true)
+        if (u.last_seen_whats_new_version !== POPUP) setVisible(true)
       } else {
         // Anon / auth disabled — no real user row to persist to, fall back
         // to a browser-local marker instead
         setMode('anon')
         const seen = localStorage.getItem(ANON_STORAGE_KEY)
-        if (seen !== WHATS_NEW.version) setVisible(true)
+        if (seen !== POPUP) setVisible(true)
       }
     }).catch(() => {})
   }, [])
@@ -50,9 +51,9 @@ export default function WhatsNewModal() {
   const dismiss = async () => {
     setVisible(false)
     if (mode === 'user') {
-      try { await api.auth.updateProfile({ last_seen_whats_new_version: WHATS_NEW.version }) } catch (e) { /* worst case it shows again next load — not worth blocking dismissal on this */ }
+      try { await api.auth.updateProfile({ last_seen_whats_new_version: POPUP }) } catch (e) { /* worst case it shows again next load — not worth blocking dismissal on this */ }
     } else {
-      localStorage.setItem(ANON_STORAGE_KEY, WHATS_NEW.version)
+      localStorage.setItem(ANON_STORAGE_KEY, POPUP)
     }
   }
 

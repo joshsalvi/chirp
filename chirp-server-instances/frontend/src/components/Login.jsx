@@ -186,7 +186,7 @@ export default function Login({ onLogin }) {
           {mode === 'login' ? 'No account yet? Switch to Register above.' : 'You can sign in right away — no approval needed.'}
         </p>
         <p className="text-xs text-center mt-3">
-          <a href="/about" style={{ color: 'var(--accent-400)' }}>What is Chirp?</a>
+          <a href="/about" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>What is Chirp? ↗</a>
         </p>
         {hasServerPicker() && (
           <p className="text-xs text-center mt-2" style={{ color: 'var(--text-tertiary)' }}>

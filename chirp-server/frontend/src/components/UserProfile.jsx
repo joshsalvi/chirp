@@ -340,7 +340,7 @@ function FeedbackSection() {
         {state && state !== 'sent' && state !== 'sending' && <span className="text-xs" style={{ color: 'var(--pastel-red)' }}>{state}</span>}
       </div>
       <p className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
-        Sent with your username so we can reply. More help on the <a href="/support.html" style={{ color: 'var(--accent-400)' }}>support page</a>.
+        Sent with your username so we can reply. More help on the <a href="/support.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>support page ↗</a>.
       </p>
     </Section>
   )

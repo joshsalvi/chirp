@@ -12,9 +12,12 @@
 //   collapsed era card.
 //
 // WHATS_NEW.version must match the VERSION file (stamp-sw-version.mjs
-// checks it), or the popup won't show for anyone.
+// checks it). Set `popup` to the new version when `latest` changes.
 export const WHATS_NEW = {
-  version: '0.5.12.t',
+  version: '0.5.12.u',
+  // The release whose `latest` text this is. The popup shows once per value,
+  // so small fixes that don't change `latest` don't bring it back.
+  popup: '0.5.12.t',
   title: "What's new in Chirp",
   latest: {
     intro: 'Easier invites, your own site on ourchirp.com, and a way to send us ideas.',

@@ -1,3 +1,8 @@
+## 0.5.12.u — 2026-10-13 — BUGFIX — Support and About links open in the browser
+
+- My Profile's support page link and the sign-in screen's "What is Chirp?" open in Safari (a new tab on the web) instead of inside the app.
+- The What's New popup shows again only when its text changes, not on every small fix.
+
 ## 0.5.12.t — 2026-10-13 — ENHANCEMENT — Contact form and feature ideas
 
 - Support page has a contact form (question, problem, feature idea) instead of an email address; the About page links to it.
