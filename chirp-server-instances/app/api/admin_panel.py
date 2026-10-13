@@ -126,7 +126,7 @@ def list_instance_members(instance_id: str, admin: GlobalUser = Depends(get_curr
 class AddMemberRequest(BaseModel):
     username: str
     role: str = "viewer"
-    member_password: str  # the per-instance User row still needs its own hashed_pw, same as the self-service join flow
+    member_password: Optional[str] = None  # ignored; the site uses the account password
 
 
 @router.post("/instances/{instance_id}/members", response_model=MembershipOut, status_code=201)
@@ -168,10 +168,9 @@ def add_member_to_instance(instance_id: str, body: AddMemberRequest, admin: Glob
         InstanceSession = sessionmaker(bind=engine)
         inst_db = InstanceSession()
         try:
-            crypt = _get_crypt()
             local_user = User(
                 username=target.username, email=target.email,
-                hashed_pw=crypt.hash(body.member_password), role=body.role,
+                hashed_pw=target.hashed_pw, role=body.role,   # same password as the account
             )
             inst_db.add(local_user)
             inst_db.commit()

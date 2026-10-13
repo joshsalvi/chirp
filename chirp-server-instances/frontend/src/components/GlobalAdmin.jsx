@@ -62,15 +62,14 @@ function StatCard({ label, value }) {
 function AddMemberForm({ instanceId, onAdded, onCancel }) {
   const [username, setUsername] = useState('')
   const [role, setRole] = useState('viewer')
-  const [password, setPassword] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
   const submit = async () => {
-    if (!username.trim() || !password) { setError('Username and password are both required.'); return }
+    if (!username.trim()) { setError('Enter a username.'); return }
     setSaving(true); setError(null)
     try {
-      await api.admin.addMember(instanceId, { username: username.trim(), role, member_password: password })
+      await api.admin.addMember(instanceId, { username: username.trim(), role })
       onAdded()
     } catch (e) {
       setError(e.message || 'Failed to add member')
@@ -82,18 +81,15 @@ function AddMemberForm({ instanceId, onAdded, onCancel }) {
   return (
     <div className="rounded-lg p-3 mt-2 space-y-2" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)' }}>
       {error && <p className="text-xs" style={{ color: 'var(--pastel-red)' }}>{error}</p>}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <input className="input text-xs" placeholder="Username" value={username}
                onChange={e => setUsername(e.target.value)}/>
-        <input className="input text-xs" type="password" placeholder="Password for this location" value={password}
-               onChange={e => setPassword(e.target.value)}/>
         <select className="input text-xs" value={role} onChange={e => setRole(e.target.value)}>
           {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
       </div>
       <p className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>
-        The username must belong to an existing registered account. This sets that person's own login for
-        this specific location — it does not need to match their password anywhere else.
+        The username must belong to an existing account. They sign in to this site with their usual password.
       </p>
       <div className="flex gap-2">
         <button onClick={submit} disabled={saving} className="btn-primary text-xs flex items-center gap-1">

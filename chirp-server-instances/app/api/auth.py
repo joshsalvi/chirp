@@ -308,12 +308,55 @@ def get_me(current_user=Depends(get_current_user)):
 
 
 
+def _verify_account_password(username: str, password: str) -> bool:
+    """Checks the sign-in (GlobalUser) password."""
+    from ..registry_db import RegistrySessionLocal
+    from ..registry_models import GlobalUser
+    reg = RegistrySessionLocal()
+    try:
+        g = reg.query(GlobalUser).filter(GlobalUser.username == username).first()
+        return bool(g and _get_crypt().verify(password, g.hashed_pw))
+    finally:
+        reg.close()
+
+
+def set_account_password(username: str, hashed_pw: str) -> None:
+    """One password per person: sets the sign-in password and the copy on
+    every site they belong to (sites keep a local user row for their own
+    code; older members had a separate per-site password there)."""
+    from sqlalchemy.orm import sessionmaker
+    from ..registry_db import RegistrySessionLocal
+    from ..registry_models import GlobalUser, Membership
+    from ..instance_registry import get_engine_for_instance
+    reg = RegistrySessionLocal()
+    try:
+        g = reg.query(GlobalUser).filter(GlobalUser.username == username).first()
+        if not g:
+            return
+        g.hashed_pw = hashed_pw
+        reg.commit()
+        for m in reg.query(Membership).filter(Membership.user_id == g.id).all():
+            try:
+                db = sessionmaker(bind=get_engine_for_instance(m.instance.db_filename))()
+                try:
+                    u = db.query(User).filter(User.username == username).first()
+                    if u:
+                        u.hashed_pw = hashed_pw
+                        db.commit()
+                finally:
+                    db.close()
+            except Exception as e:
+                logger.warning("Password sync skipped site %s: %s", m.instance_id, e)
+    finally:
+        reg.close()
+
+
 class RegisterRequest(BaseModel):
     username: str
     email: Optional[str] = None
     password: str
     invite_code: Optional[str] = None      # optional: register and join a location in one step
-    member_password: Optional[str] = None  # required only if invite_code is set — see JoinInstanceRequest's own comment on why this is deliberately separate from the global account password
+    member_password: Optional[str] = None  # ignored; older clients sent a separate per-site password
 
 
 @router.post("/register", status_code=201)
@@ -364,8 +407,6 @@ def register(body: RegisterRequest):
 
         instance = None
         if body.invite_code:
-            if not body.member_password or len(body.member_password) < 6:
-                raise HTTPException(400, "member_password (at least 6 characters) is required when registering with an invite code")
             instance = reg_db.query(Instance).filter(Instance.invite_code == body.invite_code.strip().upper()).first()
             if not instance:
                 # Checked before creating anything — an invalid code
@@ -396,10 +437,9 @@ def register(body: RegisterRequest):
         InstanceSession = sessionmaker(bind=engine)
         inst_db = InstanceSession()
         try:
-            crypt = _get_crypt()
             local_user = User(
                 username=user.username, email=user.email,
-                hashed_pw=crypt.hash(body.member_password), role="viewer",
+                hashed_pw=user.hashed_pw, role="viewer",   # same password as the account
             )
             inst_db.add(local_user)
             inst_db.commit()
@@ -474,6 +514,7 @@ def change_password(user_id: str, body: dict, current_user=Depends(require_admin
     if not user: raise HTTPException(404, "User not found")
     user.hashed_pw = _get_crypt().hash(body["password"])
     db.commit()
+    set_account_password(user.username, user.hashed_pw)
     return {"status": "ok"}
 
 
@@ -687,9 +728,11 @@ def update_my_profile(body: ProfileUpdateRequest, request: Request, db: Session 
         if auth_on:
             if not body.current_password:
                 raise HTTPException(400, "Current password is required")
-            if not crypt.verify(body.current_password, user.hashed_pw):
+            if not (_verify_account_password(user.username, body.current_password)
+                    or crypt.verify(body.current_password, user.hashed_pw)):
                 raise HTTPException(400, "Current password is incorrect")
         user.hashed_pw = crypt.hash(body.new_password)
+        set_account_password(user.username, user.hashed_pw)
         # Send confirmation email
         try:
             from ..services.email_service import notify_password_changed

@@ -855,11 +855,11 @@ export const api = {
         return res.json()
       })
     },
-    register: (username, email, password, inviteCode, memberPassword) => request('/auth/register', {
+    register: (username, email, password, inviteCode) => request('/auth/register', {
       method: 'POST',
       body: JSON.stringify({
         username, email, password,
-        ...(inviteCode ? { invite_code: inviteCode, member_password: memberPassword } : {}),
+        ...(inviteCode ? { invite_code: inviteCode } : {}),
       }),
     }),
     users: {

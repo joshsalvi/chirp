@@ -20,12 +20,9 @@ const ANON_STORAGE_KEY = 'chirp_whats_new_seen_version'
  * fields this needs (same reason Dashboard.jsx's own mode-picker logic
  * does its own independent fetch instead of relying on it).
  *
- * Only WHATS_NEW.latest is ever shown expanded — this popup announces
- * what's new right now, not a running archive of every past release
- * (that accumulated into a very long single-scroll list before this
- * rewrite). Older versions get one condensed line each under a
- * collapsed "Previously" toggle, and the full detail lives on the
- * Changelog page this links to — not duplicated here.
+ * Shows WHATS_NEW.latest (at most three short items) and, collapsed, one
+ * line per earlier release of the current minor version. Everything older
+ * is on the Changelog page.
  */
 export default function WhatsNewModal() {
   const appInfo = useAppInfo()
@@ -61,12 +58,12 @@ export default function WhatsNewModal() {
 
   if (!visible) return null
 
-  const { latest, previousHighlights, olderHistory } = WHATS_NEW
+  const { latest, recent } = WHATS_NEW
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,.6)', backdropFilter: 'blur(4px)' }}
          onClick={e => { if (e.target === e.currentTarget) dismiss() }}>
-      <div className="w-full max-w-lg rounded-2xl p-6 sm:p-7 relative max-h-[85vh] overflow-y-auto"
+      <div className="w-full max-w-md rounded-2xl p-6 relative max-h-[85vh] overflow-y-auto"
            style={{ background: 'var(--bg-card)', border: '1px solid var(--border-default)' }}>
         <button onClick={dismiss} className="tactile-press absolute top-4 right-4 p-1 rounded-lg transition-colors hover:opacity-70"
                 style={{ color: 'var(--text-tertiary)' }} aria-label="Close">
@@ -79,55 +76,45 @@ export default function WhatsNewModal() {
             {WHATS_NEW.title}
           </h2>
         </div>
-        <p className="text-xs mb-5" style={{ color: 'var(--text-tertiary)' }}>
-          Version {WHATS_NEW.version}{appInfo ? ` · iPhone app ${appInfo.version} (build ${appInfo.build})` : ''}
+        <p className="text-xs mb-4" style={{ color: 'var(--text-tertiary)' }}>
+          Version {WHATS_NEW.version}{appInfo ? ` · iPhone app ${appInfo.version}` : ''}
         </p>
 
         {latest.intro && (
-          <p className="text-sm mb-5" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{latest.intro}</p>
+          <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)', lineHeight: 1.55 }}>{latest.intro}</p>
         )}
 
-        <div className="space-y-4 mb-2">
+        <div className="space-y-3">
           {latest.sections.map((s, i) => (
-            <div key={i}>
-              <p className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>{s.heading}</p>
-              <p className="text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{s.body}</p>
+            <div key={i} className="rounded-xl px-3.5 py-3" style={{ background: 'var(--bg-subtle, rgba(255,255,255,.03))' }}>
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{s.heading}</p>
+              <p className="text-[13px] mt-0.5" style={{ color: 'var(--text-secondary)', lineHeight: 1.5 }}>{s.body}</p>
             </div>
           ))}
         </div>
 
-        {(previousHighlights?.length > 0 || olderHistory?.length > 0) && (
-          <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+        {recent?.length > 1 && (
+          <div className="mt-4">
             <button onClick={() => setShowHistory(h => !h)}
-                    className="tactile-press flex items-center gap-1.5 text-xs font-medium w-full"
+                    className="tactile-press flex items-center gap-1.5 text-xs font-medium"
                     style={{ color: 'var(--text-tertiary)' }}>
               <ChevronDown size={13} style={{ transform: showHistory ? 'rotate(180deg)' : 'none', transition: 'transform 150ms ease' }}/>
-              Previously
+              Earlier in {WHATS_NEW.version.split('.').slice(0, 3).join('.')}
             </button>
             {showHistory && (
-              <div className="mt-2 space-y-3">
-                {previousHighlights?.length > 0 && <div className="space-y-1.5">
-                  {previousHighlights.map((h, i) => (
-                    <p key={i} className="text-xs" style={{ color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
-                      <span className="font-mono" style={{ color: 'var(--text-secondary)' }}>{h.version}</span> — {h.summary}
-                    </p>
-                  ))}
-                </div>}
-                {olderHistory?.length > 0 && (
-                  <div className="space-y-1.5 pt-2" style={previousHighlights?.length > 0 ? { borderTop: '1px solid var(--border-subtle)' } : undefined}>
-                    {olderHistory.map((h, i) => (
-                      <p key={i} className="text-xs" style={{ color: 'var(--text-tertiary)', lineHeight: 1.5, opacity: 0.8 }}>
-                        <span className="font-mono" style={{ color: 'var(--text-secondary)' }}>{h.range}</span> — {h.summary}
-                      </p>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <ul className="mt-2 space-y-1">
+                {recent.slice(1).map(h => (
+                  <li key={h.version} className="text-xs flex gap-2" style={{ color: 'var(--text-tertiary)', lineHeight: 1.45 }}>
+                    <span className="font-mono flex-shrink-0" style={{ color: 'var(--text-secondary)' }}>{h.version.split('.').pop()}</span>
+                    <span>{h.summary}</span>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         )}
 
-        <div className="flex items-center gap-2 mt-4 mb-4">
+        <div className="flex items-center gap-2 mt-5 mb-3">
           <Link to="/tutorial" onClick={dismiss}
                 className="tactile-press flex items-center justify-center gap-1.5 text-xs flex-1 py-2 rounded-lg"
                 style={{ color: 'var(--accent-400)', background: 'var(--nav-active-bg)' }}>

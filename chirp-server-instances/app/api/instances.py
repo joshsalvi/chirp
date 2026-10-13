@@ -112,12 +112,12 @@ class CreateInstanceRequest(BaseModel):
     name: str
     location_name: Optional[str] = None
     admin_username: Optional[str] = None   # defaults to the global username
-    admin_password: str                     # the per-instance User row still needs its own hashed_pw, same as chirp-server's real login already expects
+    admin_password: Optional[str] = None    # ignored; the site uses the account password
 
 
 class JoinInstanceRequest(BaseModel):
     invite_code: str
-    member_password: str  # same reasoning as above — the synced local User row needs a real, independently-set password
+    member_password: Optional[str] = None  # ignored; the site uses the account password
 
 
 class SwitchInstanceRequest(BaseModel):
@@ -184,11 +184,10 @@ def create_instance(body: CreateInstanceRequest, user: GlobalUser = Depends(get_
         InstanceSession = sessionmaker(bind=engine)
         inst_db = InstanceSession()
         try:
-            crypt = _get_crypt()
             local_user = User(
                 username=body.admin_username or user.username,
                 email=user.email,
-                hashed_pw=crypt.hash(body.admin_password),
+                hashed_pw=user.hashed_pw,   # same password as the account
                 role="admin",
             )
             inst_db.add(local_user)
@@ -212,7 +211,7 @@ async def import_instance(
     name: str = Form(...),
     location_name: Optional[str] = Form(None),
     admin_username: Optional[str] = Form(None),
-    admin_password: str = Form(...),
+    admin_password: Optional[str] = Form(None),   # ignored; the site uses the account password
     user: GlobalUser = Depends(get_current_global_user),
 ):
     """
@@ -288,18 +287,17 @@ async def import_instance(
             InstanceSession = sessionmaker(bind=engine)
             inst_db = InstanceSession()
             try:
-                crypt = _get_crypt()
                 desired_username = admin_username or user.username
                 existing_local_user = inst_db.query(User).filter(User.username == desired_username).first()
                 if existing_local_user:
-                    existing_local_user.hashed_pw = crypt.hash(admin_password)
+                    existing_local_user.hashed_pw = user.hashed_pw
                     existing_local_user.role = "admin"
                     existing_local_user.active = True
                 else:
                     inst_db.add(User(
                         username=desired_username,
                         email=user.email,
-                        hashed_pw=crypt.hash(admin_password),
+                        hashed_pw=user.hashed_pw,
                         role="admin",
                     ))
                 inst_db.commit()
@@ -359,10 +357,9 @@ def join_instance(body: JoinInstanceRequest, user: GlobalUser = Depends(get_curr
         InstanceSession = sessionmaker(bind=engine)
         inst_db = InstanceSession()
         try:
-            crypt = _get_crypt()
             local_user = User(
                 username=user.username, email=user.email,
-                hashed_pw=crypt.hash(body.member_password), role="viewer",
+                hashed_pw=user.hashed_pw, role="viewer",   # same password as the account
             )
             inst_db.add(local_user)
             inst_db.commit()

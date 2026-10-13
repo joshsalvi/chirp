@@ -81,7 +81,6 @@ function RegisterForm({ onBack, onLogin }) {
   const [confirm, setConfirm] = useState('')
   const [useInvite, setUseInvite] = useState(false)
   const [inviteCode, setInviteCode] = useState('')
-  const [memberPassword, setMemberPassword] = useState('')
   const [error, setError] = useState(null)
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -92,11 +91,10 @@ function RegisterForm({ onBack, onLogin }) {
     if (password.length < 6) { setError('Password must be at least 6 characters.'); return }
     if (useInvite) {
       if (!inviteCode.trim()) { setError('Enter an invite code, or turn this off to just create an account.'); return }
-      if (memberPassword.length < 6) { setError('That location\'s password must be at least 6 characters too.'); return }
     }
     setLoading(true)
     try {
-      const data = await api.auth.register(username.trim(), email.trim(), password, useInvite ? inviteCode.trim() : null, useInvite ? memberPassword : null)
+      const data = await api.auth.register(username.trim(), email.trim(), password, useInvite ? inviteCode.trim() : null)
       // Registering with an invite code joins immediately and returns a
       // real session (see auth.py's register()) — no separate sign-in
       // step needed, same as if they'd just logged in normally.
@@ -136,10 +134,8 @@ function RegisterForm({ onBack, onLogin }) {
         <div className="space-y-4 pl-1 border-l-2" style={{ borderColor: 'var(--border-subtle)' }}>
           <div className="pl-3 space-y-4">
             <InputField label="Invite code" value={inviteCode} onChange={e => setInviteCode(e.target.value)} placeholder="e.g. ABC123" required/>
-            <InputField label="Location password" type="password" value={memberPassword} onChange={e => setMemberPassword(e.target.value)} placeholder="6+ characters" required/>
             <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-              This is a separate password just for that location — kept independent from your account password above.
-              You'll join immediately as a viewer, and that location's admins will be notified.
+              You'll join that site right away as a viewer, with the password above.
             </p>
           </div>
         </div>

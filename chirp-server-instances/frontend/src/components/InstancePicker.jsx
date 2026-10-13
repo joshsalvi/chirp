@@ -23,7 +23,6 @@ function InputField({ label, type = 'text', value, onChange, placeholder, requir
 function CreateForm({ onDone }) {
   const [name, setName] = useState('')
   const [locationName, setLocationName] = useState('')
-  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
@@ -31,7 +30,7 @@ function CreateForm({ onDone }) {
     e.preventDefault()
     setLoading(true); setError(null)
     try {
-      await api.instances.create({ name, location_name: locationName || null, admin_password: password })
+      await api.instances.create({ name, location_name: locationName || null })
       onDone()
     } catch (e) {
       setError(e.message || 'Could not create location.')
@@ -43,7 +42,6 @@ function CreateForm({ onDone }) {
     <form onSubmit={submit} className="space-y-4">
       <InputField label="Location name" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Natick Backyard" required autoFocus/>
       <InputField label="City / area (optional)" value={locationName} onChange={e => setLocationName(e.target.value)} placeholder="e.g. Natick, MA"/>
-      <InputField label="Set a password for this location" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="6+ characters" required/>
       <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
         You'll be the admin of this location. It gets its own real, separate database — nothing here is shared with any other location.
       </p>
@@ -57,7 +55,6 @@ function CreateForm({ onDone }) {
 
 function JoinForm({ onDone }) {
   const [inviteCode, setInviteCode] = useState('')
-  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
@@ -65,7 +62,7 @@ function JoinForm({ onDone }) {
     e.preventDefault()
     setLoading(true); setError(null)
     try {
-      await api.instances.join({ invite_code: inviteCode.trim().toUpperCase(), member_password: password })
+      await api.instances.join({ invite_code: inviteCode.trim().toUpperCase() })
       onDone()
     } catch (e) {
       setError(e.message || 'Could not join — check the invite code.')
@@ -76,7 +73,6 @@ function JoinForm({ onDone }) {
   return (
     <form onSubmit={submit} className="space-y-4">
       <InputField label="Invite code" value={inviteCode} onChange={e => setInviteCode(e.target.value)} placeholder="e.g. 7CCGEL6H" required autoFocus/>
-      <InputField label="Set your own password for this location" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="6+ characters" required/>
       {error && <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.25)', color: 'var(--pastel-red)' }}>{error}</div>}
       <button type="submit" disabled={loading} className="btn-primary w-full" style={{ padding: '11px 18px' }}>
         {loading ? <><RefreshCw size={14} className="animate-spin"/> Joining…</> : 'Join Location'}
@@ -90,7 +86,6 @@ function ImportForm({ onDone }) {
   const [name, setName] = useState('')
   const [locationName, setLocationName] = useState('')
   const [adminUsername, setAdminUsername] = useState('')
-  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
@@ -104,7 +99,6 @@ function ImportForm({ onDone }) {
       fd.append('name', name)
       if (locationName) fd.append('location_name', locationName)
       if (adminUsername) fd.append('admin_username', adminUsername)
-      fd.append('admin_password', password)
       await api.instances.import(fd)
       onDone()
     } catch (e) {
@@ -126,7 +120,6 @@ function ImportForm({ onDone }) {
       <InputField label="Location name" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Natick Backyard" required/>
       <InputField label="City / area (optional)" value={locationName} onChange={e => setLocationName(e.target.value)} placeholder="e.g. Natick, MA"/>
       <InputField label="Your username here (optional)" value={adminUsername} onChange={e => setAdminUsername(e.target.value)} placeholder="Defaults to your current username"/>
-      <InputField label="Set a password for this location" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="6+ characters" required/>
       <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
         Every recording, detection, and setting in the file is copied in as-is. Any users already in the file are kept; you're added as this location's admin.
       </p>

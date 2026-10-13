@@ -1,3 +1,10 @@
+## 0.5.12.s — 2026-10-13 — ENHANCEMENT — One password, shorter What's New
+
+- Joining a site needs only the invite code; the separate location password is gone from sign-up, Join, New Location, Import and Global Admin → Add member.
+- Changing a password (My Profile, or an admin resetting one) changes the sign-in password and the copy on every site.
+- What's New popup: at most three short items, earlier releases of the current version collapsed.
+- Changelog: major versions (0.5, 0.4…) as cards with a one-line summary, each minor version with its own line; summaries live in lib/whatsNew.js.
+
 ## 0.5.12.r — 2026-10-13 — BUGFIX — Live Detect on http:// servers
 
 - Live Detect on a plain http:// server address (e.g. a home-network IP in Chirp β) said microphone access was off; iOS and browsers give http:// pages no microphone. It now says the server needs an https:// address, and the app's permissions card shows the same.

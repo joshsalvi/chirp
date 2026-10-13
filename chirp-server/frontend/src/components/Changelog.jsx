@@ -20,40 +20,8 @@ function escapeHtml(s) {
 }
 import { Tag, Mail, GitBranch, ChevronDown, ChevronRight } from 'lucide-react'
 
-// Short, plain-language summary per minor version (0.1.X) — hand-written,
-// not generated from the changelog text. Older groups get a brief note;
-// nothing invented for series with too little context to summarize honestly.
-const GROUP_BLURBS = {
-  '0.1.0':  'First release — detection, recordings, and the life list.',
-  '0.1.1':  'Settings rework plus early bugfixes.',
-  '0.1.2':  'iNaturalist connection fixes and audio pipeline work.',
-  '0.1.3':  'SSH terminal fixes.',
-  '0.1.4':  'One-click eBird export, notification bugfixes.',
-  '0.1.5':  'Fixed European species showing up — a missing location filter let them through.',
-  '0.1.6':  'Fixed device audio-test crashes (ALSA errors).',
-  '0.1.7':  'Recordings list cleanup, device location defaults.',
-  '0.1.8':  'Fixed a Field Guide duplicate bug and a Settings crash. Haikubox support added.',
-  '0.1.9':  'Three new themes, an OLED display fix, and a Dashboard date bug (was using UTC midnight instead of local).',
-  '0.1.10': 'Fixed missing legends on two range map sources.',
-  '0.1.11': 'Fixed missing breeding-season bands on eBird range maps; tutorial updates.',
-  '0.1.12': 'Range map tabs no longer re-fetch data they already have.',
-  '0.1.13': 'Photo gallery layout fixes.',
-  '0.1.14': 'Mic-level and changelog display fixes; fixed a broken bird-profile link.',
-  '0.1.15': 'Bat species classification built (not yet wired in); fixed a real caching bug behind "I deployed but nothing changed."',
-  '0.1.16': 'Bat detection wired into recordings; two crash-causing hotfixes shipped and fixed same-day.',
-  '0.1.17': 'The big one: Bird Buddy and Haikubox integrations, bat pipeline fixes, a critical data-loss bug (purge was deleting bat recordings), device uploads not saving their device ID, Settings reorganized, new themes, and a Dashboard diversity/streaks section.',
-  '0.2.0':  'Started actually following the versioning scheme below. A critical fix for pages failing to load after a deploy (stale cached JS chunks), bat-recording interference flagging, a real seasonal-presence staleness bug fixed in the Field Guide, a new "no detections" filter, Dashboard mode-picker fixes, Recordings thumbnails decluttered (including a real browser-cache bug found while fixing it), Yard Diversity redesigned into a consistent 3-row layout with a plain-language summary, and several small consistency fixes.',
-  '0.3.0':  'Experimental AI features: Daily Journal, Bird Profile presence summaries, and Call Re-analysis, across four providers (Anthropic/OpenAI/Gemini/Ollama, the last one self-hosted with no API key needed) with per-feature assignment, key testing, and real API usage tracking. Plus real device push notifications, a persistent Settings save bar, an OAuth-app-free iNaturalist token refresh option, and a critical fix for an invalid Anthropic model name that was silently breaking every AI feature.',
-  '0.4.0':  'Bluetooth-based first-time device setup (iOS/Android app only) — provision a brand-new Pi\'s WiFi before it has any network connection at all.',
-  '1.2':    'Multi-target upload support added to the device — the same recording now goes to every configured server, not just one — through several gaps found along the way: a secondary server never paired at all, Live Detect\'s device mode failed with a 401 against any server but the first, and bat detections kept reaching only the first configured target even after regular recordings were fixed. Also: Tailscale wired in (pointed at a bundled Headscale, a real auth key saved, then several connection fixes — permissions, a missing kernel module fallback, an "Access denied" checkprefs issue), and install.sh fixed for two missing native build dependencies (cairo, then gobject-introspection) that were silently breaking Bluetooth-based setup.',
-  '0.5.0':  'AudioMoth crash recovery fixed (a real, previously-missing automatic restart), plus new iNaturalist comment posting for AI second opinions and your own notes.',
-  '0.5.1':  'Theme-color fixes, a real reason Cool Facts went missing, and the Cool Facts card redesigned.',
-  '0.5.2':  'Added a bird size-comparison ruler matching AAB\'s layout, with real licensed bird silhouettes, and a bats-exclusion toggle for Statistics.',
-  '0.5.3':  'Added a Life History card with full explanations behind Habitat/Food/Nesting/Behavior/Conservation, fetched directly from All About Birds.',
-  '0.5.4':  'Live Detect gained the ability to save a full session as one continuous recording, admins can now choose which Dashboard cards load at all (not just show/hide), and several rounds of diagnostics tooling arrived — automatic SQLite maintenance, a VACUUM button, and a query-plan checker to verify database health directly. Also: Settings tab alignment, log/report downloads that could silently fail in some browsers, a Tutorial section for Live Detect, and assorted smaller fixes.',
-  '0.5.5':  'A long-running arc: server-side Tailscale support arrived as a Settings toggle, then went through several fixes to connect reliably — a background daemon that was never started, wrong permissions on /var/run inside the container, a host with no kernel TUN module (now falls back to userspace networking automatically), and better diagnostics logging surfaced along the way. A new Tech Docs page covers the whole setup plus macOS/iOS toggling. Also: the theme picker checkmark no longer overlaps its own icon, the dashboard cache warmer keeps species streaks and yard diversity proactively fresh, several Live Detect cleanup/dedup fixes, detection colors spread apart with four selectable palettes, a full parity audit against chirp-server-instances, and a Devices-page mobile layout fix.',
-  '0.5.6':  'Version numbers reconciled with chirp-server-instances, so both projects move together from here. Live Detect\'s capture loop no longer pauses for analysis between clips, gained an adjustable sensitivity slider, then two overlapping listening lanes with an adjustable window length on top of that. New Mic Frequency Response diagnostic comparing phone and device mics side by side, and a way to dismiss a "Config pending" state on the Devices page that doesn\'t reflect anything actually pending.',
-}
+// One-line summaries per major and minor version live in lib/whatsNew.js.
+import { ERA_SUMMARIES, GROUP_SUMMARIES } from '../lib/whatsNew'
 
 // Versioning scheme, shown at the bottom of this page
 
@@ -190,7 +158,7 @@ export default function Changelog() {
             <Mail size={11}/> josh.salvi@gmail.com
           </a>
           <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-            © 2026 Joshua Salvi — All rights reserved
+            © 2026 Joshua Salvi · PolyForm Noncommercial license
           </span>
         </div>
       </div>
@@ -210,10 +178,10 @@ export default function Changelog() {
 
       {tab === 'ios' && <IosVersions groups={serverGroups} appInfo={appInfo}/>}
 
-      {/* Version groups */}
-      {tab !== 'ios' && <div className="space-y-2 mb-8">
-        {activeGroups.map((g, i) => (
-          <VersionGroup key={g.key} groupKey={g.key} sections={g.sections} defaultOpen={i === 0} isFirstGroup={i === 0}/>
+      {/* Major versions (0.5, 0.4…; the device's 1), each holding its minor versions */}
+      {tab !== 'ios' && <div className="space-y-3 mb-8">
+        {groupEras(activeGroups, tab === 'device').map((era, i) => (
+          <EraCard key={era.key} era={era} defaultOpen={i === 0}/>
         ))}
         {activeGroups.length === 0 && (
           <p className="text-sm p-4" style={{ color: 'var(--text-tertiary)' }}>Nothing here yet.</p>
@@ -299,9 +267,51 @@ function IosVersions({ groups, appInfo }) {
   )
 }
 
+// Server groups 0.5.12 → era "0.5"; device groups 1.3 → era "1".
+function groupEras(groups, device) {
+  const eras = []
+  for (const g of groups) {
+    const key = device ? g.key.split('.')[0] : g.key.split('.').slice(0, 2).join('.')
+    let era = eras.find(e => e.key === key)
+    if (!era) { era = { key, groups: [] }; eras.push(era) }
+    era.groups.push(g)
+  }
+  return eras
+}
+
+function EraCard({ era, defaultOpen }) {
+  const [open, setOpen] = useState(defaultOpen)
+  const releases = era.groups.reduce((n, g) => n + g.sections.length, 0)
+  const summary = ERA_SUMMARIES[era.key]
+  return (
+    <div className="rounded-2xl" style={{ border: '1px solid var(--border-default)', background: 'var(--bg-card)' }}>
+      <button onClick={() => setOpen(o => !o)} className="w-full text-left px-4 py-3.5">
+        <div className="flex items-center gap-2">
+          <span className="font-mono font-bold" style={{ color: 'var(--accent-400)' }}>{era.key}</span>
+          <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+            {era.groups.length} version{era.groups.length !== 1 ? 's' : ''} · {releases} release{releases !== 1 ? 's' : ''}
+          </span>
+          <span className="ml-auto">
+            {open ? <ChevronDown size={14} style={{ color: 'var(--text-tertiary)' }}/> : <ChevronRight size={14} style={{ color: 'var(--text-tertiary)' }}/>}
+          </span>
+        </div>
+        {summary && <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{summary}</p>}
+      </button>
+      {open && (
+        <div className="px-3 pb-3 space-y-2">
+          {era.groups.map((g, i) => (
+            <VersionGroup key={g.key} groupKey={g.key} sections={g.sections}
+                          defaultOpen={defaultOpen && i === 0} isFirstGroup={defaultOpen && i === 0}/>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function VersionGroup({ groupKey, sections, defaultOpen, isFirstGroup }) {
   const [open, setOpen] = useState(defaultOpen)
-  const blurb = GROUP_BLURBS[groupKey]
+  const blurb = GROUP_SUMMARIES[groupKey]
 
   // Date range for the group header
   const dates = sections.map(s => (s.split('\n')[0].match(/(\d{4}-\d{2}-\d{2})/) || [])[1]).filter(Boolean)
@@ -322,7 +332,7 @@ function VersionGroup({ groupKey, sections, defaultOpen, isFirstGroup }) {
         </div>
       </button>
       {blurb && (
-        <p className="text-sm px-4 pb-3" style={{ color: 'var(--text-secondary)' }}>{blurb}</p>
+        <p className="text-xs px-4 pb-3 -mt-1" style={{ color: 'var(--text-secondary)', lineHeight: 1.5 }}>{blurb}</p>
       )}
       {open && (
         <div className="px-3 pb-3 space-y-2">
