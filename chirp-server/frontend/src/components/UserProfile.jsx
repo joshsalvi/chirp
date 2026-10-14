@@ -1,11 +1,12 @@
 import { useEffect, useState, useRef } from 'react'
-import { User, Lock, Bell, Check, AlertCircle, Eye, EyeOff, Save, Shield, Feather, Leaf, RefreshCw, LogOut, Camera, Trash2, UserX, Server, MessageSquare } from 'lucide-react'
+import { User, Lock, Bell, Check, AlertCircle, Eye, EyeOff, Save, Shield, Feather, Leaf, RefreshCw, LogOut, Camera, Trash2, UserX, Server, MessageSquare, Watch } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { format } from 'date-fns'
 import UnifiedCard from './UnifiedCard'
 import { InatRefreshInline } from './Settings'
-import { hasServerPicker, openServerPicker } from '../native'
+import { hasServerPicker, openServerPicker, native } from '../native'
+import { tokenStore } from '../lib/api'
 
 // ── Field wrapper ─────────────────────────────────────────────────────────────
 function Field({ label, hint, error, children }) {
@@ -293,6 +294,36 @@ function ServerSection() {
           <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>You stay signed in here when you switch.</p>
         </div>
         <button onClick={openServerPicker} className="btn-secondary text-xs px-3 py-1.5 flex-shrink-0">Change server</button>
+      </div>
+    </Section>
+  )
+}
+
+// ── Apple Watch ───────────────────────────────────────────────────────────────
+// iPhone app with the watch app only: shows whether a watch is ready and
+// sends it the sign-in again (it's also sent by itself once a week).
+const WATCH_TEXT = {
+  sent: 'Sent. Open Chirp on the watch.',
+  current: 'Signed in.',
+  'no-watch': 'No Apple Watch is paired with this iPhone.',
+  'not-installed': 'Install Chirp on the watch from the Watch app on this iPhone, then send again.',
+}
+function WatchSection() {
+  const [show, setShow] = useState(false)
+  const [state, setState] = useState(null)
+  useEffect(() => { native.watch.available().then(setShow) }, [])
+  if (!show) return null
+  const send = async () => {
+    setState('sending')
+    const key = `${localStorage.getItem('chirp_user') || ''}|${tokenStore.getActiveInstanceId?.() || ''}`
+    setState(await native.watch.sync({ key, force: true, getToken: () => api.auth.watchToken() }))
+  }
+  const text = state === 'sending' ? 'Sending…' : state ? (WATCH_TEXT[state] || `Couldn\u2019t send (${state.replace(/^failed: /, '')}).`) : 'Live Detect on your wrist. The watch signs in through this iPhone.'
+  return (
+    <Section id="me:watch" fallbackOpen={false} icon={Watch} title="Apple Watch" color="#f472b6">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs min-w-0" style={{ color: state && !['sent', 'current', 'sending'].includes(state) ? 'var(--pastel-red)' : 'var(--text-secondary)' }}>{text}</p>
+        <button onClick={send} disabled={state === 'sending'} className="btn-secondary text-xs px-3 py-1.5 flex-shrink-0">Send sign-in</button>
       </div>
     </Section>
   )
@@ -783,6 +814,7 @@ export default function UserProfile() {
       </button>
 
       {hasServerPicker() && <ServerSection/>}
+      <WatchSection/>
       <FeedbackSection/>
       <BlockedPeopleSection/>
       <DeleteAccountSection/>

@@ -68,6 +68,18 @@ async function getHaptics() {
 }
 
 const WATCH_KEY = 'chirp_watch_sync'
+const withTimeout = (promise, ms) => Promise.race([
+  promise, new Promise((_, reject) => setTimeout(() => reject(new Error('timed out')), ms))])
+function reportWatch(data) {
+  try {
+    const token = localStorage.getItem('chirp_token')
+    fetch('/api/v1/diagnostics/client', {
+      method: 'POST', keepalive: true,
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+      body: JSON.stringify({ kind: 'watch', ...data }),
+    }).catch(() => {})
+  } catch { /* diagnostics only */ }
+}
 let _watch
 async function watchPlugin() {
   if (!isIOS()) return null
@@ -76,6 +88,7 @@ async function watchPlugin() {
     const { Capacitor, registerPlugin } = await import('@capacitor/core')
     _watch = Capacitor.isPluginAvailable('ChirpWatch') ? registerPlugin('ChirpWatch') : null
   } catch { _watch = null }
+  if (!_watch && /\bChirpApp\/2\b/.test(navigator.userAgent || '')) reportWatch({ result: 'no-plugin' })
   return _watch
 }
 
@@ -160,27 +173,39 @@ export const native = {
    * signs the watch out. Both do nothing outside the app or with no watch.
    */
   watch: {
+    available: async () => !!(await watchPlugin()),
     status: async () => {
       const p = await watchPlugin()
       if (!p) return null
-      try { return await p.status() } catch { return null }
+      try { return await withTimeout(p.status(), 5000) } catch { return null }
     },
+    /**
+     * Resolves to 'sent', 'current' (sent within the week), 'no-watch',
+     * 'not-installed', 'unavailable' or 'failed: <reason>'. Each attempt is
+     * logged on the server (diagnostics/client) to help with watch problems.
+     */
     sync: async ({ key, getToken, force = false }) => {
       const p = await watchPlugin()
       if (!p) return 'unavailable'
+      let st = null
+      let result
       try {
-        const st = await p.status()
-        if (!st?.paired || !st?.installed) return 'no-watch'
+        st = await withTimeout(p.status(), 5000)
         const last = JSON.parse(localStorage.getItem(WATCH_KEY) || 'null')
-        if (!force && last?.key === key && Date.now() - last.at < 7 * 864e5) return 'current'
-        const { access_token } = await getToken()
-        await p.setCredentials({ server: window.location.origin, token: access_token || '', site: window.location.host })
-        localStorage.setItem(WATCH_KEY, JSON.stringify({ key, at: Date.now() }))
-        return 'sent'
+        if (!st?.paired) result = 'no-watch'
+        else if (!st?.installed) result = 'not-installed'
+        else if (!force && last?.key === key && Date.now() - last.at < 7 * 864e5) return 'current'
+        else {
+          const { access_token } = await getToken()
+          await withTimeout(p.setCredentials({ server: window.location.origin, token: access_token || '', site: window.location.host }), 5000)
+          localStorage.setItem(WATCH_KEY, JSON.stringify({ key, at: Date.now() }))
+          result = 'sent'
+        }
       } catch (e) {
-        console.warn('Watch sync failed:', e)
-        return 'failed'
+        result = 'failed: ' + (e?.message || e)
       }
+      reportWatch({ result, status: st, force })
+      return result
     },
     clear: async () => {
       if (!localStorage.getItem(WATCH_KEY)) return

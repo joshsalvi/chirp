@@ -90,7 +90,6 @@ final class LiveSession: NSObject, ObservableObject, CLLocationManagerDelegate {
         do {
             let audio = AVAudioSession.sharedInstance()
             try audio.setCategory(.record, mode: .measurement, options: [])
-            try? audio.setPreferredSampleRate(48_000)
             try audio.setActive(true)
 
             let input = engine.inputNode

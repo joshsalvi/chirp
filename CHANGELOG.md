@@ -1,3 +1,8 @@
+## 0.5.12.aa — 2026-10-14 — BUGFIX — Apple Watch sign-in check
+
+- My Profile → Apple Watch shows whether a watch is ready and sends it the sign-in again.
+- Each watch sign-in attempt is logged on the server to help find why a watch isn't signed in.
+
 ## 0.5.12.z — 2026-10-14 — FEATURE — Apple Watch groundwork
 
 - Apple Watch app for Live Detect (ios-watch/), built into test builds with WATCH=1; not in the App Store version yet.
