@@ -1,3 +1,7 @@
+## 0.5.12.w — 2026-10-14 — ENHANCEMENT — Menu label
+
+- About page menu says "Set up", matching the guide pages.
+
 ## 0.5.12.v — 2026-10-14 — ENHANCEMENT — Setup guide and user guide
 
 - New /setup.html: station parts and Pi setup, install, three ways to connect (approval email, Discover → Auto-configure, manual key), testing, hosted or self-hosted server, HTTPS and push, app and invites, troubleshooting.
