@@ -67,6 +67,18 @@ async function getHaptics() {
   return _haptics
 }
 
+const WATCH_KEY = 'chirp_watch_sync'
+let _watch
+async function watchPlugin() {
+  if (!isIOS()) return null
+  if (_watch !== undefined) return _watch
+  try {
+    const { Capacitor, registerPlugin } = await import('@capacitor/core')
+    _watch = Capacitor.isPluginAvailable('ChirpWatch') ? registerPlugin('ChirpWatch') : null
+  } catch { _watch = null }
+  return _watch
+}
+
 export const native = {
   /**
    * Haptic feedback — no-op in browser.
@@ -138,6 +150,43 @@ export const native = {
         const { Network } = await import('@capacitor/network')
         return await Network.getStatus()
       } catch { return { connected: navigator.onLine, connectionType: 'unknown' } }
+    },
+  },
+
+  /**
+   * Apple Watch (the ChirpWatch plugin in the iPhone app). sync() gives the
+   * watch a Live Detect-only sign-in for this server; it runs at most once a
+   * week per account and site, since the sign-in lasts 30 days. clear()
+   * signs the watch out. Both do nothing outside the app or with no watch.
+   */
+  watch: {
+    status: async () => {
+      const p = await watchPlugin()
+      if (!p) return null
+      try { return await p.status() } catch { return null }
+    },
+    sync: async ({ key, getToken, force = false }) => {
+      const p = await watchPlugin()
+      if (!p) return 'unavailable'
+      try {
+        const st = await p.status()
+        if (!st?.paired || !st?.installed) return 'no-watch'
+        const last = JSON.parse(localStorage.getItem(WATCH_KEY) || 'null')
+        if (!force && last?.key === key && Date.now() - last.at < 7 * 864e5) return 'current'
+        const { access_token } = await getToken()
+        await p.setCredentials({ server: window.location.origin, token: access_token || '', site: window.location.host })
+        localStorage.setItem(WATCH_KEY, JSON.stringify({ key, at: Date.now() }))
+        return 'sent'
+      } catch (e) {
+        console.warn('Watch sync failed:', e)
+        return 'failed'
+      }
+    },
+    clear: async () => {
+      if (!localStorage.getItem(WATCH_KEY)) return
+      localStorage.removeItem(WATCH_KEY)
+      const p = await watchPlugin()
+      try { await p?.clearCredentials() } catch {}
     },
   },
 

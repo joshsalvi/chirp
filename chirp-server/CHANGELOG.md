@@ -1,3 +1,8 @@
+## 0.5.12.z — 2026-10-14 — FEATURE — Apple Watch groundwork
+
+- Apple Watch app for Live Detect (ios-watch/), built into test builds with WATCH=1; not in the App Store version yet.
+- POST /api/v1/auth/watch-token: a 30-day sign-in that only works for Live Detect; the iPhone app passes it to the watch.
+
 ## 0.5.12.y — 2026-10-14 — ENHANCEMENT — iPhone app versions
 
 - Changelog's iPhone App tab lists only uploaded app builds; server-only releases leave the app version unchanged.

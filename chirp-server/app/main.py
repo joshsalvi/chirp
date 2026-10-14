@@ -643,6 +643,14 @@ def viewer_may_write(method: str, path: str) -> bool:
     return method in ("GET", "HEAD", "OPTIONS") or bool(_VIEWER_WRITE_OK.match(path))
 
 
+# Apple Watch sign-ins (POST /auth/watch-token) only run Live Detect.
+_WATCH_OK = re.compile(r"^/api/v1/(live-detect/analyze|auth/me)$")
+
+
+def watch_may_use(path: str) -> bool:
+    return bool(_WATCH_OK.match(path))
+
+
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
@@ -691,12 +699,16 @@ class AuthMiddleware(BaseHTTPMiddleware):
                     ).first()
                     if not user or not user.active:
                         return JSONResponse({"detail": "User not found"}, status_code=401)
-                    cached_user = {"username": user.username, "role": user.role, "active": True}
+                    cached_user = {"username": user.username, "role": user.role, "active": True,
+                                   "scope": payload.get("scope")}
             except Exception:
                 return JSONResponse({"detail": "Auth error"}, status_code=401)
             user_token_cache.set(token, cached_user)
         elif not cached_user.get("active"):
             return JSONResponse({"detail": "User not found"}, status_code=401)
+
+        if cached_user.get("scope") == "watch" and not watch_may_use(path):
+            return JSONResponse({"detail": "The watch sign-in only works for Live Detect."}, status_code=403)
 
         if cached_user.get("role") == "viewer" and not viewer_may_write(request.method, path):
             return JSONResponse({"detail": "This account is view-only. Ask an admin for submitter access."},

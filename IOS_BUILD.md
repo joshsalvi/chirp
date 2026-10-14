@@ -354,6 +354,21 @@ npx cap sync ios       # syncs updated dist/ to Xcode project
 
 ---
 
+## Apple Watch app (in testing)
+
+Live Detect from the wrist. Code is in `ios-watch/`; nothing else uses it yet.
+
+```bash
+sudo gem install xcodeproj        # once
+WATCH=1 PICKER=1 TEAM_ID=F7N9ZF7U57 ./build-ios.sh --testflight
+```
+
+- `WATCH=1` adds a watchOS target (`ChirpWatch`, bundle ID `<app>.watchkitapp`, watchOS 10+) to Capacitor's Xcode project and embeds it in the iPhone app. A build without it takes the target back out, so production builds are unchanged.
+- Sign-in: the web app asks `POST /api/v1/auth/watch-token` for a 30-day token that only works for Live Detect, and the `ChirpWatch` plugin (`ios-watch/phone/`) passes it to the watch with WatchConnectivity. The watch then talks to the server directly.
+- The watch records 4-second clips every 3 seconds (32 kHz mono WAV) and sends them to `/api/v1/live-detect/analyze`, the same endpoint the phone uses. Clips with a bird become recordings.
+- To check on a watch: listening with the wrist down, the microphone sample rate, and upload speed when the watch only has the iPhone's connection.
+- Shipping it in the App Store version needs Apple Watch screenshots in App Store Connect.
+
 ## Native Features Implemented
 
 | Feature | Implementation |

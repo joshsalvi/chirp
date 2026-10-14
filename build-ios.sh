@@ -24,6 +24,9 @@
 #                                  picker (ios-launcher/) instead of opening
 #                                  ourchirp.com; named "Chirp β", uploaded but
 #                                  never handed to external testers
+#   WATCH=1 PICKER=1 ./build-ios.sh --testflight   also build the Apple Watch
+#                                  app (ios-watch/; Live Detect only). Needs
+#                                  the xcodeproj gem and a paid team
 #   PUSH=1 / PUSH=0                force push notifications on/off (default:
 #                                  on for a paid team, off for a free one,
 #                                  which can't sign the push entitlement)
@@ -274,6 +277,31 @@ ENT
   else
     APP_ID="$BASE_APP_ID"
   fi
+  # Settings for the iPhone app only. On the xcodebuild command line they'd
+  # also apply to the watch app, so WATCH=1 writes them into the project.
+  TARGET_SETTINGS=(PRODUCT_BUNDLE_IDENTIFIER="$APP_ID" ${ENTITLEMENTS[@]+"${ENTITLEMENTS[@]}"})
+  if [[ "${WATCH:-0}" == "1" ]]; then
+    info "Adding the Apple Watch app (ios-watch/)"
+    command -v ruby &>/dev/null && ruby -e 'require "xcodeproj"' 2>/dev/null \
+      || error "WATCH=1 needs the xcodeproj gem: sudo gem install xcodeproj"
+    cp "$ROOT"/ios-watch/phone/*.swift ios/App/App/
+    rm -rf ios/App/ChirpWatch && cp -R "$ROOT/ios-watch/ChirpWatch" ios/App/ChirpWatch
+    cp "$ROOT/ios-icons/icon-1024.png" ios/App/ChirpWatch/Assets.xcassets/AppIcon.appiconset/
+    # Main.storyboard's view controller registers the ChirpWatch plugin.
+    sed -i '' 's/customClass="CAPBridgeViewController" customModule="Capacitor"/customClass="ChirpBridgeViewController" customModule="App" customModuleProvider="target"/' \
+      ios/App/App/Base.lproj/Main.storyboard
+    ruby "$ROOT/ios-watch/add-watch-target.rb" ios/App/App.xcodeproj "$APP_ID" "$TEAM_ID" "${TARGET_SETTINGS[@]}" \
+      || error "Could not add the watch app to the Xcode project"
+    TARGET_SETTINGS=()
+  elif grep -q ChirpWatch ios/App/App.xcodeproj/project.pbxproj 2>/dev/null; then
+    # An earlier WATCH=1 build left the watch app in ios/; take it out.
+    ruby "$ROOT/ios-watch/add-watch-target.rb" ios/App/App.xcodeproj --remove \
+      || error "Could not remove the watch app from the Xcode project (delete ios/ and run again)"
+    sed -i '' 's/customClass="ChirpBridgeViewController" customModule="App" customModuleProvider="target"/customClass="CAPBridgeViewController" customModule="Capacitor"/' \
+      ios/App/App/Base.lproj/Main.storyboard
+    rm -rf ios/App/ChirpWatch
+    (cd "$ROOT/ios-watch/phone" && for f in *.swift; do rm -f "$OLDPWD/ios/App/App/$f"; done)
+  fi
   SOON=$(( $(date +%s) + 3*86400 ))
   mkdir -p "$ROOT/build/old-profiles"
   for PDIR in "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" "$HOME/Library/MobileDevice/Provisioning Profiles"; do
@@ -332,8 +360,8 @@ ENT
     for D in "${DEVICES[@]}"; do
       xcodebuild "${PROJ[@]}" -scheme App -configuration Release -destination "id=$D" \
         -allowProvisioningUpdates -allowProvisioningDeviceRegistration \
-        DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic PRODUCT_BUNDLE_IDENTIFIER="$APP_ID" \
-        ${ENTITLEMENTS[@]+"${ENTITLEMENTS[@]}"} \
+        DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
+        ${TARGET_SETTINGS[@]+"${TARGET_SETTINGS[@]}"} \
         build | tail -n 1 || warn "Could not register $D"
     done
   fi
@@ -345,9 +373,9 @@ ENT
   xcodebuild "${PROJ[@]}" -scheme App -configuration Release \
     -destination 'generic/platform=iOS' -archivePath "$ARCHIVE_PATH" \
     -allowProvisioningUpdates -allowProvisioningDeviceRegistration ${ASC_AUTH[@]+"${ASC_AUTH[@]}"} \
-    DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic PRODUCT_BUNDLE_IDENTIFIER="$APP_ID" \
+    DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
     MARKETING_VERSION="$MARKETING_VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
-    ${ENTITLEMENTS[@]+"${ENTITLEMENTS[@]}"} \
+    ${TARGET_SETTINGS[@]+"${TARGET_SETTINGS[@]}"} \
     archive | tail -n 5
   [[ -d "$ARCHIVE_PATH" ]] || error "Archive failed (see the xcodebuild output above)."
   success "Archive: $ARCHIVE_PATH"

@@ -239,6 +239,29 @@ def login(request: Request, form: OAuth2PasswordRequestForm = Depends(),
     return TokenOut(access_token=token, username=user.username, role=user.role)
 
 
+WATCH_TOKEN_DAYS = 30
+
+
+@router.post("/watch-token")
+def watch_token(token: str = Depends(oauth2_scheme), current_user=Depends(get_current_user)):
+    """
+    Sign-in for the Apple Watch app. The iPhone app asks for one when it
+    opens and passes it to the watch. It lasts 30 days and only works for
+    Live Detect (main.py's AuthMiddleware enforces that).
+    """
+    if current_user is None:
+        return {"access_token": None, "auth_required": False}
+    payload = verify_token(token) if token else None
+    if not payload:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    if payload.get("scope") == "watch":
+        raise HTTPException(status_code=403, detail="A watch sign-in can't make another")
+    claims = {k: payload[k] for k in ("sub", "global_user_id", "active_instance_id", "role") if k in payload}
+    claims["scope"] = "watch"
+    return {"access_token": create_access_token(claims, expires_minutes=WATCH_TOKEN_DAYS * 1440),
+            "expires_days": WATCH_TOKEN_DAYS, "auth_required": True}
+
+
 @router.get("/me")
 def get_me(current_user=Depends(get_current_user)):
     if current_user is None:

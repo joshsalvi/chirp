@@ -549,6 +549,15 @@ export default function App() {
     return () => window.removeEventListener('chirp-settings-saved', h)
   }, [checkAuth])
 
+  // Apple Watch: give it a Live Detect sign-in for this account and site, or
+  // sign it out. Only does anything in the iPhone app with a paired watch.
+  const watchKey = currentUser ? `${currentUser.username || ''}|${tokenStore.getActiveInstanceId() || ''}` : ''
+  useEffect(() => {
+    if (!authChecked) return
+    if (signedIn && watchKey) native.watch.sync({ key: watchKey, getToken: () => api.auth.watchToken() })
+    else if (!signedIn) native.watch.clear()
+  }, [authChecked, signedIn, watchKey])
+
   // Native push registration (APNs, via Capacitor) — the native-app
   // counterpart to the PWA's Web Push subscribe flow (see
   // components/Settings.jsx's notification settings for that side).

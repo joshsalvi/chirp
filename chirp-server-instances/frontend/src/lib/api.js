@@ -815,6 +815,8 @@ export const api = {
   },
 
   auth: {
+    // Live Detect-only sign-in for the Apple Watch app (30 days)
+    watchToken: () => request('/auth/watch-token', { method: 'POST' }),
     deleteAccount: (password) => request('/auth/me/delete', { method: 'POST', body: JSON.stringify({ password }) }),
     login: async (username, password, rememberMe = false) => {
       const fd = new FormData()
