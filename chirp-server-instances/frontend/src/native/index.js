@@ -82,13 +82,18 @@ function reportWatch(data) {
 }
 let _watch
 async function watchPlugin() {
-  if (!isIOS()) return null
   if (_watch !== undefined) return _watch
+  _watch = null
+  if (!isApp()) return _watch
   try {
     const { Capacitor, registerPlugin } = await import('@capacitor/core')
-    _watch = Capacitor.isPluginAvailable('ChirpWatch') ? registerPlugin('ChirpWatch') : null
-  } catch { _watch = null }
-  if (!_watch && /\bChirpApp\/2\b/.test(navigator.userAgent || '')) reportWatch({ result: 'no-plugin' })
+    if (Capacitor.getPlatform() === 'ios' && Capacitor.isPluginAvailable('ChirpWatch')) _watch = registerPlugin('ChirpWatch')
+  } catch { /* stays null */ }
+  if (!_watch) {
+    const C = window.Capacitor
+    reportWatch({ result: 'no-plugin', platform: C?.getPlatform?.(), native: !!C?.isNativePlatform?.(),
+                  plugins: (C?.PluginHeaders || []).map(h => h.name), ua: navigator.userAgent })
+  }
   return _watch
 }
 

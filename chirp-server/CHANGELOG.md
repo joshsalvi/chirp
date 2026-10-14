@@ -1,3 +1,7 @@
+## 0.5.12.ab — 2026-10-14 — DEVELOPER — Watch plugin check
+
+- Logs which native plugins the iPhone app reports when the watch link is missing.
+
 ## 0.5.12.aa — 2026-10-14 — BUGFIX — Apple Watch sign-in check
 
 - My Profile → Apple Watch shows whether a watch is ready and sends it the sign-in again.
