@@ -1,0 +1,39 @@
+# Chirp server for your own home server: one container, no extras.
+# (docker-compose.yml is the full ourchirp.com stack with Headscale, Caddy
+# and the iOS re-sign service; you don't need any of that to run Chirp.)
+#
+#   cp .env.simple.example .env      # then edit it
+#   docker compose -f docker-compose.simple.yml up -d --build
+#   open http://YOUR-SERVER-IP:8768
+#
+# Setup guide: https://ourchirp.com/setup.html#server
+services:
+  chirp:
+    build:
+      context: .
+    container_name: chirp
+    restart: unless-stopped
+    ports:
+      - "8768:8768"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - CHIRP_SECRET_KEY=${CHIRP_SECRET_KEY:?Set CHIRP_SECRET_KEY in .env}
+      - CHIRP_GLOBAL_ADMIN_USERNAME=${CHIRP_GLOBAL_ADMIN_USERNAME:-}
+      - CHIRP_SERVER_URL=${CHIRP_SERVER_URL:-}
+      - CHIRP_EBIRD_API_KEY=${CHIRP_EBIRD_API_KEY:-}
+      - CHIRP_AUTH_ENABLED=true
+      - CHIRP_DATA_DIR=/app/data
+      - CHIRP_RECORDINGS_DIR=/app/data/recordings
+      - CHIRP_MEDIA_DIR=/app/data/media/birds
+      - CHIRP_DB_URL=sqlite:////app/data/_legacy_unused.db
+      - CHIRP_HOST=0.0.0.0
+      - CHIRP_PORT=8768
+      - CHIRP_TAILSCALE_ENABLED=false
+      - TZ=${TZ:-America/New_York}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8768/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s

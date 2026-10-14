@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="favicon.ico?v=0.5.12.v" sizes="16x16 32x32 48x48">
+<link rel="icon" href="favicon.svg?v=0.5.12.v" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=0.5.12.v">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Set up Chirp — station, server and app</title>
+<meta name="description" content="Step-by-step setup for a Chirp listening station, a Chirp server and the Chirp app.">
+<link rel="stylesheet" href="docs.css">
+<script src="site.js"></script>
+</head>
+<body>
+<nav><div class="bar">
+  <a class="brand" href="about"><img src="logo.svg" alt="">Chirp</a>
+  <div class="links">
+    <a class="hide-sm" href="about">About</a>
+    <a class="on" href="setup.html">Set up</a>
+    <a href="guide.html">User guide</a>
+    <a class="hide-sm" href="support.html">Support</a>
+    <a class="btn btn-primary" href="/login">Sign in</a>
+  </div>
+</div></nav>
+
+<div class="layout">
+  <aside class="toc">
+    <p>Set up</p>
+    <a href="#paths">Pick your path</a>
+    <p>Station</p>
+    <a href="#hardware">What you need</a>
+    <a href="#pi">Prepare the Pi</a>
+    <a href="#install">Install the software</a>
+    <a href="#connect">Connect to a server</a>
+    <a href="#test">Test and start</a>
+    <p>Server</p>
+    <a href="#hosted">Hosted on ourchirp.com</a>
+    <a href="#server">Run your own</a>
+    <a href="#https">HTTPS and push</a>
+    <a href="#legacy">Older single-site server</a>
+    <p>App</p>
+    <a href="#app">iPhone and browser</a>
+    <a href="#invite">Invite your household</a>
+    <a href="#trouble">Troubleshooting</a>
+  </aside>
+
+  <main>
+    <div class="eyebrow">Setup guide</div>
+    <h1>Set up Chirp</h1>
+    <p class="lede">A station in the yard, a server that keeps everything, and the app to explore it. Most people finish in an afternoon.</p>
+
+    <h2 id="paths">Pick your path</h2>
+    <div class="grid">
+      <div class="card">
+        <div class="k">Join only</div>
+        <h3>Someone invited you</h3>
+        <p>No hardware. Create an account with their invite code.</p>
+        <a class="btn btn-ghost" href="#app">App setup →</a>
+      </div>
+      <div class="card">
+        <div class="k">Hosted</div>
+        <h3>Build a station, we host it</h3>
+        <p>Build the station; ourchirp.com runs the server.</p>
+        <a class="btn btn-primary" href="#hardware">Start here →</a>
+      </div>
+      <div class="card">
+        <div class="k">Self-hosted</div>
+        <h3>Run everything at home</h3>
+        <p>Station plus a Docker server on your own hardware.</p>
+        <a class="btn btn-ghost" href="#server">Server setup →</a>
+      </div>
+    </div>
+
+    <h2 id="hardware">1 · What you need for a station</h2>
+    <table>
+      <tr><th>Part</th><th>Notes</th></tr>
+      <tr><td>Raspberry Pi 5</td><td>4 GB or more. A Pi 4 works but analysis is slower.</td></tr>
+      <tr><td>microSD card</td><td>32 GB or more, a good brand (A2 rated).</td></tr>
+      <tr><td>Official USB-C power supply</td><td>27 W for the Pi 5. Weak supplies cause audio dropouts.</td></tr>
+      <tr><td>USB microphone</td><td>A ReSpeaker USB mic array is the tested choice. More USB mics can be added; Chirp mixes them by signal strength.</td></tr>
+      <tr><td>Weatherproof spot</td><td>Within Wi-Fi range, mic pointing at the yard, out of direct rain.</td></tr>
+      <tr><td>Optional</td><td>Google Coral accelerator (faster identification), AudioMoth (bats), Argon ONE case with display.</td></tr>
+    </table>
+    <p>Full hardware notes: <a href="https://github.com/joshsalvi/chirp/blob/main/chirp-device/SETUP.md" target="_blank" rel="noopener">chirp-device/SETUP.md <span class="ext">↗</span></a>.</p>
+
+    <h2 id="pi">2 · Prepare the Pi</h2>
+    <ol class="steps">
+      <li>Install <a href="https://www.raspberrypi.com/software/" target="_blank" rel="noopener">Raspberry Pi Imager <span class="ext">↗</span></a> on your computer and flash <b>Raspberry Pi OS (64-bit)</b> to the card.</li>
+      <li>In Imager's settings, set a hostname (e.g. <code>chirppi</code>), a username and password, your <b>Wi-Fi</b> and turn on <b>SSH</b>. This is the simplest way to get the Pi online.</li>
+      <li>Put the card in the Pi, plug in the microphone, then power it on. Give it two minutes.</li>
+      <li>From your computer: <code>ssh YOUR-USERNAME@chirppi.local</code></li>
+      <li>Update it:
+<pre><code>sudo apt update && sudo apt full-upgrade -y && sudo reboot</code></pre></li>
+    </ol>
+    <div class="note"><p><b>No Wi-Fi set in Imager?</b> The Chirp iPhone app can send Wi-Fi details to a new station over Bluetooth: <b>Devices → Bluetooth device setup</b>. <span class="tag">Beta</span> It needs the Chirp software installed first, so a wired Ethernet connection is the easier fallback.</p></div>
+
+    <h2 id="install">3 · Install the station software</h2>
+    <ol class="steps">
+      <li>Download Chirp:
+<pre><code>sudo apt install -y git
+git clone https://github.com/joshsalvi/chirp.git
+cd chirp/chirp-device</code></pre></li>
+      <li>Run the installer. It sets up Python, the audio libraries, BirdNET and the <code>chirp-device</code> service (10–20 minutes):
+<pre><code>./install.sh</code></pre></li>
+      <li>Only with a Google Coral accelerator:
+<pre><code>./install-coral.sh</code></pre></li>
+    </ol>
+
+    <h2 id="connect">4 · Connect the station to a server</h2>
+    <p>Pick one. The station needs the server's address and a <b>device key</b>. Location, thresholds and other settings then come from the server automatically.</p>
+
+    <h3>Option A · Hosted site (approval email)</h3>
+    <ol class="steps">
+      <li>Request a site at <a href="about#start">ourchirp.com/about</a>. When it's approved you get an email with your device key and a ready-made <code>config.yaml</code> snippet.</li>
+      <li>On the Pi: <code>nano ~/chirp/chirp-device/config.yaml</code>, find the <code>upload:</code> and <code>server_sync:</code> sections and paste in the values from the email. Save with Ctrl-O, Enter, Ctrl-X.</li>
+    </ol>
+
+    <h3>Option B · Auto-configure from the server <span class="tag">Same network</span></h3>
+    <p>For a server on your home network. The server finds the Pi and writes its settings for you.</p>
+    <ol class="steps">
+      <li>Sign in as an admin and open <b>Devices</b>. Tap <b>Discover</b>.</li>
+      <li>The server scans your network for stations running Chirp. Next to yours, tap <b>Auto-configure</b>.</li>
+      <li>Enter the Pi's SSH username and password. The server makes a device key, writes it to <code>config.yaml</code> and restarts the station.</li>
+      <li>The station appears in Devices within a minute.</li>
+    </ol>
+
+    <h3>Option C · Manual key</h3>
+    <ol class="steps">
+      <li>As an admin, open <b>Devices → New Device Key</b>. Copy the key (it's shown once).</li>
+      <li>On the Pi, edit <code>~/chirp/chirp-device/config.yaml</code>:
+<pre><code>upload:
+  enabled: true
+  server_url: "https://YOUR-SERVER/api/v1/recordings/upload"
+  api_key: "chirp-…"
+
+server_sync:
+  enabled: true
+  server_url: "https://YOUR-SERVER"
+  api_key: "chirp-…"
+  device_name: "Garden Pi"</code></pre>
+      Use the same key in both places. For ourchirp.com, <code>YOUR-SERVER</code> is <code>ourchirp.com</code>; for a home server it can be <code>http://192.168.1.50:8768</code>.</li>
+    </ol>
+
+    <h2 id="test">5 · Test and start</h2>
+    <ol class="steps">
+      <li>Check the microphone and detection:
+<pre><code>cd ~/chirp/chirp-device
+source venv/bin/activate
+python main.py --list-devices      # the mic should be listed
+python main.py --test-audio        # whistle; levels should jump
+python main.py --test-detection    # BirdNET loads and runs</code></pre></li>
+      <li>Start it for good (it also starts on every boot):
+<pre><code>sudo systemctl restart chirp-device
+journalctl -u chirp-device -f      # watch it work; Ctrl-C to stop watching</code></pre></li>
+      <li>Open your site. The station shows as online in <b>Devices</b>, and recordings appear within a minute of the first bird.</li>
+    </ol>
+
+    <h2 id="hosted">Server · Hosted on ourchirp.com</h2>
+    <p>Nothing to install. <a href="about#start">Request a site</a>; once it's approved you get your sign-in, invite code and device key by email. Then follow the station steps above with <a href="#connect">Option A</a>.</p>
+
+    <h2 id="server">Server · Run your own</h2>
+    <p>One Docker container hosts any number of sites, each with its own members. Any always-on machine with Docker works: a NAS, Unraid, a mini PC or a spare computer.</p>
+    <ol class="steps">
+      <li>Install <a href="https://docs.docker.com/get-docker/" target="_blank" rel="noopener">Docker <span class="ext">↗</span></a> with Compose.</li>
+      <li>Download Chirp and copy the settings file:
+<pre><code>git clone https://github.com/joshsalvi/chirp.git
+cd chirp/chirp-server-instances
+cp .env.simple.example .env</code></pre></li>
+      <li>Edit <code>.env</code>: set <code>CHIRP_SECRET_KEY</code> (make one with <code>openssl rand -hex 32</code>) and <code>CHIRP_GLOBAL_ADMIN_USERNAME</code> to the username you'll register.</li>
+      <li>Start it (the first build takes 5–10 minutes):
+<pre><code>docker compose -f docker-compose.simple.yml up -d --build</code></pre></li>
+      <li>Open <code>http://YOUR-SERVER-IP:8768</code>, tap <b>Create account</b> with that username, then <b>New Location</b> to create your site. Restart once (<code>docker compose -f docker-compose.simple.yml restart</code>) to become server-wide admin.</li>
+      <li>In <b>Settings → General</b>, set the location, time zone and web address. Add an eBird key in <b>Integrations</b> and email under <b>Alerts &amp; Email</b>.</li>
+      <li>Connect your station with <a href="#connect">Option B or C</a>.</li>
+    </ol>
+    <div class="note"><p>Data lives in <code>./data</code> next to the compose file. Back it up, or use <b>Settings → Storage &amp; Backup</b>.</p></div>
+
+    <h3 id="https">HTTPS, iPhone push and Live Detect</h3>
+    <ul>
+      <li><b>HTTPS</b> is needed for Live Detect's microphone and for browser notifications. The simplest route is a free Cloudflare Tunnel: <a href="https://github.com/joshsalvi/chirp/blob/main/docs/CLOUDFLARE_TUNNEL.md" target="_blank" rel="noopener">guide <span class="ext">↗</span></a>.</li>
+      <li><b>iPhone push</b> from your own server goes through a relay on ourchirp.com. <a href="about#request">Request a relay token</a>, then paste it in <b>Settings → Alerts &amp; Email → iPhone Push</b>. Your server doesn't need to be reachable from the internet for this.</li>
+    </ul>
+
+    <h3 id="legacy">The older single-site server <span class="tag">Deprecated</span></h3>
+    <p><code>chirp-server</code> (one site per container) still runs but gets no new features. New setups should use <code>chirp-server-instances</code> above. To move an existing one: download a backup from the old server's <b>Settings → Storage &amp; Backup</b>, then in the new server's location picker tap <b>Import from Database File</b>. Detections, the life list, notes and accounts come across; audio files stay on the old server.</p>
+
+    <h2 id="app">App · iPhone and browser</h2>
+    <ol class="steps">
+      <li data-appstore-soon><b>iPhone:</b> the Chirp app is coming to the App Store. Until then, open <a href="/login">ourchirp.com</a> (or your server's address) in Safari, tap <b>Share → Add to Home Screen</b>.</li>
+      <li data-appstore hidden><b>iPhone:</b> <a data-appstore href="#" target="_blank" rel="noopener">get Chirp from the App Store <span class="ext">↗</span></a>.</li>
+      <li><b>Computer or Android:</b> open your site in any browser. Chrome and Edge offer <b>Install app</b> in the address bar.</li>
+      <li>Sign in, or tap <b>Create account</b> and enter your invite code.</li>
+      <li>Allow notifications when asked, then choose what you hear about in <b>Settings → My Notifications</b>.</li>
+    </ol>
+
+    <h3 id="invite">Invite your household</h3>
+    <ol class="steps">
+      <li>As the site's admin, open <b>Users</b>. Your invite code is at the top; tap <b>Copy invite</b> and send it.</li>
+      <li>They create an account with the code and join as viewers.</li>
+      <li>Change someone's role on the same page: <b>viewer</b> (look and take notes), <b>submitter</b> (also uploads and iNaturalist), <b>admin</b> (everything).</li>
+    </ol>
+
+    <h2 id="trouble">Troubleshooting</h2>
+    <table>
+      <tr><th>Problem</th><th>Try</th></tr>
+      <tr><td>Station shows offline</td><td><code>journalctl -u chirp-device -n 50</code> on the Pi. Check the server address and that both <code>api_key</code> lines match a key in Settings.</td></tr>
+      <tr><td>No recordings</td><td><code>python main.py --test-audio</code> and whistle. If levels don't move, check the mic in <code>--list-devices</code>.</td></tr>
+      <tr><td>Wrong or foreign birds</td><td>Set the location in <b>Settings → General</b>; the station picks it up within a minute.</td></tr>
+      <tr><td>Live Detect: microphone blocked</td><td>The site must use an <code>https://</code> address.</td></tr>
+      <tr><td>No iPhone notifications</td><td>iPhone Settings → Chirp → Notifications on; on your own server, add a relay token.</td></tr>
+    </table>
+    <p>Still stuck? <a href="support.html#contact">Contact us</a>. For day-to-day use, see the <a href="guide.html">user guide</a>.</p>
+  </main>
+</div>
+
+<footer><div class="bar">
+  <span>© 2026 Joshua Salvi · Chirp</span>
+  <div class="links">
+    <a href="about">About</a><a href="guide.html">User guide</a><a href="support.html">Support</a><a href="privacy.html">Privacy</a>
+    <a href="https://github.com/joshsalvi/chirp" target="_blank" rel="noopener">GitHub ↗</a>
+  </div>
+</div></footer>
+</body>
+</html>

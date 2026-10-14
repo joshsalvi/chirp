@@ -14,7 +14,7 @@
 // WHATS_NEW.version must match the VERSION file (stamp-sw-version.mjs
 // checks it). Set `popup` to the new version when `latest` changes.
 export const WHATS_NEW = {
-  version: '0.5.12.u',
+  version: '0.5.12.v',
   // The release whose `latest` text this is. The popup shows once per value,
   // so small fixes that don't change `latest` don't bring it back.
   popup: '0.5.12.t',
@@ -37,6 +37,7 @@ export const WHATS_NEW = {
     ],
   },
   recent: [
+    { version: '0.5.12.v', summary: 'Setup guide and user guide, linked throughout; invite code on the Users page.' },
     { version: '0.5.12.t', summary: 'Help & Feedback in My Profile; contact form on the support page.' },
     { version: '0.5.12.s', summary: 'Invite code is all you need to join a site; shorter What’s New and Changelog.' },
     { version: '0.5.12.p', summary: 'Request a hosted site or a push relay token at ourchirp.com/about.' },

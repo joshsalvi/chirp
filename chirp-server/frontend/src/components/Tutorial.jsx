@@ -1285,6 +1285,10 @@ export default function Tutorial() {
             <p className="text-xs mt-2 flex items-center gap-1.5" style={{ color: 'var(--text-tertiary)' }}>
               <Clock size={11}/> {SECTIONS.length} sections · ~5 min read · jump to any section below, or scroll through top to bottom
             </p>
+            <p className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
+              Also online: the <a href="/guide.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>user guide ↗</a> and
+              the <a href="/setup.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>setup guide ↗</a> for stations and servers.
+            </p>
           </div>
         </div>
         {/* Tutorial on/off toggle */}

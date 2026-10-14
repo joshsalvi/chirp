@@ -1650,6 +1650,10 @@ function DevicesInner() {
               <span>Configure BirdNET settings, push the config, and the Pi applies it within 60 seconds.</span>
             </li>
           </ol>
+          <p className="text-sm text-gray-400">
+            Step-by-step, including building the station and automatic setup with Discover:{' '}
+            <a href="/setup.html#connect" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>setup guide ↗</a>
+          </p>
         </div>
       )}
 

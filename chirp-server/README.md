@@ -1,4 +1,10 @@
-# Chirp Server
+# Chirp Server (deprecated)
+
+> **Deprecated.** This single-site server still runs but gets no new features.
+> Use [`chirp-server-instances`](../chirp-server-instances) for new setups: it hosts
+> one or many sites from one container. Setup: https://ourchirp.com/setup.html#server.
+> To move over, download a backup here (Settings → Storage & Backup) and use
+> **Import from Database File** in the new server's location picker.
 
 Docker-based bird call detection server. Receives recordings from Chirp devices, generates spectrograms, enriches bird profiles from Cornell Lab / Xeno-canto / Wikipedia, and serves a React WebGUI.
 

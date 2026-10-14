@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Users, Plus, Trash2, Check, ChevronDown } from 'lucide-react'
-import { api } from '../lib/api'
+import { api, tokenStore } from '../lib/api'
 
 const ROLE_COLORS = {
   admin:     { bg: 'rgba(167,139,250,.15)', color: '#c4b5fd', border: 'rgba(167,139,250,.3)' },
@@ -56,6 +56,34 @@ function RoleDropdown({ userId, currentRole, onChanged, disabled }) {
           </div>
         </>
       )}
+    </div>
+  )
+}
+
+// The site's invite code: people create an account with it and join as
+// viewers. Shown to this site's admins (the server only returns it to them).
+function InviteCodeCard() {
+  const [site, setSite] = useState(null)
+  const [copied, setCopied] = useState(false)
+  useEffect(() => {
+    const active = tokenStore.getActiveInstanceId()
+    api.instances.list().then(list => setSite(list.find(i => i.id === active && i.invite_code) || null)).catch(() => {})
+  }, [])
+  if (!site) return null
+  const text = `Join ${site.name} on Chirp: create an account at ${window.location.origin} with invite code ${site.invite_code}`
+  return (
+    <div className="card p-4 mb-4 flex flex-wrap items-center gap-3" style={{ border: '1px solid var(--border-subtle)' }}>
+      <div className="flex-1 min-w-[12rem]">
+        <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Invite people</p>
+        <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+          Share this code. People create an account with it and join {site.name} as viewers; change their role below.
+        </p>
+      </div>
+      <span className="font-mono text-lg font-bold tracking-wider" style={{ color: 'var(--accent-400)' }}>{site.invite_code}</span>
+      <button className="btn-secondary text-xs px-3 py-1.5"
+              onClick={() => navigator.clipboard?.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500) })}>
+        {copied ? 'Copied' : 'Copy invite'}
+      </button>
     </div>
   )
 }
@@ -131,6 +159,8 @@ export default function UserManagement() {
           <Plus size={13}/> New User
         </button>
       </div>
+
+      <InviteCodeCard/>
 
       {/* Create form */}
       {showCreate && (

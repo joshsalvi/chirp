@@ -245,13 +245,15 @@ def hosted_email(row: SiteRequest, base: str, invite_code: str, device_key: str)
     upload = f"{base}/api/v1/recordings/upload"
     config = (f"upload:\n  enabled: true\n  server_url: \"{upload}\"\n  api_key: \"{device_key}\"\n\n"
               f"server_sync:\n  enabled: true\n  server_url: \"{base}\"\n  api_key: \"{device_key}\"")
+    guide = f"{base}/setup.html"
     steps = [
         f"Sign in at {base} as <b>{escape(row.username)}</b> with the password you chose.",
-        f"Get the device software: <a href='{GITHUB_URL}'>{GITHUB_URL}</a> (folder <code>chirp-device</code>).",
-        "On a Raspberry Pi 5 with a USB microphone: <code>git clone</code> the repository, "
+        f"Build the station: Raspberry Pi 5 and a USB microphone (<a href='{guide}#hardware'>parts and Pi setup</a>).",
+        "On the Pi: <code>git clone https://github.com/joshsalvi/chirp.git</code>, "
         "<code>cd chirp/chirp-device</code>, then <code>./install.sh</code>.",
         "Edit <code>config.yaml</code> and set the two sections below.",
-        "Run <code>python main.py --test-detection</code>, then <code>sudo systemctl enable --now chirp</code>.",
+        "Test with <code>source venv/bin/activate</code> and <code>python main.py --test-detection</code>, "
+        "then start it: <code>sudo systemctl restart chirp-device</code>.",
         "Recordings appear in your site within a minute of the first bird.",
     ]
     html = (f"<p>Hi {escape(row.full_name.split()[0])},</p>"
@@ -259,19 +261,22 @@ def hosted_email(row: SiteRequest, base: str, invite_code: str, device_key: str)
             + "".join(f"<li style='margin-bottom:6px'>{s}</li>" for s in steps) + "</ol>"
             f"<p style='margin-bottom:4px'><b>config.yaml</b></p>"
             f"<pre style='background:#f4f1ea;padding:12px;border-radius:8px;font-size:12px;white-space:pre-wrap;word-break:break-all'>{escape(config)}</pre>"
-            f"<p>Keep the API key private: it lets a device upload to your site. You can make new keys "
-            f"or revoke this one in Settings → Devices.</p>"
-            f"<p>Invite family or friends as viewers with the code <b>{escape(invite_code)}</b> "
-            f"(Create account → invite code).</p>"
+            f"<p>The full walkthrough, with troubleshooting, is in the <a href='{guide}'>setup guide</a>; "
+            f"the <a href='{base}/guide.html'>user guide</a> covers the app and its settings.</p>"
+            f"<p>Keep the API key private: it lets a device upload to your site. Make new keys "
+            f"or revoke this one on the Devices page.</p>"
+            f"<p>Invite family or friends with the code <b>{escape(invite_code)}</b>: they choose "
+            f"Create account and enter it. It's also on your Users page.</p>"
             f"<p>On iPhone, open {base} in Safari and choose Share → Add to Home Screen, or use the Chirp app.</p>")
     text = (f"Hi {row.full_name.split()[0]},\n\nYour Chirp site {row.site_name} is ready.\n\n"
             f"1. Sign in at {base} as {row.username} with the password you chose.\n"
-            f"2. Device software: {GITHUB_URL} (folder chirp-device).\n"
-            "3. On a Raspberry Pi 5 with a USB microphone: git clone, cd chirp/chirp-device, ./install.sh\n"
+            f"2. Build the station: Raspberry Pi 5 and a USB microphone ({guide}#hardware).\n"
+            "3. On the Pi: git clone https://github.com/joshsalvi/chirp.git, cd chirp/chirp-device, ./install.sh\n"
             "4. Edit config.yaml:\n\n" + config + "\n\n"
-            "5. python main.py --test-detection, then sudo systemctl enable --now chirp\n\n"
-            "Keep the API key private. Manage keys in Settings → Devices.\n"
-            f"Invite code for viewers: {invite_code}\n")
+            "5. source venv/bin/activate; python main.py --test-detection; sudo systemctl restart chirp-device\n\n"
+            f"Setup guide: {guide}\nUser guide: {base}/guide.html\n\n"
+            "Keep the API key private. Manage keys on the Devices page.\n"
+            f"Invite code: {invite_code}\n")
     return "Your Chirp site is ready", html, text
 
 
@@ -283,7 +288,8 @@ def relay_email(row: SiteRequest, base: str, token: str):
             "<li>Open Settings → Alerts &amp; Email → iPhone push.</li>"
             f"<li>Paste this relay token and save:</li></ol>"
             f"<pre style='background:#f4f1ea;padding:12px;border-radius:8px;font-size:12px;word-break:break-all'>{escape(token)}</pre>"
-            "<p>Then use “Send test” on that card. Keep the token private; ask us to revoke it if it leaks.</p>")
+            "<p>Then use “Send test” on that card. Keep the token private; ask us to revoke it if it leaks.</p>"
+            f"<p>Server setup and HTTPS: <a href='{base}/setup.html#server'>setup guide</a>.</p>")
     text = (f"Hi {row.full_name.split()[0]},\n\nYour Chirp server {row.site_name} can now send iPhone "
             f"notifications through {base}.\n\n1. Update to Chirp 0.5.12.p or later.\n"
             "2. Settings → Alerts & Email → iPhone push.\n3. Paste this relay token and save:\n\n"

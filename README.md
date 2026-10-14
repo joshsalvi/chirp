@@ -5,7 +5,7 @@ identification, and archival. It runs entirely on your own hardware — no cloud
 subscriptions, no data sharing.
 
 **Author:** Joshua Salvi — josh.salvi@gmail.com  
-**Version:** 0.5.12.u  
+**Version:** 0.5.12.p  
 **Status:** Active development · [ourchirp.com/about](https://ourchirp.com/about)
 
 ---
@@ -13,7 +13,7 @@ subscriptions, no data sharing.
 ## 🧠 How It Works
 
 > **Getting started:** build a station from [chirp-device/README.md](chirp-device/README.md), then either
-> run your own server ([chirp-server/README.md](chirp-server/README.md)) or
+> run your own server ([setup guide](https://ourchirp.com/setup.html#server), `chirp-server-instances/docker-compose.simple.yml`) or
 > [request a hosted site on ourchirp.com](https://ourchirp.com/about#start).
 > Self-hosted servers can request a push relay token there so the iPhone app
 > gets notifications.
@@ -133,7 +133,9 @@ for this README so far. If you'd like to contribute some, a PR adding
 | **[chirp-server/MULTI_INSTANCE.md](chirp-server/MULTI_INSTANCE.md)** | Multiple locations/tenants — one real chirp-server instance per location, the current recommended approach |
 | **[docs/MULTI_SERVER_DEVICE.md](docs/MULTI_SERVER_DEVICE.md)** | Sending one chirp-device's data to more than one server at once (e.g. two different chirp-server instances) |
 | **[docs/CLOUDFLARE_TUNNEL.md](docs/CLOUDFLARE_TUNNEL.md)** | HTTPS setup — the default for both projects. No port forwarding, no open ports. Genuinely required for Web Push and native APNs push to work at all, not optional hardening. |
-| **[chirp-server/README.md](chirp-server/README.md)** | Docker server setup — environment variables, API reference, volumes |
+| **[Setup guide](https://ourchirp.com/setup.html)** | Station, server and app, step by step (also `chirp-server-instances/frontend/public/setup.html`) |
+| **[User guide](https://ourchirp.com/guide.html)** | Every page and setting in the app |
+| **[chirp-server/README.md](chirp-server/README.md)** | The older single-site server (deprecated) |
 | **[CHANGELOG.md](CHANGELOG.md)** | Full version history with all changes per release |
 | **[LICENSE](LICENSE)** | PolyForm Noncommercial 1.0.0 |
 
@@ -144,8 +146,8 @@ for this README so far. If you'd like to contribute some, a PR adding
 | Directory | Description |
 |---|---|
 | `chirp-device/` | Raspberry Pi 5 agent — mic capture, BirdNET inference (+ Coral EdgeTPU), upload |
-| `chirp-server/` | Docker server — FastAPI backend, React WebGUI, species enrichment, spectrograms |
-| `chirp-server-instances/` | A separate, actively maintained multi-tenant fork of chirp-server — one shared app with per-tenant databases and a Global Admin panel, rather than N fully independent containers. See its own `ARCHITECTURE.md` and the Tech Docs "System Architecture" page's "Supporting infrastructure containers" section for its bundled Headscale/Caddy/cloudflare-ddns. |
+| `chirp-server/` | Older single-site server (deprecated; use chirp-server-instances) |
+| `chirp-server-instances/` | **The Chirp server.** Multi-site — one shared app with per-tenant databases and a Global Admin panel, rather than N fully independent containers. See its own `ARCHITECTURE.md` and the Tech Docs "System Architecture" page's "Supporting infrastructure containers" section for its bundled Headscale/Caddy/cloudflare-ddns. |
 | `figures/` | Ten technical diagrams covering system architecture, the detection pipeline, and other subsystems |
 
 ---

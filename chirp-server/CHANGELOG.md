@@ -1,3 +1,14 @@
+## 0.5.12.v — 2026-10-14 — ENHANCEMENT — Setup guide and user guide
+
+- New /setup.html: station parts and Pi setup, install, three ways to connect (approval email, Discover → Auto-configure, manual key), testing, hosted or self-hosted server, HTTPS and push, app and invites, troubleshooting.
+- New /guide.html: every page, Settings tab by tab, devices, people and roles, My Profile.
+- Linked from About (nav, cards, FAQ, footer), Support, sign-in, Settings, Tutorial, Devices, My Profile, the approval and relay emails, README and install.sh.
+- chirp-server-instances/docker-compose.simple.yml and .env.simple.example: one container for running your own server.
+- chirp-server (single site) marked deprecated in its README and the guides; move with Import from Database File.
+- Users page shows the site's invite code with Copy invite (site admins could only see it in the approval email).
+- Approval email: correct service name (chirp-device), venv step and guide links.
+- About, Support and Privacy load the full icon set with version tags, so browsers drop the old cached icon.
+
 ## 0.5.12.u — 2026-10-13 — BUGFIX — Support and About links open in the browser
 
 - My Profile's support page link and the sign-in screen's "What is Chirp?" open in Safari (a new tab on the web) instead of inside the app.

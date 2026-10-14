@@ -3458,9 +3458,12 @@ export default function SettingsPage({ currentUser } = {}) {
         <div className="space-y-3">
           <div className="flex items-baseline justify-between gap-3">
             <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Settings</h1>
-            <Link to="/changelog" className="hidden md:inline text-xs" style={{ color: 'var(--text-tertiary)', textDecoration: 'none' }}>
-              {serverVersion ? `v${serverVersion}` : ''} · What&#39;s New
-            </Link>
+<span className="text-xs flex items-center gap-3">
+              <a href="/guide.html#settings-you" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)', textDecoration: 'none' }}>Settings guide ↗</a>
+              <Link to="/changelog" className="hidden md:inline" style={{ color: 'var(--text-tertiary)', textDecoration: 'none' }}>
+                {serverVersion ? `v${serverVersion}` : ''} · What&#39;s New
+              </Link>
+            </span>
           </div>
           <SettingsSearch containerRef={settingsContainerRef} tabs={SETTINGS_TABS}
                           tabForElement={findTabForElement} onPick={openSearchResult}/>
