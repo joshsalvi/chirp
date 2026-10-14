@@ -87,7 +87,12 @@ async function watchPlugin() {
   if (!isApp()) return _watch
   try {
     const { Capacitor, registerPlugin } = await import('@capacitor/core')
-    if (Capacitor.getPlatform() === 'ios' && Capacitor.isPluginAvailable('ChirpWatch')) _watch = registerPlugin('ChirpWatch')
+    if (Capacitor.getPlatform() === 'ios' && Capacitor.isPluginAvailable('ChirpWatch')) {
+      // Wrapped: a Capacitor plugin proxy answers any property, `then`
+      // included, so returning it from an async function never resolves.
+      const P = registerPlugin('ChirpWatch')
+      _watch = { status: () => P.status(), setCredentials: o => P.setCredentials(o), clearCredentials: () => P.clearCredentials() }
+    }
   } catch { /* stays null */ }
   if (!_watch) {
     const C = window.Capacitor

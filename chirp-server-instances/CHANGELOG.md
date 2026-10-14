@@ -1,3 +1,7 @@
+## 0.5.12.ac — 2026-10-14 — BUGFIX — Apple Watch sign-in
+
+- The iPhone app now sends the watch its sign-in; the watch link never finished starting before.
+
 ## 0.5.12.ab — 2026-10-14 — DEVELOPER — Watch plugin check
 
 - Logs which native plugins the iPhone app reports when the watch link is missing.
