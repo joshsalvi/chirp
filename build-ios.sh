@@ -379,6 +379,22 @@ PLIST
     grep -q -E "EXPORT SUCCEEDED|Upload succeeded|Uploaded" "$EXPORT_DIR/upload.log" \
       || error "Upload to App Store Connect failed (log: $EXPORT_DIR/upload.log). If it says the app record is missing, create the app in App Store Connect with bundle ID $APP_ID."
     success "Uploaded $MARKETING_VERSION ($BUILD_NUMBER) to App Store Connect. It appears in TestFlight after Apple processes it (usually 5-30 minutes)."
+    # Record the build for the Changelog's iPhone App tab (both forks); the
+    # next server deploy shows it. Server-only releases never get an entry.
+    for f in "$ROOT"/chirp-server*/frontend/src/lib/appReleases.json; do
+      [[ -f "$f" ]] || continue
+      python3 - "$f" "$VERSION" "$MARKETING_VERSION" "$BUILD_NUMBER" "$PICKER" <<'PY' || warn "Could not record the build in $f"
+import json, sys, datetime
+path, chirp, ios, build, picker = sys.argv[1:]
+rows = [r for r in json.load(open(path)) if r["build"] != build]
+row = {"chirp": chirp, "ios": ios, "build": build, "date": datetime.date.today().isoformat()}
+if picker == "1":
+    row["test"] = True
+rows.insert(0, row)
+with open(path, "w") as fh:
+    fh.write("[\n" + ",\n".join("  " + json.dumps(r, ensure_ascii=False) for r in rows) + "\n]\n")
+PY
+    done
     if [[ "$PICKER" == "1" ]]; then
       # Not recorded for testflight-auto.sh, so it never reaches external testers.
       echo "$BUILD_NUMBER" > "$ROOT/build/last-picker-build"

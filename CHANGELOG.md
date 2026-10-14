@@ -1,3 +1,8 @@
+## 0.5.12.y — 2026-10-14 — ENHANCEMENT — iPhone app versions
+
+- Changelog's iPhone App tab lists only uploaded app builds; server-only releases leave the app version unchanged.
+- Each app version lists the Chirp releases it brought; build-ios.sh records new builds in appReleases.json.
+
 ## 0.5.12.x — 2026-10-14 — ENHANCEMENT — Station offline alerts
 
 - Admins can turn on Settings → My Notifications → Stations: a push and/or email when a station sends no heartbeat for 10 minutes, and another when it's back with how long it was down. Off by default.

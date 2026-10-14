@@ -6,7 +6,7 @@
  * and renders it with basic markdown parsing.
  */
 import { useState, useEffect } from 'react'
-import { iosVersionFor, atLeast, FIRST_PER_RELEASE, useAppInfo } from '../lib/appVersion'
+import { APP_RELEASES, LATEST_APP, atLeast, useAppInfo } from '../lib/appVersion'
 
 // Escape raw HTML before applying our own markdown-style tags below, so a
 // literal "<" or "&" in the changelog text can't be interpreted as markup
@@ -212,18 +212,29 @@ export default function Changelog() {
   )
 }
 
-// iPhone app versions: one per Chirp release since 0.5.12.c, plus the
-// version installed on this phone when opened in the app.
+// iPhone app versions: one per uploaded build (appReleases.json), each
+// listing the Chirp releases it brought to the app. Server-only releases
+// don't add a version. Test builds count from the last public build.
 function IosVersions({ groups, appInfo }) {
-  const rows = []
+  const releases = []
   for (const g of groups) {
     for (const sec of g.sections) {
       const m = sec.split('\n')[0].match(/^## (\d+\.\d+\.\d+\.[a-z]+)\s*[—-]\s*([\d-]+)?\s*(?:[—-]\s*[A-Z]+\s*)?(?:[—-]\s*(.*))?/)
-      if (m && atLeast(m[1], FIRST_PER_RELEASE)) {
-        rows.push({ chirp: m[1], date: m[2], title: m[3] || '', body: sec.split('\n').slice(1).join('\n') })
-      }
+      if (m) releases.push({ chirp: m[1], title: m[3] || '', body: sec.split('\n').slice(1).join('\n') })
     }
   }
+  const after = (v, base) => atLeast(v, base) && v !== base
+  const rows = APP_RELEASES.map((app, i) => {
+    // Previous public build: what someone updating to this one had before.
+    const prev = APP_RELEASES.slice(i + 1).find(r => !r.test)?.chirp
+    const included = prev
+      ? releases.filter(r => atLeast(app.chirp, r.chirp) && after(r.chirp, prev))
+      : releases.filter(r => r.chirp === app.chirp)
+    const body = included.map(r => `### Chirp ${r.chirp}${r.title ? ' — ' + r.title : ''}\n${r.body}`).join('\n')
+    return { ...app, included, body }
+  })
+  const span = (inc) => !inc.length ? '' : inc.length === 1
+    ? `Chirp ${inc[0].chirp}` : `Chirp ${inc[inc.length - 1].chirp} – ${inc[0].chirp}`
   return (
     <div className="space-y-3 mb-8">
       <div className="card p-4">
@@ -233,27 +244,28 @@ function IosVersions({ groups, appInfo }) {
             <p className="font-mono text-xl font-bold mt-1" style={{ color: 'var(--accent-400)' }}>{appInfo.version}</p>
             <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Build {appInfo.build}</p>
           </>
-        ) : (
-          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-            Open Chirp in the iPhone app to see the version installed on your phone.
-          </p>
-        )}
+        ) : LATEST_APP ? (
+          <>
+            <p className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-tertiary)' }}>Latest iPhone app</p>
+            <p className="font-mono text-xl font-bold mt-1" style={{ color: 'var(--accent-400)' }}>{LATEST_APP.ios}</p>
+            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Build {LATEST_APP.build} · {LATEST_APP.date}</p>
+          </>
+        ) : null}
         <p className="text-xs mt-3" style={{ color: 'var(--text-tertiary)' }}>
-          Each Chirp release has its own iPhone version: the letter becomes part of the last number (0.5.12.e → 0.5.1205).
-          Earlier TestFlight builds were 0.5.11 and 0.5.12.
+          The app version changes only when a new app build ships; most Chirp updates arrive without one.
+          Its last number carries the Chirp release letter (0.5.12.e → 0.5.1205). Earlier TestFlight builds were 0.5.11 and 0.5.12.
         </p>
       </div>
-      {/* Each version opens to that release's changes; the installed one
-          (or the newest, outside the app) starts open. */}
+      {/* Each version opens to the changes it brought; the installed one
+          (or the newest public one, outside the app) starts open. */}
       <div className="space-y-2">
-        {rows.map((r, i) => {
-          const ios = iosVersionFor(r.chirp)
-          const installed = appInfo?.version === ios
+        {rows.map(r => {
+          const installed = appInfo?.version === r.ios
+          const note = [span(r.included), r.test && 'test build'].filter(Boolean).join(' · ')
           return (
-            <VersionSection key={r.chirp} ver={ios} date={r.date}
-                            note={`Chirp ${r.chirp}${r.title ? ' — ' + r.title : ''}${installed ? ' · installed' : ''}`}
+            <VersionSection key={r.ios + r.build} ver={r.ios} date={r.date} note={note}
                             isCurrent={installed} body={r.body}
-                            defaultOpen={appInfo ? installed : i === 0}/>
+                            defaultOpen={appInfo ? installed : r === rows.find(x => !x.test)}/>
           )
         })}
       </div>
