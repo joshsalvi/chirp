@@ -93,6 +93,8 @@ PREF_FIELDS = {
     "weekly_journal_push": ("notify_weekly_journal_push", True),
     "new_bird_email": ("notify_new_bird", True),
     "daily_digest_email": ("notify_daily_digest", False),
+    "device_offline_push": ("notify_device_offline_push", False),
+    "device_offline_email": ("notify_device_offline_email", False),
 }
 
 
@@ -116,6 +118,7 @@ def get_prefs(db: Session = Depends(get_db), user=Depends(get_current_user)):
     from ..models import BirdWatch
     u = _me(db, user)
     out = {k: (getattr(u, col) if getattr(u, col, None) is not None else d) for k, (col, d) in PREF_FIELDS.items()}
+    out["is_admin"] = getattr(u, "role", None) == "admin"   # station alerts are for admins
     out["watches"] = [_watch_out(w) for w in db.query(BirdWatch).filter(BirdWatch.user_id == u.id)
                       .order_by(BirdWatch.common_name).all()]
     # When the site sends the digest (local hours), for the descriptions.

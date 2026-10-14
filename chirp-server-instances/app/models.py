@@ -1007,6 +1007,8 @@ class User(Base):
     notify_daily_digest = Column(Boolean, default=False) # daily detection digest email
     notify_daily_digest_push = Column(Boolean, default=False)  # same digest, as a push notification instead — a real, separate preference, not tied to the email one, since someone might reasonably want one channel and not the other
     notify_new_bird_push = Column(Boolean, default=True)       # push for a new species
+    notify_device_offline_push = Column(Boolean, default=False)   # admins: a station stopped reporting, and when it's back
+    notify_device_offline_email = Column(Boolean, default=False)
     notify_daily_journal_push = Column(Boolean, default=True)  # 6 pm push with the Daily Journal
     notify_weekly_journal_push = Column(Boolean, default=True) # Sunday noon push with the Weekly Journal
     dashboard_mode = Column(String, nullable=True)  # 'simplified' | 'detailed' | None (not yet chosen — triggers the first-login picker)
@@ -1165,6 +1167,7 @@ class Device(Base):
     # Connectivity
     last_seen = Column(DateTime, nullable=True, index=True)
     status    = Column(String, default="never_connected")  # "online" | "offline" | "never_connected"
+    offline_since = Column(DateTime, nullable=True)   # last heartbeat before an announced outage (services/device_alerts.py)
 
     # Server-managed config (deep-merged onto device's local config.yaml)
     # The device polls this and applies it at runtime without requiring a restart.

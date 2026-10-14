@@ -1,3 +1,9 @@
+## 0.5.12.x — 2026-10-14 — ENHANCEMENT — Station offline alerts
+
+- Admins can turn on Settings → My Notifications → Stations: a push and/or email when a station sends no heartbeat for 10 minutes, and another when it's back with how long it was down. Off by default.
+- Checked every minute per site (services/device_alerts.py); Haikubox and Bird Buddy are skipped, and stations silent for over a day before the check are not announced.
+- New columns: users.notify_device_offline_push, users.notify_device_offline_email, devices.offline_since.
+
 ## 0.5.12.w — 2026-10-14 — ENHANCEMENT — Menu label
 
 - About page menu says "Set up", matching the guide pages.

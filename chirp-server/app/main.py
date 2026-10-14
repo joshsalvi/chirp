@@ -259,12 +259,16 @@ async def lifespan(app: FastAPI):
         # (services/scheduled_push.daily_digest_tick keeps the day sent).
         from .database import SessionLocal as _SL_dh
         from .services.scheduled_push import daily_digest_tick
+        from .services.device_alerts import device_offline_tick
         while not _stop_digest.wait(60):
             try:
                 with _SL_dh() as _db_dh:
                     sent = daily_digest_tick(_db_dh)
                     if sent:
                         logger.info("Daily digest sent: %s", ", ".join(sent))
+                    alerts = device_offline_tick(_db_dh)
+                    if alerts:
+                        logger.info("Station alerts: %s", ", ".join(alerts))
             except Exception as _de:
                 logger.warning("Daily digest error: %s", _de)
 

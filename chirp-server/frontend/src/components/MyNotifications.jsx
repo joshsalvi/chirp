@@ -4,7 +4,7 @@
  * types, this device's push status, and watched birds.
  */
 import { useEffect, useMemo, useState } from 'react'
-import { Bell, Bird, Mail, Plus, Smartphone, Trash2, Check, AlertCircle } from 'lucide-react'
+import { Bell, Bird, Mail, Plus, Smartphone, Trash2, Check, AlertCircle, Radio } from 'lucide-react'
 import { api } from '../lib/api'
 import { native, isApp } from '../native'
 import { PushNotificationSection } from './UserProfile'
@@ -188,6 +188,15 @@ export default function MyNotifications() {
         {EMAIL.map(([k, label, sub, hourKey]) => <Switch key={k} label={label} sub={hourKey ? sub(prefs[hourKey]) : sub} checked={prefs[k]} onChange={v => toggle(k, v)}/>)}
         <p className="text-[11px] mt-1" style={{ color: 'var(--text-tertiary)' }}>Sent to the email address on your profile.</p>
       </Card>
+      {prefs.is_admin && (
+        <Card icon={Radio} title="Stations">
+          <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+            When a station stops reporting for 10 minutes (crashed, lost power or Wi-Fi), and again when it's back.
+          </p>
+          <Switch label="Station offline: push" checked={prefs.device_offline_push} onChange={v => toggle('device_offline_push', v)}/>
+          <Switch label="Station offline: email" checked={prefs.device_offline_email} onChange={v => toggle('device_offline_email', v)}/>
+        </Card>
+      )}
       {isApp() ? <ThisDevice/> : <PushNotificationSection/>}
       {saved && <p className="text-xs flex items-center gap-1" style={{ color: 'var(--accent-400)' }}><Check size={12}/> Saved</p>}
     </div>

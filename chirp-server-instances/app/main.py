@@ -370,12 +370,16 @@ async def lifespan(app: FastAPI):
         # (services/scheduled_push.daily_digest_tick keeps the day sent).
         from .instance_registry import iter_instance_sessions
         from .services.scheduled_push import daily_digest_tick
+        from .services.device_alerts import device_offline_tick
         while not _stop_digest.wait(60):
             for instance, _db_dh in iter_instance_sessions():
                 try:
                     sent = daily_digest_tick(_db_dh)
                     if sent:
                         logger.info("Daily digest sent for %s: %s", instance.name, ", ".join(sent))
+                    alerts = device_offline_tick(_db_dh)
+                    if alerts:
+                        logger.info("Station alerts for %s: %s", instance.name, ", ".join(alerts))
                 except Exception as _de:
                     logger.warning("Daily digest error for instance %s: %s", instance.name, _de)
 

@@ -598,6 +598,8 @@ def _migrate_columns():
             ("notify_daily_digest",  "BOOLEAN"),
             ("notify_daily_digest_push", "BOOLEAN"),
             ("notify_new_bird_push", "BOOLEAN"),
+            ("notify_device_offline_push", "BOOLEAN"),
+            ("notify_device_offline_email", "BOOLEAN"),
             ("notify_daily_journal_push", "BOOLEAN"),
             ("notify_weekly_journal_push", "BOOLEAN"),
             ("dashboard_mode",       "VARCHAR"),
@@ -617,6 +619,7 @@ def _migrate_columns():
             ("deleted_at",      "DATETIME"),
         ],
         "devices": [
+            ("offline_since",          "DATETIME"),
             ("hostname",               "VARCHAR"),
             ("ip_address",             "VARCHAR"),
             ("tailscale_ip",           "VARCHAR"),
