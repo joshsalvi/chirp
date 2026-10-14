@@ -1,3 +1,7 @@
+## 0.5.12.ad — 2026-10-14 — ENHANCEMENT — Watch app logo
+
+- The watch app shows the Chirp logo at the top; its bars move while listening, as on the Live Detect page.
+
 ## 0.5.12.ac — 2026-10-14 — BUGFIX — Apple Watch sign-in
 
 - The iPhone app now sends the watch its sign-in; the watch link never finished starting before.

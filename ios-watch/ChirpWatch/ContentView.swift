@@ -13,9 +13,7 @@ struct ContentView: View {
     private var signInView: some View {
         ScrollView {
             VStack(spacing: 10) {
-                Image(systemName: "bird.fill")
-                    .font(.system(size: 34))
-                    .foregroundStyle(.orange)
+                ChirpMark(height: 34)
                 Text("Sign in on your iPhone")
                     .font(.headline)
                     .multilineTextAlignment(.center)
@@ -28,7 +26,6 @@ struct ContentView: View {
             }
             .padding(.horizontal, 4)
         }
-        .navigationTitle("Chirp")
     }
 
     private var listenView: some View {
@@ -77,7 +74,11 @@ struct ContentView: View {
                 }
             }
         }
-        .navigationTitle(account.site.isEmpty ? "Chirp" : account.site)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                ChirpMark(height: 22, animate: live.state == .listening)
+            }
+        }
     }
 
     private var statusIsProblem: Bool {
