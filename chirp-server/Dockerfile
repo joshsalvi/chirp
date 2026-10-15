@@ -68,8 +68,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # once left tensorflow without tensorflow/python and the image still
 # built, so server BirdNET failed with "No module named 'tensorflow.python'".
 RUN python -c "from tensorflow import lite; import birdnetlib.analyzer; print('tensorflow + birdnetlib OK')"
-# Nighthawk (Experimental night flight calls): no deps, see requirements.txt
-RUN pip install --no-cache-dir --no-deps nighthawk==0.3.1 && \
+# Nighthawk (Experimental night flight calls): no deps, see requirements.txt.
+# Its wheel says Python 3.10 only; on 3.11 it gives the same detections.
+RUN pip install --no-cache-dir --no-deps --ignore-requires-python nighthawk==0.3.1 && \
     python -c "import nighthawk.detector, onnxruntime, pandas; print('nighthawk + onnxruntime OK')"
 
 # Make Chromium accessible to all users
