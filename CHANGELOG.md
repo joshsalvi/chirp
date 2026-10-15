@@ -1,3 +1,17 @@
+## 0.5.13.a — 2026-10-15 — FEATURE — BirdNET v3 and night flight calls (experimental)
+
+- Settings → Experimental → Detection Models: compare each recording with BirdNET v3, or use it as the main model.
+- Recording pages show a BirdNET v3 comparison card when comparing is on.
+- Night flight calls: stations upload night audio and Nighthawk lists migrant calls on a new Night Calls page.
+- Clearing all notifications asks first; deleting an account needs "delete" typed.
+- Wikipedia searches for the AI journal send a contact URL, as Wikipedia asks (it was answering 403).
+- Tailscale goes straight to userspace networking after kernel TUN is refused once.
+
+## 1.4.0 (chirp-device) — 2026-10-15 — FEATURE — Night audio for Nighthawk
+
+- Uploads 10-minute 22.05 kHz FLAC chunks during the night hours a server asks for (GET /night-calls/accepting); off for servers that don't.
+- Backlog capped at night_audio.max_backlog_gb (3 GB); needs soxr.
+
 ## 0.5.12.ae — 2026-10-14 — BUGFIX — Watch sessions saved to Recordings
 
 - Stopping Live Detect on the watch saves the session to Recordings with its full audio, as the phone's Save session does.

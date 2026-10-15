@@ -26,6 +26,12 @@ pyproj>=3.6.0           # Coordinate reprojection — eBird S&T GeoTIFFs use Equ
 # tensorflow-cpu is the CPU-only build (~230MB) — no GPU deps, works reliably.
 tensorflow-cpu>=2.14.0
 birdnetlib>=0.9.0
+# Settings → Experimental: BirdNET v3 (ONNX, model downloaded on first use)
+# and Nighthawk (installed with --no-deps in the Dockerfile: its own pins ask
+# for Python 3.10 and TensorFlow 2.12, but it runs unchanged on 3.11/2.21
+# with pandas 2 — checked detection for detection against the official build).
+onnxruntime>=1.18.0
+pandas>=2.2,<3
 
 # HTTP client for bird enrichment APIs
 httpx>=0.27.0

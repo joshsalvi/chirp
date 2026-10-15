@@ -143,6 +143,8 @@ class Recording(Base):
     # rule and without also excluding the one real, consolidated session
     # recording that same prefix also happens to share.
     is_live_detect_clip = Column(Boolean, default=False, index=True)
+    # When the BirdNET v3 shadow pass last scored this recording (Experimental)
+    shadow_checked_at = Column(DateTime, nullable=True)
 
     # iNaturalist submission
     inat_observation_id  = Column(String, nullable=True)   # e.g. "369739156"
@@ -182,6 +184,7 @@ class Recording(Base):
                                cascade="all, delete-orphan", lazy="selectin")
     near_misses = relationship("NearMiss", cascade="all, delete-orphan", lazy="select")
     reanalysis_runs = relationship("ReanalysisRun", cascade="all, delete-orphan", lazy="select")
+    shadow_detections = relationship("ShadowDetection", cascade="all, delete-orphan", lazy="select")
 
     @property
     def top_species(self) -> Optional[str]:
@@ -917,6 +920,20 @@ class AppSettings(Base):
     # rumble-removal already defaults to on, but kept a separate opt-in
     # given AI Enhance's real CPU/first-use-download cost.
     ai_enhance_auto_apply = Column(Boolean, default=False)
+
+    # Experimental detection models (Settings → Experimental; see
+    # services/birdnet3.py and services/nighthawk_service.py).
+    # BirdNET v3: shadow = also score each recording and show the result for
+    # comparison; main = use it instead of BirdNET 2.4 in the server pass.
+    exp_birdnet3_shadow = Column(Boolean, default=False)
+    exp_birdnet3_main = Column(Boolean, default=False)
+    exp_birdnet3_min_conf = Column(Float, default=0.5)
+    # Nighthawk: stations upload night audio between these local times and the
+    # server lists the night flight calls it finds (threshold in percent).
+    exp_nighthawk_enabled = Column(Boolean, default=False)
+    exp_nighthawk_start = Column(String, default="21:00")
+    exp_nighthawk_end = Column(String, default="05:00")
+    exp_nighthawk_threshold = Column(Integer, default=80)
     # Dry/wet mix passed to ai_enhance.enhance_wav() — 0.0 = fully
     # AI-denoised, 1.0 = original passthrough. Default matches
     # biodenoising's own upstream CLI default.
@@ -1367,3 +1384,65 @@ class ContentBlock(Base):
     user_id        = Column(String, index=True, nullable=False)
     blocked_author = Column(String, nullable=False)
     created_at     = Column(DateTime, default=datetime.utcnow)
+
+
+class ShadowDetection(Base):
+    """A detection from an experimental model run alongside the main pass
+    (BirdNET v3 shadow mode): shown for comparison, never used for alerts,
+    the life list or profiles."""
+    __tablename__ = "shadow_detections"
+
+    id = Column(String, primary_key=True, default=new_uuid)
+    recording_id = Column(String, ForeignKey("recordings.id"), nullable=False, index=True)
+    model = Column(String, nullable=False, default="birdnet3", index=True)
+    common_name = Column(String, nullable=False, index=True)
+    scientific_name = Column(String, nullable=True)
+    label = Column(String, nullable=True)
+    confidence = Column(Float, nullable=False)
+    start_time = Column(Float, default=0.0)
+    end_time = Column(Float, default=5.0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class NightChunk(Base):
+    """One stretch of night audio a station uploaded for Nighthawk
+    (services/nighthawk_service.py). The audio is deleted once analyzed;
+    each call found keeps a short clip (FlightCall)."""
+    __tablename__ = "night_chunks"
+
+    id = Column(String, primary_key=True, default=new_uuid)
+    device_id = Column(String, nullable=True, index=True)
+    started_at = Column(DateTime, nullable=False, index=True)      # UTC
+    duration_seconds = Column(Float, default=0.0)
+    sample_rate = Column(Integer, nullable=True)
+    path = Column(String, nullable=True)                           # cleared once deleted
+    status = Column(String, default="pending", index=True)          # pending | processing | done | error
+    error = Column(String, nullable=True)
+    calls = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    processed_at = Column(DateTime, nullable=True)
+
+
+class FlightCall(Base):
+    """A night flight call Nighthawk found. Nighthawk names a species when
+    it is confident and otherwise a sound group (e.g. ZEEP), family or
+    order: `category` is the most specific of those, `level` which one."""
+    __tablename__ = "flight_calls"
+
+    id = Column(String, primary_key=True, default=new_uuid)
+    chunk_id = Column(String, ForeignKey("night_chunks.id"), nullable=True, index=True)
+    device_id = Column(String, nullable=True, index=True)
+    detected_at = Column(DateTime, nullable=False, index=True)     # UTC
+    night = Column(String, nullable=False, index=True)              # local date the night began, YYYY-MM-DD
+    level = Column(String, nullable=False)                          # species | group | family | order
+    category = Column(String, nullable=False, index=True)           # eBird code, group code, family or order
+    common_name = Column(String, nullable=True)                     # species only
+    scientific_name = Column(String, nullable=True)
+    family = Column(String, nullable=True)
+    order = Column(String, nullable=True)
+    group = Column(String, nullable=True)
+    prob = Column(Float, nullable=False)
+    prob_species = Column(Float, nullable=True)
+    duration = Column(Float, default=0.0)
+    clip_path = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)

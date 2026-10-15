@@ -13,6 +13,7 @@ import { api, clearApiCache } from '../lib/api'
 import { saveUrl } from '../lib/download'
 import { PALETTES, DEFAULT_PALETTE } from '../lib/detectionColors'
 import MicFrequencyResponse, { PhoneMicTest } from './MicFrequencyResponse'
+import ExperimentalModels from './ExperimentalModels'
 import { BirdIcon, BatIcon } from './BirdBatIcons'
 import GeomodelDownloadPanel from './GeomodelDownloadPanel'
 import { AABIcon, MacaulayIcon, INatIcon, BirdLifeIcon, EbirdSTIcon } from './MapSourceIcons'
@@ -2394,7 +2395,7 @@ const SETTINGS_TABS = [
   { id: 'integrations', label: 'Integrations',      icon: Plug,         anchor: 'settings-integrations-group', blurb: 'eBird, Haikubox, Bird Buddy and iNaturalist', adminOnly: true },
   { id: 'storage',      label: 'Storage & Backup',  icon: HardDrive,    anchor: 'settings-storage-group',      blurb: 'Disk use, cleanup, backups and bird data refresh', adminOnly: true },
   { id: 'account',      label: 'Access & Security', icon: Lock,         anchor: 'settings-account-group',      blurb: 'Sign-in, device keys, activity log and network', adminOnly: true },
-  { id: 'experimental', label: 'Experimental',      icon: FlaskConical, anchor: 'settings-experimental',       blurb: 'Range maps, heatmap, bat detection and AI features', adminOnly: true },
+  { id: 'experimental', label: 'Experimental',      icon: FlaskConical, anchor: 'settings-experimental',       blurb: 'Detection models, range maps, heatmap, bat detection and AI features', adminOnly: true },
   { id: 'diagnostics',  label: 'Diagnostics',       icon: Stethoscope,  anchor: 'settings-diagnostics-group',  blurb: 'Server health, device checks, microphones and logs', adminOnly: true },
 ]
 
@@ -3108,6 +3109,13 @@ export default function SettingsPage({ currentUser } = {}) {
           ai_enhance_enabled: s.ai_enhance_enabled ?? false,
           ai_enhance_auto_apply: s.ai_enhance_auto_apply ?? false,
           ai_enhance_dry: s.ai_enhance_dry ?? 0.1,
+          exp_birdnet3_shadow: s.exp_birdnet3_shadow ?? false,
+          exp_birdnet3_main: s.exp_birdnet3_main ?? false,
+          exp_birdnet3_min_conf: s.exp_birdnet3_min_conf ?? 0.5,
+          exp_nighthawk_enabled: s.exp_nighthawk_enabled ?? false,
+          exp_nighthawk_start: s.exp_nighthawk_start || '21:00',
+          exp_nighthawk_end: s.exp_nighthawk_end || '05:00',
+          exp_nighthawk_threshold: s.exp_nighthawk_threshold ?? 80,
           show_deleted_detections: s.show_deleted_detections ?? false,
           // Recording device settings
           recording_min_gap_seconds: s.recording_min_gap_seconds ?? DEFAULTS.RECORDING_MIN_GAP_SECONDS,
@@ -5283,6 +5291,12 @@ export default function SettingsPage({ currentUser } = {}) {
           features each assignable to a different provider — the
           content below (AiSettingsPanel) is its own self-contained
           config UI rather than a checkbox that reveals more options. */}
+      {/* Detection models: BirdNET v3 and Nighthawk (ExperimentalModels.jsx) */}
+      <ExpCard id="models" title="Detection Models" collapsed={expCollapsed} setCollapsed={setExpCollapsed}
+               subtitle="Newer models to try alongside BirdNET 2.4: BirdNET v3 for day and night birdsong, Nighthawk for the flight calls of migrating birds at night. All off by default.">
+        <ExperimentalModels form={form} setForm={setForm}/>
+      </ExpCard>
+
       <ExpCard id="ai" title="AI Features" collapsed={expCollapsed} setCollapsed={setExpCollapsed}
                subtitle="Daily Journal, Bird Profile presence summaries, and Call Re-analysis — each independently assignable to Anthropic, OpenAI, Gemini, or a self-hosted Ollama server, or turned off entirely. Every feature here is off by default and stays fully hidden from the rest of the app until you assign it a provider below.">
         <AiSettingsPanel form={form} setForm={setForm} settings={settings}/>

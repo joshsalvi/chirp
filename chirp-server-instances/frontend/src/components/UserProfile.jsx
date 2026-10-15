@@ -396,11 +396,13 @@ function BlockedPeopleSection() {
 function DeleteAccountSection() {
   const [open, setOpen] = useState(false)
   const [password, setPassword] = useState('')
+  const [typed, setTyped] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
 
   const submit = async (e) => {
     e.preventDefault()
+    if (!ready) return
     setBusy(true); setError(null)
     try {
       await api.auth.deleteAccount(password)
@@ -411,6 +413,8 @@ function DeleteAccountSection() {
       setBusy(false)
     }
   }
+
+  const ready = !!password && typed.trim().toLowerCase() === 'delete'
 
   return (
     <div className="rounded-2xl p-4" style={{ border: '1px solid rgba(248,113,113,0.25)', background: 'rgba(248,113,113,0.04)' }}>
@@ -431,15 +435,18 @@ function DeleteAccountSection() {
             Recordings and detections stay with the location. This can't be undone.
           </p>
           <input className="input" type="password" required autoComplete="current-password"
-                 placeholder="Your password to confirm" value={password} onChange={e => setPassword(e.target.value)}/>
+                 placeholder="Your password" value={password} onChange={e => setPassword(e.target.value)}/>
+          <input className="input" type="text" autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false}
+                 aria-label="Type delete to confirm" placeholder="Type delete to confirm"
+                 value={typed} onChange={e => setTyped(e.target.value)}/>
           {error && <p className="text-xs flex items-center gap-1" style={{ color: '#f87171' }}><AlertCircle size={12}/> {error}</p>}
           <div className="flex gap-2">
-            <button type="submit" disabled={busy || !password}
+            <button type="submit" disabled={busy || !ready}
                     className="px-3 py-2 rounded-lg text-sm font-semibold"
-                    style={{ background: '#dc2626', color: '#fff', opacity: busy || !password ? 0.6 : 1 }}>
+                    style={{ background: '#dc2626', color: '#fff', opacity: busy || !ready ? 0.6 : 1 }}>
               {busy ? 'Deleting…' : 'Delete my account'}
             </button>
-            <button type="button" className="btn-ghost text-sm" onClick={() => { setOpen(false); setPassword(''); setError(null) }}>Cancel</button>
+            <button type="button" className="btn-ghost text-sm" onClick={() => { setOpen(false); setPassword(''); setTyped(''); setError(null) }}>Cancel</button>
           </div>
         </form>
       )}

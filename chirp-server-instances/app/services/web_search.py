@@ -40,7 +40,8 @@ import httpx
 
 logger = logging.getLogger("chirp.web_search")
 
-USER_AGENT = "ChirpBirdMonitor/1.0 (self-hosted personal bioacoustic monitor; non-commercial)"
+# Wikimedia answers 403 to agents without a contact URL (meta.wikimedia.org/wiki/User-Agent_policy).
+USER_AGENT = "ChirpBirdMonitor/1.0 (https://ourchirp.com; self-hosted bioacoustic monitor) python-httpx"
 
 
 def search_wikipedia(query: str, max_results: int = 2) -> list:
@@ -63,7 +64,8 @@ def search_wikipedia(query: str, max_results: int = 2) -> list:
             timeout=8.0,
         )
         if resp.status_code != 200:
-            logger.warning("Wikipedia search returned HTTP %s for query %r", resp.status_code, query)
+            logger.warning("Wikipedia search returned HTTP %s for query %r: %s",
+                           resp.status_code, query, resp.text[:160].replace("\n", " "))
             return []
         results = resp.json().get("query", {}).get("search", [])
         out = []

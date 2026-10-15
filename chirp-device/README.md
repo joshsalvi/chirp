@@ -123,3 +123,7 @@ The Coral allows real-time continuous processing without audio gaps. Supports US
 ## Server-Managed Config
 
 When paired with the Chirp Server, the device polls for config updates every 60 seconds. Admins can push config changes from the Devices page without SSH access. The device also sends heartbeats every 30 seconds so the server shows live status.
+
+## Night Audio (Nighthawk)
+
+From 1.4.0, when a server turns on Settings → Experimental → Night flight calls, the device uploads its recording audio during that server's night hours as 10-minute 22.05 kHz FLAC chunks (about 60–90 MB per hour). Each upload target is asked every 15 minutes (`GET /api/v1/night-calls/accepting`); targets that haven't turned it on get nothing. Chunks wait in `night_audio.dir` (`~/chirp/night_audio`) until uploaded; past `night_audio.max_backlog_gb` (3 GB) the oldest are dropped. Set `night_audio.enabled: false` to never send night audio.

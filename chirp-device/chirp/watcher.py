@@ -147,6 +147,17 @@ class BirdWatcher:
         logger.info("Step 4/4: Starting uploader...")
         self._uploader.start()
 
+        # Night audio for Nighthawk: records only between the hours a
+        # server asks for (Settings → Experimental on the server).
+        try:
+            from .night_audio import NightAudio
+            self._night_audio = NightAudio(self.config, self._uploader.targets, self.config["audio"]["sample_rate"])
+            self._audio.night_sink = self._night_audio.feed
+            self._night_audio.start()
+        except Exception as e:
+            self._night_audio = None
+            logger.warning("Night audio unavailable: %s", e)
+
         # 4. Start detection (last — begins consuming audio immediately)
         self._detector.start()
 
@@ -183,6 +194,8 @@ class BirdWatcher:
         # Stop in reverse order
         self._detector.stop()
         self._recorder.stop()
+        if getattr(self, "_night_audio", None):
+            self._night_audio.stop()
         self._uploader.stop()
         self._audio.stop()
         self._bat_detector.stop()

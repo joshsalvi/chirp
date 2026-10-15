@@ -647,6 +647,7 @@ class AudioCapture:
         self._detect_lock = threading.Lock()
 
         self._merger_thread: Optional[threading.Thread] = None
+        self.night_sink = None        # set by BirdWatcher: gets every recording-mix chunk
         self._running = threading.Event()
 
         self.stats = {
@@ -1196,6 +1197,9 @@ class AudioCapture:
             else:
                 record_mix = snr_weighted_merge(channel_arrays)
             self._pre_roll.push(record_mix)
+            sink = self.night_sink          # night audio for Nighthawk (night_audio.py)
+            if sink is not None:
+                sink(record_mix)
 
             # ── Detection audio: use best source for BirdNET analysis ─────────
             src = self._detection_source

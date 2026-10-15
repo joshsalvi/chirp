@@ -14,41 +14,30 @@
 // WHATS_NEW.version must match the VERSION file (stamp-sw-version.mjs
 // checks it). Set `popup` to the new version when `latest` changes.
 export const WHATS_NEW = {
-  version: '0.5.12.ae',
+  version: '0.5.13.a',
   // The release whose `latest` text this is. The popup shows once per value,
   // so small fixes that don't change `latest` don't bring it back.
-  popup: '0.5.12.t',
+  popup: '0.5.13.a',
   title: "What's new in Chirp",
   latest: {
-    intro: 'Easier invites, your own site on ourchirp.com, and a way to send us ideas.',
+    intro: 'Newer bird-ID models to try, night flight calls, and safer deletes.',
     sections: [
       {
-        heading: '🔑 Invites need only the code',
-        body: 'Joining a site takes your account and the invite code; the separate location password is gone. Change password in My Profile now changes your sign-in password.',
+        heading: '🧪 BirdNET v3',
+        body: 'Admins can turn it on in Settings → Experimental → Detection Models, to compare on each recording or as the main model. In testing it found about twice as many species at the same accuracy.',
       },
       {
-        heading: '🏡 Your own site',
-        body: 'Build a station and request a hosted site at ourchirp.com/about. Approval emails your sign-in, device key and setup steps.',
+        heading: '🌙 Night flight calls',
+        body: 'With Nighthawk on, stations send their night audio and the new Night Calls page lists the calls of migrating birds overhead.',
       },
       {
-        heading: '💡 Suggest a feature',
-        body: 'My Profile → Help & Feedback sends an idea, a problem or a question straight to us.',
+        heading: '🗑️ Confirm before deleting',
+        body: 'Clearing all notifications asks first, and deleting your account needs the word delete typed.',
       },
     ],
   },
   recent: [
-    { version: '0.5.12.ae', summary: 'Admins can get an alert when a station goes offline.' },
-    { version: '0.5.12.v', summary: 'Setup guide and user guide, linked throughout; invite code on the Users page.' },
-    { version: '0.5.12.t', summary: 'Help & Feedback in My Profile; contact form on the support page.' },
-    { version: '0.5.12.s', summary: 'Invite code is all you need to join a site; shorter What’s New and Changelog.' },
-    { version: '0.5.12.p', summary: 'Request a hosted site or a push relay token at ourchirp.com/about.' },
-    { version: '0.5.12.o', summary: 'About page at ourchirp.com/about.' },
-    { version: '0.5.12.m', summary: 'Far fewer false owls from noise.' },
-    { version: '0.5.12.l', summary: 'Same-day evening digest, separate push and email times, reorganized Settings.' },
-    { version: '0.5.12.j', summary: 'Delete single notifications; dependable daily digest.' },
-    { version: '0.5.12.e', summary: 'Haptic feedback in the iPhone app.' },
-    { version: '0.5.12.c', summary: 'Faster start and page switching; Settings search.' },
-    { version: '0.5.12.a', summary: 'My Notifications, watched birds and in-app account deletion.' },
+    { version: '0.5.13.a', summary: 'BirdNET v3 and night flight calls in Settings → Experimental; delete confirmations.' },
   ],
 }
 
@@ -62,7 +51,8 @@ export const ERA_SUMMARIES = {
 }
 
 export const GROUP_SUMMARIES = {
-  '0.5.12': 'Notifications tab tools, same-day digest, Settings reorganized, fewer false owls, About page and site requests.',
+  '0.5.13': 'BirdNET v3 and Nighthawk night flight calls (experimental).',
+  '0.5.12': 'Notifications tools, same-day digest, reorganized Settings, fewer false owls, hosted sites, invite codes and station-offline alerts.',
   '0.5.11': 'Notifications tab, iPhone push alerts, read-only viewers, privacy page, first TestFlight builds.',
   '0.5.10': 'Faster deletes, smaller spectrograms, night-caller thresholds, new daily email, iOS 26–27 fixes.',
   '0.5.9': 'Animated Songbird logo, iPhone app permissions and offline page, better owl scoring, FLAC storage.',

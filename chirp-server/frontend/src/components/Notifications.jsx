@@ -59,7 +59,9 @@ export default function Notifications() {
     return () => window.removeEventListener('chirp-notification', load)
   }, [load])
 
+  const [confirmClear, setConfirmClear] = useState(false)
   const clearAll = async () => {
+    setConfirmClear(false)
     setBusy(true)
     try { await api.notifications.clear(); setItems([]); setUnread(0) } catch {}
     setBusy(false)
@@ -93,10 +95,21 @@ export default function Notifications() {
         <div className="flex items-center gap-1">
           <button className="btn-ghost p-2" aria-label="Refresh" onClick={load}><RefreshCw size={16}/></button>
           {items?.length > 0 && (
-            <button className="btn-ghost p-2" aria-label="Clear all" disabled={busy} onClick={clearAll}><Trash2 size={16}/></button>
+            <button className="btn-ghost p-2" aria-label="Clear all" disabled={busy} onClick={() => setConfirmClear(true)}><Trash2 size={16}/></button>
           )}
         </div>
       </div>
+
+      {confirmClear && items?.length > 0 && (
+        <div className="card p-3 mb-4 flex items-center gap-3" role="alertdialog" aria-label="Clear all notifications">
+          <p className="text-sm flex-1" style={{ color: 'var(--text-primary)' }}>
+            Clear all {items.length} notification{items.length === 1 ? '' : 's'}? This can't be undone.
+          </p>
+          <button className="px-3 py-1.5 rounded-lg text-sm font-semibold" style={{ background: '#dc2626', color: '#fff' }}
+                  disabled={busy} onClick={clearAll}>Clear all</button>
+          <button className="btn-ghost text-sm" onClick={() => setConfirmClear(false)}>Cancel</button>
+        </div>
+      )}
 
       {isApp() && pushState && pushState !== 'granted' && (
         <div className="card p-4 mb-4 flex items-start gap-3">

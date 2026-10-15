@@ -17,6 +17,7 @@ import { useTz, toLocalInput, fromLocalInput } from '../lib/time'
 import Comments from './Comments'
 import InatSubmitButton from './InatSubmitButton'
 import ReanalysisHistory from './ReanalysisHistory'
+import ShadowComparison from './ShadowComparison'
 import { hapticEvent } from '../lib/haptics'
 
 function CollapsibleSection({ title, icon: Icon, defaultOpen = false, children }) {
@@ -1468,11 +1469,13 @@ export default function RecordingDetail({ shared = false }) {
   // whole fetch on every settings change, not wanted) or reading a ref
   // that's always current.
   const aiEnhanceAutoApplyRef = useRef(false)
+  const [shadowOn, setShadowOn] = useState(false)   // Experimental: BirdNET v3 comparison
   useEffect(() => {
     api.settings.get().then(d => {
       if (d && d.allow_manual_reanalyze === false) setAllowManualReanalyze(false)
       if (d && d.detection_color_palette) setColorPalette(d.detection_color_palette)
       if (d) setAiEnhanceEnabled(!!d.ai_enhance_enabled)
+      if (d) setShadowOn(!!d.exp_birdnet3_shadow && !d.exp_birdnet3_main)
       if (d) { setAiEnhanceAutoApply(!!d.ai_enhance_auto_apply); aiEnhanceAutoApplyRef.current = !!d.ai_enhance_auto_apply }
       const mode = (d && d.rumble_removal_mode) || 'auto'
       setRumbleRemovalMode(mode); rumbleRemovalModeRef.current = mode
@@ -1913,6 +1916,10 @@ export default function RecordingDetail({ shared = false }) {
       {!shared && recording && !recording.is_bat && (
         <ReanalysisHistory recordingId={recording.id} refreshKey={reanalyzeVersion}
                            busy={reanalyzing} onUndone={waitForProcessing}/>
+      )}
+
+      {!shared && shadowOn && recording && !recording.is_bat && (
+        <ShadowComparison recordingId={recording.id} refreshKey={reanalyzeVersion}/>
       )}
 
       {/* AI second-opinion result — only shown once there's something to show */}

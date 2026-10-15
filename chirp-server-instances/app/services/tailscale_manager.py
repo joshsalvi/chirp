@@ -261,6 +261,12 @@ class TailscaleManager:
         if not tailscaled:
             logger.warning("tailscaled binary not found alongside tailscale — was the image built from the current Dockerfile?")
             return
+        # Once kernel TUN has failed with a permission error, later restarts
+        # go straight to userspace (marker file; removed by a container
+        # rebuild that wipes it, or by hand).
+        no_tun_marker = f"{state_dir}/kernel-tun-blocked"
+        if not force_userspace and os.path.exists(no_tun_marker):
+            force_userspace = True
         tun_mode = "userspace-networking" if (force_userspace or not os.path.exists("/dev/net/tun")) else None
         cmd = [
             tailscaled,
@@ -300,6 +306,10 @@ class TailscaleManager:
                 logger.warning("tailscaled exited immediately after starting — its own log:\n%s", tail)
                 if not force_userspace and tail and ("operation not permitted" in tail or "tstun.New" in tail):
                     logger.warning("Kernel TUN creation failed with a permission error — retrying once with userspace networking instead.")
+                    try:
+                        open(no_tun_marker, "w").write(time.strftime("%Y-%m-%dT%H:%M:%S"))
+                    except OSError:
+                        pass
                     self._daemon_proc = None
                     self._ensure_daemon_running(force_userspace=True)
                 break

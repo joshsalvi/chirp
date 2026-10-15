@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Mic, MapPin, Settings,
   Activity, BarChart2, Bell, Upload, Award, Users, LogOut,
   User, Radio, ChevronLeft, ChevronRight, Menu, X,
-  Feather, Terminal, ChevronDown, BookOpen, MessageSquare, GitBranch, FileText, AudioLines
+  Feather, Terminal, ChevronDown, BookOpen, MessageSquare, GitBranch, FileText, AudioLines, Moon
 } from 'lucide-react'
 import { createWebSocket, api, tokenStore, markNavigation } from './lib/api'
 import { getStoredTheme, applyTheme } from './lib/theme'
@@ -55,6 +55,7 @@ const AllNotes           = lazyPage(() => import('./components/AllNotes'))
 const Notifications      = lazyPage(() => import('./components/Notifications'))
 const Journal            = lazyPage(() => import('./components/Journal'))
 const Statistics         = lazyPage(() => import('./components/Statistics'))
+const NightCalls         = lazyPage(() => import('./components/NightCalls'))
 const Devices            = lazyPage(() => import('./components/Devices'))
 const Changelog          = lazyPage(() => import('./components/Changelog'))
 const Tutorial           = lazyPage(() => import('./components/Tutorial'))
@@ -108,6 +109,7 @@ const NAV = [
   { to: '/notifications', icon: Bell,          label: 'Notifications', adminOnly: false },
   { to: '/notes',       icon: MessageSquare,   label: 'Notes',        adminOnly: false },
   { to: '/statistics',  icon: BarChart2,       label: 'Statistics',   adminOnly: false },
+  { to: '/night-calls', icon: Moon,           label: 'Night Calls',  adminOnly: false, nightCalls: true },
   { to: '/devices',     icon: Radio,           label: 'Devices',      adminOnly: true  },
   { to: '/activity',    icon: Activity,        label: 'Activity',     adminOnly: true  },
   { to: '/users',       icon: Users,           label: 'Users',        adminOnly: true  },
@@ -322,7 +324,7 @@ function SidebarUnread() {
   return <span className="absolute -top-1 -right-1.5 w-2 h-2 rounded-full" style={{ background: 'var(--accent-400)' }}/>
 }
 
-function MobileNav({ currentUser, location }) {
+function MobileNav({ currentUser, location, nightCallsOn }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const isAdmin      = currentUser?.role === 'admin'
   const hasMenu      = !!currentUser  // all logged-in users get triple-dot
@@ -347,6 +349,7 @@ function MobileNav({ currentUser, location }) {
     { to: '/regional',   icon: BookOpen,      label: 'Field Guide' },
     { to: '/notes',      icon: MessageSquare, label: 'Notes'       },
     { to: '/statistics', icon: BarChart2,     label: 'Statistics'  },
+    ...(nightCallsOn ? [{ to: '/night-calls', icon: Moon, label: 'Night Calls' }] : []),
     ...(isAdmin ? [
       { to: '/devices',  icon: Radio,    label: 'Devices'   },
       { to: '/activity', icon: Activity, label: 'Activity'  },
@@ -512,6 +515,17 @@ export default function App() {
     return () => window.removeEventListener('chirp-settings-saved', h)
   }, [checkAuth])
 
+  // Night Calls page appears in the menus only while Settings → Experimental
+  // → Night flight calls is on.
+  const [nightCallsOn, setNightCallsOn] = useState(false)
+  useEffect(() => {
+    if (!signedIn) return
+    const load = () => api.settings.get().then(s => setNightCallsOn(!!s?.exp_nighthawk_enabled)).catch(() => {})
+    load()
+    window.addEventListener('chirp-settings-saved', load)
+    return () => window.removeEventListener('chirp-settings-saved', load)
+  }, [signedIn])
+
   // Apple Watch: give it a Live Detect sign-in for this account, or sign it
   // out. Only does anything in the iPhone app with a paired watch.
   const watchKey = currentUser ? (currentUser.username || 'local') : ''
@@ -660,7 +674,7 @@ export default function App() {
     return <Login onLogin={(data) => { setCurrentUser({ username: data.username, role: data.role }); setRequiresAuth(true) }}/>
   }
 
-  const navItems = NAV.filter(i => !i.adminOnly || currentUser?.role === 'admin')
+  const navItems = NAV.filter(i => (!i.adminOnly || currentUser?.role === 'admin') && (!i.nightCalls || nightCallsOn))
   const liveEvent = liveEvents[0] || null
 
   return (
@@ -760,6 +774,7 @@ export default function App() {
                 <Route path="/digest"         element={<Digest/>}/>
                 <Route path="/live-detect"    element={<LiveDetect/>}/>
                 <Route path="/statistics"     element={<Statistics/>}/>
+                <Route path="/night-calls"    element={<NightCalls/>}/>
                 <Route path="/devices"        element={<Devices/>}/>
                 <Route path="/activity"       element={<UserActivity/>}/>
                 <Route path="/tutorial"       element={<Tutorial/>}/>
@@ -774,7 +789,7 @@ export default function App() {
       </div>
 
       {/* Mobile bottom nav */}
-      <MobileNav currentUser={currentUser} location={location}/>
+      <MobileNav currentUser={currentUser} location={location} nightCallsOn={nightCallsOn}/>
 
       {showUpload && (
         <Suspense fallback={

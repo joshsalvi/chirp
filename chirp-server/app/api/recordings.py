@@ -795,6 +795,43 @@ def _get_file_size(wav_path: Optional[str]) -> Optional[int]:
         return None
 
 
+def _bn3_main(app_s) -> bool:
+    return bool(app_s and getattr(app_s, "exp_birdnet3_main", False))
+
+
+def _bn3_shadow(app_s) -> bool:
+    return bool(app_s and getattr(app_s, "exp_birdnet3_shadow", False))
+
+
+def _store_shadow(db, rec_id: str, wav_path: str, lat, lon, when, app_s) -> int:
+    """BirdNET v3 shadow pass (Settings → Experimental): stored apart from
+    the detections, for comparison only. Never raises."""
+    try:
+        from ..services import birdnet3
+        from ..models import ShadowDetection
+        if not birdnet3.installed():
+            birdnet3.ensure_downloaded()
+            return 0
+        conf = float(getattr(app_s, "exp_birdnet3_min_conf", None) or birdnet3.DEFAULT_MIN_CONF)
+        dets = birdnet3.analyze(wav_path, lat=lat, lon=lon, when=when, min_conf=conf)
+        db.query(ShadowDetection).filter(ShadowDetection.recording_id == rec_id,
+                                         ShadowDetection.model == "birdnet3").delete(synchronize_session=False)
+        for d in dets:
+            db.add(ShadowDetection(recording_id=rec_id, model="birdnet3", common_name=d["common_name"],
+                                   scientific_name=d["scientific_name"], label=d["label"],
+                                   confidence=d["confidence"], start_time=d["start_time"],
+                                   end_time=d["end_time"]))
+        rec = db.query(Recording).filter(Recording.id == rec_id).first()
+        if rec:
+            rec.shadow_checked_at = datetime.utcnow()
+        db.commit()
+        return len(dets)
+    except Exception as e:
+        db.rollback()
+        logger.warning("BirdNET v3 shadow pass failed for %s: %s", rec_id, e)
+        return 0
+
+
 def _run_server_birdnet(rec_id: str, db, replace_device_detections: bool = True, min_confidence_override: float = None) -> int:
     """
     Run BirdNET analysis on the server using full settings (lat/lon + week-of-year filter,
@@ -867,14 +904,30 @@ def _run_server_birdnet(rec_id: str, db, replace_device_detections: bool = True,
         logger.warning("ffmpeg error for %s: %s — using original", rec_id, e)
 
     try:
-        prior = (_prior_server_detections(db, rec_id)
-                 if wav_path.lower().endswith(_LOSSY_EXTS) else None)
-        _diag: dict = {}
-        raw = _run_birdnet_pass(analysis_wav, lat=lat, lon=lon, when=rec_date,
-                                min_conf=min_conf, sensitivity=sensitivity, overlap=overlap,
-                                prior=prior, diag=_diag, **_bn_rules(app_s))
-        logger.info("Server BirdNET: %d detection(s) for %s", len(raw), rec_id)
-        _store_near_misses(db, rec_id, _diag, raw)
+        raw = None
+        if _bn3_main(app_s):
+            # Settings → Experimental: BirdNET v3 as the main model. BirdNET
+            # 2.4's owl rules and near-miss log don't apply to its scores.
+            try:
+                from ..services import birdnet3
+                bn3_conf = float(min_confidence_override) if min_confidence_override is not None \
+                    else float(getattr(app_s, "exp_birdnet3_min_conf", None) or birdnet3.DEFAULT_MIN_CONF)
+                raw = birdnet3.analyze(wav_path, lat=lat, lon=lon, when=rec_date, min_conf=bn3_conf)
+                logger.info("Server BirdNET v3 (main): %d detection(s) for %s", len(raw), rec_id)
+            except Exception as e:
+                logger.warning("BirdNET v3 unavailable for %s (%s) — using BirdNET 2.4", rec_id, e)
+                raw = None
+        if raw is None:
+            prior = (_prior_server_detections(db, rec_id)
+                     if wav_path.lower().endswith(_LOSSY_EXTS) else None)
+            _diag: dict = {}
+            raw = _run_birdnet_pass(analysis_wav, lat=lat, lon=lon, when=rec_date,
+                                    min_conf=min_conf, sensitivity=sensitivity, overlap=overlap,
+                                    prior=prior, diag=_diag, **_bn_rules(app_s))
+            logger.info("Server BirdNET: %d detection(s) for %s", len(raw), rec_id)
+            _store_near_misses(db, rec_id, _diag, raw)
+            if _bn3_shadow(app_s) and not rec.is_live_detect_clip:
+                _store_shadow(db, rec_id, wav_path, lat, lon, rec_date, app_s)
 
         # Remove stale server detections from any previous re-analysis
         db.query(Detection).filter(
@@ -4516,6 +4569,36 @@ def _run_out(run, latest_id: Optional[str]) -> dict:
         "before_count": len(run.before or []),
         "undone_at": run.undone_at.isoformat() + "Z" if run.undone_at else None,
         "can_undo": run.id == latest_id and run.status in ("done", "error"),
+    }
+
+
+@router.get("/{recording_id}/shadow")
+def shadow_results(recording_id: str, db: Session = Depends(get_db)):
+    """BirdNET v3 shadow results for one recording next to the main
+    detections (Settings → Experimental). `ran` is false until the shadow
+    pass has scored this recording."""
+    from ..models import ShadowDetection
+    rec = db.query(Recording).filter(Recording.id == recording_id).first()
+    if not rec:
+        raise HTTPException(status_code=404, detail="Recording not found")
+    rows = db.query(ShadowDetection).filter(ShadowDetection.recording_id == recording_id).all()
+    main = {}
+    for d in rec.detections:
+        main[d.common_name] = max(main.get(d.common_name, 0.0), float(d.confidence or 0))
+    best = {}
+    for r in rows:
+        b = best.setdefault(r.common_name, {"common_name": r.common_name, "scientific_name": r.scientific_name,
+                                            "confidence": 0.0, "windows": 0, "first": r.start_time})
+        b["confidence"] = max(b["confidence"], r.confidence); b["windows"] += 1
+        b["first"] = min(b["first"], r.start_time)
+    species = sorted(best.values(), key=lambda b: -b["confidence"])
+    for b in species:
+        b["in_main"] = b["common_name"] in main
+    return {
+        "model": "BirdNET v3 (preview)",
+        "ran": bool(rows) or rec.shadow_checked_at is not None,
+        "species": species,
+        "main_only": sorted(n for n in main if n not in best),
     }
 
 

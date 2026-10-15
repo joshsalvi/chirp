@@ -441,6 +441,19 @@ upload:
   retry_queued_interval_seconds: 300
 
 # ---------------------------------------------------------------------------
+# Night audio (Nighthawk night flight calls)
+# ---------------------------------------------------------------------------
+# Off unless a server turns on Settings → Experimental → Night flight calls.
+# Then, between the hours that server sets, the station uploads its audio in
+# 10-minute 22.05 kHz FLAC chunks (about 60-90 MB per hour) and deletes each
+# chunk once uploaded. enabled: false here stops it on this station whatever
+# the server says.
+night_audio:
+  enabled: true
+  dir: "~/chirp/night_audio"
+  max_backlog_gb: 3.0           # oldest chunks dropped past this if uploads can't keep up
+
+# ---------------------------------------------------------------------------
 # System Settings
 # ---------------------------------------------------------------------------
 system:

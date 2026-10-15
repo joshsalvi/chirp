@@ -437,6 +437,8 @@ export const api = {
     edit:  (id, body) => request(`/recordings/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
     reanalyze: (id, { useAiEnhance = false } = {}) => request(`/recordings/${id}/reanalyze${useAiEnhance ? '?use_ai_enhance=true' : ''}`, { method: 'POST' }),
     reanalysisHistory: (id) => request(`/recordings/${id}/reanalysis-history`),
+    // BirdNET v3 shadow results next to the main detections (Settings → Experimental)
+    shadow: (id) => request(`/recordings/${id}/shadow`),
     undoReanalysis: (id, runId) => request(`/recordings/${id}/reanalysis/${runId}/undo`, { method: 'POST' }),
     archive:   (id) => request(`/recordings/${id}/archive`, { method: 'POST' }),
     unarchive: (id) => request(`/recordings/${id}/unarchive`, { method: 'POST' }),
@@ -807,6 +809,14 @@ export const api = {
     },
   },
 
+  // Night flight calls (Nighthawk) and experimental model status
+  nightCalls: {
+    status: () => request('/night-calls/status'),
+    downloadBirdnet3: () => request('/night-calls/birdnet3/download', { method: 'POST' }),
+    nights: () => request('/night-calls/nights'),
+    list: (night) => request(`/night-calls?night=${encodeURIComponent(night)}`),
+    remove: (id) => request(`/night-calls/${id}`, { method: 'DELETE' }),
+  },
   batActivity: {
     list: (limit = 50) => request(`/bat-activity?limit=${limit}`),
     delete: (id) => request(`/bat-activity/${id}`, { method: 'DELETE' }),

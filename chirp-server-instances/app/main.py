@@ -41,6 +41,7 @@ from .api import admin_panel as admin_panel_router
 from .api import devices as devices_router
 from .api import logs as logs_router
 from .api import bat_activity as bat_activity_router
+from .api import night_calls as night_calls_router
 from .api import diagnostics as diagnostics_router
 from .api import push as push_router
 from .api import notifications as notifications_router
@@ -385,6 +386,24 @@ async def lifespan(app: FastAPI):
 
     _digest_thread = _threading.Thread(target=_digest_loop, daemon=True, name="digest")
     _digest_thread.start()
+
+    # Night flight calls (Experimental): finish chunks a restart left
+    # waiting and drop failed audio (services/nighthawk_service.py).
+    def _night_calls_loop():
+        from .instance_registry import iter_instance_sessions
+        from .services import nighthawk_service as _nh
+        while not _stop_digest.wait(300):
+            if _nh.available():
+                continue
+            for instance, _db_nc in iter_instance_sessions():
+                try:
+                    _nh.cleanup(_db_nc)
+                    for _cid in _nh.pending_ids(_db_nc):
+                        _nh.process_chunk(_cid)
+                except Exception as _ne:
+                    logger.warning("Night calls error for instance %s: %s", instance.name, _ne)
+
+    _threading.Thread(target=_night_calls_loop, daemon=True, name="night-calls").start()
 
     # Scheduled pushes: Daily Journal 6 pm, Weekly Journal Sunday noon,
     # watched-bird summaries 7 pm (local time per location). See
@@ -783,6 +802,8 @@ def _is_media_path(path: str) -> bool:
         r"|birds/photos/[^/]+/file"
         r"|bat-activity/upload"
         r"|bat-activity/[^/]+/audio"
+        r"|night-calls/(upload|accepting)"
+        r"|night-calls/[^/]+/(audio|spectrogram)"
         r"|recordings/shared/[^/]+"
         r"|devices/pair"
         r"|devices/[^/]+/(config|heartbeat)"
@@ -992,6 +1013,7 @@ app.include_router(instances_router.router, prefix="/api/v1/instances", tags=["i
 app.include_router(admin_panel_router.router, prefix="/api/v1/admin", tags=["admin"])
 app.include_router(devices_router.router, prefix="/api/v1/devices", tags=["devices"])
 app.include_router(bat_activity_router.router, prefix="/api/v1/bat-activity", tags=["bat-activity"])
+app.include_router(night_calls_router.router, prefix="/api/v1/night-calls", tags=["night-calls"])
 app.include_router(logs_router.router, prefix="/api/v1/logs", tags=["logs"])
 app.include_router(diagnostics_router.router, prefix="/api/v1/diagnostics", tags=["diagnostics"])
 app.include_router(push_router.router, prefix="/api/v1/push", tags=["push"])

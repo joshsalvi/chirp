@@ -130,6 +130,13 @@ class SettingsIn(BaseModel):
     allow_manual_reanalyze: Optional[bool] = None
     detection_color_palette: Optional[str] = None
     ai_enhance_enabled: Optional[bool] = None
+    exp_birdnet3_shadow: Optional[bool] = None
+    exp_birdnet3_main: Optional[bool] = None
+    exp_birdnet3_min_conf: Optional[float] = None
+    exp_nighthawk_enabled: Optional[bool] = None
+    exp_nighthawk_start: Optional[str] = None
+    exp_nighthawk_end: Optional[str] = None
+    exp_nighthawk_threshold: Optional[int] = None
     ai_enhance_auto_apply: Optional[bool] = None
     ai_enhance_dry: Optional[float] = None
     rumble_removal_mode: Optional[str] = None
@@ -261,6 +268,13 @@ class SettingsOut(BaseModel):
     allow_manual_reanalyze: Optional[bool] = True
     detection_color_palette: Optional[str] = "vivid"
     ai_enhance_enabled: Optional[bool] = False
+    exp_birdnet3_shadow: Optional[bool] = False
+    exp_birdnet3_main: Optional[bool] = False
+    exp_birdnet3_min_conf: Optional[float] = 0.5
+    exp_nighthawk_enabled: Optional[bool] = False
+    exp_nighthawk_start: Optional[str] = "21:00"
+    exp_nighthawk_end: Optional[str] = "05:00"
+    exp_nighthawk_threshold: Optional[int] = 80
     ai_enhance_auto_apply: Optional[bool] = False
     ai_enhance_dry: Optional[float] = 0.1
     rumble_removal_mode: Optional[str] = "auto"
@@ -413,6 +427,13 @@ _MIGRATION_DEFAULTS = [
     ("activity_log_track_ip", True),
     ("activity_log_retention_days", 90),
     ("ai_enhance_enabled", False),
+    ("exp_birdnet3_shadow", False),
+    ("exp_birdnet3_main", False),
+    ("exp_birdnet3_min_conf", 0.5),
+    ("exp_nighthawk_enabled", False),
+    ("exp_nighthawk_start", "21:00"),
+    ("exp_nighthawk_end", "05:00"),
+    ("exp_nighthawk_threshold", 80),
     ("ai_enhance_auto_apply", False),
     ("ai_enhance_dry", 0.1),
     ("rumble_removal_mode", "auto"),
@@ -509,8 +530,23 @@ def update_settings(body: SettingsIn, background_tasks: BackgroundTasks, db: Ses
         data["night_threshold_species"] = {
             str(k).strip(): bool(v) for k, v in (data["night_threshold_species"] or {}).items()
             if str(k).strip() and NIGHT_CALLER_RE.search(str(k))}
+    # Experimental models: keep values sane (see services/birdnet3.py, nighthawk_service.py)
+    import re as _re
+    for k in ("exp_nighthawk_start", "exp_nighthawk_end"):
+        if k in data and (not isinstance(data[k], str) or not _re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", data[k] or "")):
+            raise HTTPException(status_code=422, detail="Night audio times must be HH:MM (24-hour)")
+    if data.get("exp_birdnet3_min_conf") is not None:
+        data["exp_birdnet3_min_conf"] = min(0.99, max(0.05, float(data["exp_birdnet3_min_conf"])))
+    if data.get("exp_nighthawk_threshold") is not None:
+        data["exp_nighthawk_threshold"] = int(min(99, max(1, int(data["exp_nighthawk_threshold"]))))
     _night_changed = any(k in data and data[k] != getattr(s, k, None)
                          for k in ("night_threshold_mode", "night_threshold_species", "birdnet_min_confidence"))
+    if data.get("exp_birdnet3_shadow") or data.get("exp_birdnet3_main"):
+        try:
+            from ..services import birdnet3
+            birdnet3.ensure_downloaded()
+        except Exception as e:
+            logger.warning("BirdNET v3 download couldn't start: %s", e)
     for field, value in data.items():
         setattr(s, field, value)
         if field in _json_cols:
