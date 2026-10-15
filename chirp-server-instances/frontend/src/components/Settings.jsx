@@ -2391,7 +2391,7 @@ const SETTINGS_TABS = [
   { id: 'appearance',   label: 'Appearance',        icon: Palette,      anchor: 'settings-appearance',         blurb: 'Theme, dashboard style, card layout and installing the app', adminOnly: false },
   { id: 'site',         label: 'General',           icon: MapPin,       anchor: 'settings-site-group',         blurb: 'Location, time zone, web address and what everyone sees', adminOnly: true },
   { id: 'detection',    label: 'Detection',         icon: Brain,        anchor: 'settings-detection-group',    blurb: 'BirdNET thresholds, night callers, server analysis and recording limits', adminOnly: true },
-  { id: 'notif',        label: 'Alerts & Email',    icon: Mail,         anchor: 'settings-notif-group',        blurb: 'Daily digest times, the email server and iPhone push keys', adminOnly: true },
+  { id: 'notif',        label: 'Alerts & Email',    icon: Mail,         anchor: 'settings-notif-group',        blurb: 'Daily digest times, station offline alerts, the email server and iPhone push keys', adminOnly: true },
   { id: 'integrations', label: 'Integrations',      icon: Plug,         anchor: 'settings-integrations-group', blurb: 'eBird, Haikubox, Bird Buddy and iNaturalist', adminOnly: true },
   { id: 'storage',      label: 'Storage & Backup',  icon: HardDrive,    anchor: 'settings-storage-group',      blurb: 'Disk use, cleanup, backups and bird data refresh', adminOnly: true },
   { id: 'account',      label: 'Access & Security', icon: Lock,         anchor: 'settings-account-group',      blurb: 'Sign-in, device keys, activity log and network', adminOnly: true },
@@ -2418,6 +2418,7 @@ const CARD_KEYWORDS = {
   'settings-integrations-birdbuddy': 'Bird Buddy email, password, feeders',
   'settings-integrations-inat': 'iNaturalist API token, username, auto refresh, OAuth',
   'settings-digest': 'daily digest, digest time, push notification time, email time, evening, morning, test digest',
+  'settings-station-offline': 'station offline, device offline, back online, alert delay, minutes, pi down',
   'settings-notif-email': 'SMTP host, port, username, password, from address, admin email, test email, new-species emails, registration emails',
   'settings-notif-apns': 'iPhone push, relay token, APNs, team ID, key ID, bundle ID, auth key, push environment',
   'settings-storage': 'disk usage, compression, archive audio, remove old recordings, size limit, soft-deleted cleanup',
@@ -3897,6 +3898,23 @@ export default function SettingsPage({ currentUser } = {}) {
             </p>
             <TestSendButton label="📋 Test Digest" run={() => api.settings.sendTestDigestEmail()}/>
           </div>
+        </div>
+      </Section>
+      <Section icon={Radio} title="Station Offline Alerts" id="settings-station-offline">
+        <div className="space-y-3">
+          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+            Admins who turn on Station offline in My Notifications are told when a station stops reporting for
+            this long, and again when it's back.
+          </p>
+          <label className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-primary)' }}>
+            Alert after
+            <input type="number" min={5} max={1440} aria-label="Minutes offline before alerting"
+                   value={form.device_offline_minutes ?? 15}
+                   onChange={e => setForm(f => ({ ...f, device_offline_minutes: e.target.value === '' ? '' : parseInt(e.target.value, 10) }))}
+                   onBlur={e => setForm(f => ({ ...f, device_offline_minutes: Math.min(1440, Math.max(5, parseInt(e.target.value, 10) || 15)) }))}
+                   className="input text-sm py-1 text-center" style={{ width: 72 }}/>
+            minutes offline
+          </label>
         </div>
       </Section>
       <Section icon={Mail} title="Email (SMTP)" id="settings-notif-email">

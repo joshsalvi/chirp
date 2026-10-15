@@ -1,7 +1,9 @@
 """
 Station offline alerts. A Pi heartbeats every 30 s; when one has been
-silent for OFFLINE_AFTER, admins who turned on "Station offline" (My
-Notifications) get a push and/or email, and another when it reports again.
+silent for AppSettings.device_offline_minutes (default 15, Settings →
+Alerts & Email), admins who turned on "Station offline" (My Notifications)
+get a push and/or email, and another when it reports again. Only admins:
+with sign-in on, pushes skip devices that aren't signed in.
 
 Run once a minute per site (main.py's digest loop). Haikubox and Bird
 Buddy aren't stations and are skipped. A station already silent for more
@@ -13,9 +15,16 @@ from html import escape
 
 logger = logging.getLogger("chirp.device_alerts")
 
-OFFLINE_AFTER = timedelta(minutes=10)
+DEFAULT_OFFLINE_MINUTES = 15
 BACK_WITHIN = timedelta(minutes=2)
 STALE_AFTER = timedelta(hours=24)
+
+
+def offline_after(db) -> timedelta:
+    from ..models import AppSettings
+    s = db.query(AppSettings).filter(AppSettings.id == 1).first()
+    m = getattr(s, "device_offline_minutes", None) or DEFAULT_OFFLINE_MINUTES
+    return timedelta(minutes=min(1440, max(5, int(m))))
 
 
 def _virtual(d) -> bool:
@@ -60,8 +69,9 @@ def _email(db, subject: str, text: str):
 
 def _notify(db, title: str, body: str):
     from .push_notifications import send_push_to_all
+    from .notification_inbox import _auth_on
     send_push_to_all(db, title, body, url="/devices", tag="device-offline",
-                     user_filter=_wants("notify_device_offline_push"))
+                     user_filter=_wants("notify_device_offline_push"), signed_in_only=_auth_on(db))
     try:
         _email(db, title, body)
     except Exception as e:
@@ -72,6 +82,7 @@ def device_offline_tick(db, now: datetime = None) -> list:
     """Announce stations that went silent or came back. Returns what was sent."""
     from ..models import Device
     now = now or datetime.utcnow()
+    after = offline_after(db)
     sent = []
     for d in db.query(Device).all():
         if _virtual(d) or not d.last_seen:
@@ -79,7 +90,7 @@ def device_offline_tick(db, now: datetime = None) -> list:
         name = d.name or d.hostname or "Your station"
         silent = now - d.last_seen
         if d.offline_since is None:
-            if OFFLINE_AFTER <= silent <= STALE_AFTER:
+            if after <= silent <= STALE_AFTER:
                 d.offline_since = d.last_seen
                 db.commit()
                 _notify(db, f"{name} is offline",

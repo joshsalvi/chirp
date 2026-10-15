@@ -587,6 +587,7 @@ def _migrate_columns():
             ("exp_nighthawk_start",      "VARCHAR DEFAULT '21:00'"),
             ("exp_nighthawk_end",        "VARCHAR DEFAULT '05:00'"),
             ("exp_nighthawk_threshold",  "INTEGER DEFAULT 80"),
+            ("device_offline_minutes",   "INTEGER DEFAULT 15"),
             ("rumble_removal_mode",      "VARCHAR"),
             ("auto_backup_last_run_at",     "DATETIME"),
             ("auto_backup_last_success_at", "DATETIME"),

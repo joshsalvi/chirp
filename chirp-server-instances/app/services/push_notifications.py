@@ -155,7 +155,7 @@ def app_path(url):
 
 
 def send_push_to_all(db, title: str, body: str, url: str = None, tag: str = None, user_filter=None,
-                     record_inbox: bool = True, data: dict = None) -> int:
+                     record_inbox: bool = True, data: dict = None, signed_in_only: bool = False) -> int:
     """
     Sends to every stored Web Push subscription AND every registered
     native (APNs) device token — one call reaches both the PWA and the
@@ -184,9 +184,12 @@ def send_push_to_all(db, title: str, body: str, url: str = None, tag: str = None
     q = db.query(PushSubscription)
     if user_filter is not None:
         allowed_user_ids = {u.id for u in db.query(User).all() if user_filter(u)}
-        q = q.filter(
-            (PushSubscription.user_id.in_(allowed_user_ids)) | (PushSubscription.user_id.is_(None))
-        )
+        if signed_in_only:   # e.g. admin-only alerts: skip subscriptions with no account
+            q = q.filter(PushSubscription.user_id.in_(allowed_user_ids))
+        else:
+            q = q.filter(
+                (PushSubscription.user_id.in_(allowed_user_ids)) | (PushSubscription.user_id.is_(None))
+            )
     subscriptions = q.all()
 
     sent = 0
@@ -196,7 +199,7 @@ def send_push_to_all(db, title: str, body: str, url: str = None, tag: str = None
 
     try:
         from .apns_push import send_apns_to_all
-        sent += send_apns_to_all(db, title, body, url=url, user_filter=user_filter)
+        sent += send_apns_to_all(db, title, body, url=url, user_filter=user_filter, signed_in_only=signed_in_only)
     except Exception as e:
         logger.warning("APNs portion of send_push_to_all failed (Web Push portion still sent): %s", e)
 

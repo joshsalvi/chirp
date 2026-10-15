@@ -137,6 +137,7 @@ class SettingsIn(BaseModel):
     exp_nighthawk_start: Optional[str] = None
     exp_nighthawk_end: Optional[str] = None
     exp_nighthawk_threshold: Optional[int] = None
+    device_offline_minutes: Optional[int] = None
     ai_enhance_auto_apply: Optional[bool] = None
     ai_enhance_dry: Optional[float] = None
     rumble_removal_mode: Optional[str] = None
@@ -275,6 +276,7 @@ class SettingsOut(BaseModel):
     exp_nighthawk_start: Optional[str] = "21:00"
     exp_nighthawk_end: Optional[str] = "05:00"
     exp_nighthawk_threshold: Optional[int] = 80
+    device_offline_minutes: Optional[int] = 15
     ai_enhance_auto_apply: Optional[bool] = False
     ai_enhance_dry: Optional[float] = 0.1
     rumble_removal_mode: Optional[str] = "auto"
@@ -434,6 +436,7 @@ _MIGRATION_DEFAULTS = [
     ("exp_nighthawk_start", "21:00"),
     ("exp_nighthawk_end", "05:00"),
     ("exp_nighthawk_threshold", 80),
+    ("device_offline_minutes", 15),
     ("ai_enhance_auto_apply", False),
     ("ai_enhance_dry", 0.1),
     ("rumble_removal_mode", "auto"),
@@ -539,6 +542,11 @@ def update_settings(body: SettingsIn, background_tasks: BackgroundTasks, db: Ses
         data["exp_birdnet3_min_conf"] = min(0.99, max(0.05, float(data["exp_birdnet3_min_conf"])))
     if data.get("exp_nighthawk_threshold") is not None:
         data["exp_nighthawk_threshold"] = int(min(99, max(1, int(data["exp_nighthawk_threshold"]))))
+    if data.get("device_offline_minutes") is not None:
+        try:
+            data["device_offline_minutes"] = int(min(1440, max(5, int(data["device_offline_minutes"]))))
+        except (TypeError, ValueError):
+            data["device_offline_minutes"] = 15
     _night_changed = any(k in data and data[k] != getattr(s, k, None)
                          for k in ("night_threshold_mode", "night_threshold_species", "birdnet_min_confidence"))
     if data.get("exp_birdnet3_shadow") or data.get("exp_birdnet3_main"):

@@ -934,6 +934,7 @@ class AppSettings(Base):
     exp_nighthawk_start = Column(String, default="21:00")
     exp_nighthawk_end = Column(String, default="05:00")
     exp_nighthawk_threshold = Column(Integer, default=80)
+    device_offline_minutes = Column(Integer, default=15)   # station-offline alert delay (services/device_alerts.py)
     # Dry/wet mix passed to ai_enhance.enhance_wav() — 0.0 = fully
     # AI-denoised, 1.0 = original passthrough. Default matches
     # biodenoising's own upstream CLI default.

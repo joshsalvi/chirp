@@ -235,7 +235,8 @@ class ApnsResult:
         return self.ok
 
 
-def send_apns_to_all(db, title: str, body: str, url: str = None, user_filter=None) -> int:
+def send_apns_to_all(db, title: str, body: str, url: str = None, user_filter=None,
+                     signed_in_only: bool = False) -> int:
     """
     Sends to every registered native device token, optionally filtered
     to specific users — same signature/behavior shape as
@@ -253,9 +254,12 @@ def send_apns_to_all(db, title: str, body: str, url: str = None, user_filter=Non
     q = db.query(ApnsDeviceToken)
     if user_filter is not None:
         allowed_user_ids = {u.id for u in db.query(User).all() if user_filter(u)}
-        q = q.filter(
-            (ApnsDeviceToken.user_id.in_(allowed_user_ids)) | (ApnsDeviceToken.user_id.is_(None))
-        )
+        if signed_in_only:
+            q = q.filter(ApnsDeviceToken.user_id.in_(allowed_user_ids))
+        else:
+            q = q.filter(
+                (ApnsDeviceToken.user_id.in_(allowed_user_ids)) | (ApnsDeviceToken.user_id.is_(None))
+            )
     tokens = q.all()
 
     sent = 0

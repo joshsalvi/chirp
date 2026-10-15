@@ -1,3 +1,8 @@
+## 0.5.13.b — 2026-10-15 — ENHANCEMENT — Station offline alert delay
+
+- Station offline alerts wait 15 minutes by default; set the delay in Settings → Alerts & Email.
+- Station alerts go only to signed-in admins' devices.
+
 ## 0.5.13.a — 2026-10-15 — FEATURE — BirdNET v3 and night flight calls (experimental)
 
 - Settings → Experimental → Detection Models: compare each recording with BirdNET v3, or use it as the main model.

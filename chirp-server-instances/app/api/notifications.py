@@ -119,6 +119,8 @@ def get_prefs(db: Session = Depends(get_db), user=Depends(get_current_user)):
     u = _me(db, user)
     out = {k: (getattr(u, col) if getattr(u, col, None) is not None else d) for k, (col, d) in PREF_FIELDS.items()}
     out["is_admin"] = getattr(u, "role", None) == "admin"   # station alerts are for admins
+    from ..services.device_alerts import offline_after
+    out["device_offline_minutes"] = int(offline_after(db).total_seconds() // 60)
     out["watches"] = [_watch_out(w) for w in db.query(BirdWatch).filter(BirdWatch.user_id == u.id)
                       .order_by(BirdWatch.common_name).all()]
     # When the site sends the digest (local hours), for the descriptions.

@@ -191,7 +191,7 @@ export default function MyNotifications() {
       {prefs.is_admin && (
         <Card icon={Radio} title="Stations">
           <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-            When a station stops reporting for 10 minutes (crashed, lost power or Wi-Fi), and again when it's back.
+            When a station stops reporting for {prefs.device_offline_minutes || 15} minutes (crashed, lost power or Wi-Fi), and again when it's back. Admins only; the delay is in Settings → Alerts & Email.
           </p>
           <Switch label="Station offline: push" checked={prefs.device_offline_push} onChange={v => toggle('device_offline_push', v)}/>
           <Switch label="Station offline: email" checked={prefs.device_offline_email} onChange={v => toggle('device_offline_email', v)}/>
