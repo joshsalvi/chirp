@@ -973,10 +973,6 @@ export default function LiveDetect() {
       <div className="flex items-center gap-2 mb-1">
         <ChirpLogo size={30} animate={listening ? 'meter' : false}/>
         <h1 className="font-display text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Live Detect</h1>
-        <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full"
-              style={{ background: 'rgba(251,146,60,.18)', color: '#fb923c', border: '1px solid rgba(251,146,60,.35)' }}>
-          Beta
-        </span>
       </div>
       <p className="text-sm mb-5" style={{ color: 'var(--text-tertiary)' }}>
         Listen in real time and save what's calling — separate from your device's own always-on recording.

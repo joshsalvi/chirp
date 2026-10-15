@@ -819,7 +819,7 @@ def viewer_may_write(method: str, path: str) -> bool:
 
 
 # Apple Watch sign-ins (POST /auth/watch-token) only run Live Detect.
-_WATCH_OK = re.compile(r"^/api/v1/(live-detect/analyze|auth/me)$")
+_WATCH_OK = re.compile(r"^/api/v1/(live-detect/(analyze|save-session)|auth/me)$")
 
 
 def watch_may_use(path: str) -> bool:

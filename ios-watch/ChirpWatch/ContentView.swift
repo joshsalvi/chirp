@@ -54,6 +54,17 @@ struct ContentView: View {
                         .foregroundStyle(statusIsProblem ? .orange : .secondary)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
+                    if let text = savingText {
+                        Text(text.0)
+                            .font(.footnote)
+                            .foregroundStyle(text.1 ? .orange : .green)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
+                    }
+                    if live.canRetrySave {
+                        Button("Try saving again") { live.save() }
+                            .font(.footnote)
+                    }
                 }
                 .listRowBackground(Color.clear)
             }
@@ -78,6 +89,16 @@ struct ContentView: View {
             ToolbarItem(placement: .topBarLeading) {
                 ChirpMark(height: 22, animate: live.state == .listening)
             }
+        }
+    }
+
+    /// (text, is a problem)
+    private var savingText: (String, Bool)? {
+        switch live.saving {
+        case .none, .ready: return nil
+        case .saving: return ("Saving to Recordings…", false)
+        case .saved: return ("Saved to Recordings", false)
+        case .failed(let why): return ("Not saved: \(why)", true)
         }
     }
 

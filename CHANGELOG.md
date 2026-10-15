@@ -1,3 +1,9 @@
+## 0.5.12.ae — 2026-10-14 — BUGFIX — Watch sessions saved to Recordings
+
+- Stopping Live Detect on the watch saves the session to Recordings with its full audio, as the phone's Save session does.
+- The watch sign-in can save Live Detect sessions.
+- Live Detect is no longer marked Beta.
+
 ## 0.5.12.ad — 2026-10-14 — ENHANCEMENT — Watch app logo
 
 - The watch app shows the Chirp logo at the top; its bars move while listening, as on the Live Detect page.

@@ -1,8 +1,8 @@
 import CoreLocation
 import Foundation
 
-/// POST /api/v1/live-detect/analyze with one clip (multipart, as the web
-/// app's Live Detect sends it).
+/// Live Detect requests, multipart as the web app sends them:
+/// /analyze for each clip, /save-session for the whole session.
 enum Analyzer {
     struct Detection: Decodable {
         let common_name: String
@@ -10,8 +10,9 @@ enum Analyzer {
         let confidence: Double
     }
 
-    private struct Reply: Decodable {
+    struct Reply: Decodable {
         let detected: Bool
+        let recording_id: String?
         let detections: [Detection]
     }
 
@@ -22,29 +23,49 @@ enum Analyzer {
 
     private static let session: URLSession = {
         let c = URLSessionConfiguration.default
-        c.timeoutIntervalForRequest = 20
+        c.timeoutIntervalForRequest = 120
         return URLSession(configuration: c)
     }()
 
-    static func analyze(wav: Data, server: URL, token: String?, location: CLLocation?) async throws -> [Detection] {
-        var req = URLRequest(url: server.appendingPathComponent("api/v1/live-detect/analyze"))
+    static func analyze(wav: Data, server: URL, token: String?, location: CLLocation?) async throws -> Reply {
+        var fields = ["source": "phone"]
+        fields.merge(coords(location)) { a, _ in a }
+        let data = try await post("api/v1/live-detect/analyze", server: server, token: token, fields: fields,
+                                  file: wav, filename: "watch.wav", type: "audio/wav", timeout: 20)
+        return try JSONDecoder().decode(Reply.self, from: data)
+    }
+
+    /// Turns the session's clips into one recording with the whole session's
+    /// audio (the phone's "Save session").
+    static func saveSession(audio: URL, recordingIDs: [String], start: Date, server: URL, token: String?,
+                            location: CLLocation?) async throws {
+        let ids = String(data: try JSONSerialization.data(withJSONObject: recordingIDs), encoding: .utf8) ?? "[]"
+        var fields = ["recording_ids": ids, "session_start": ISO8601DateFormatter().string(from: start)]
+        fields.merge(coords(location)) { a, _ in a }
+        _ = try await post("api/v1/live-detect/save-session", server: server, token: token, fields: fields,
+                           file: try Data(contentsOf: audio), filename: "watch.m4a", type: "audio/mp4", timeout: 120)
+    }
+
+    private static func coords(_ location: CLLocation?) -> [String: String] {
+        guard let c = location?.coordinate else { return [:] }
+        return ["latitude": String(c.latitude), "longitude": String(c.longitude)]
+    }
+
+    private static func post(_ path: String, server: URL, token: String?, fields: [String: String],
+                             file: Data, filename: String, type: String, timeout: TimeInterval) async throws -> Data {
+        var req = URLRequest(url: server.appendingPathComponent(path))
         req.httpMethod = "POST"
+        req.timeoutInterval = timeout
         let boundary = "chirp-\(UUID().uuidString)"
         req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         req.setValue("ChirpWatch/1", forHTTPHeaderField: "User-Agent")
         if let token { req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
-
-        var fields = ["source": "phone"]
-        if let c = location?.coordinate {
-            fields["latitude"] = String(c.latitude)
-            fields["longitude"] = String(c.longitude)
-        }
         var body = Data()
         for (k, v) in fields {
             body.append("--\(boundary)\r\nContent-Disposition: form-data; name=\"\(k)\"\r\n\r\n\(v)\r\n")
         }
-        body.append("--\(boundary)\r\nContent-Disposition: form-data; name=\"file\"; filename=\"watch.wav\"\r\nContent-Type: audio/wav\r\n\r\n")
-        body.append(wav)
+        body.append("--\(boundary)\r\nContent-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\nContent-Type: \(type)\r\n\r\n")
+        body.append(file)
         body.append("\r\n--\(boundary)--\r\n")
 
         let (data, resp) = try await session.upload(for: req, from: body)
@@ -54,7 +75,7 @@ enum Analyzer {
             let detail = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["detail"] as? String
             throw Failure.server(code, detail)
         }
-        return try JSONDecoder().decode(Reply.self, from: data).detections
+        return data
     }
 
     static func describe(_ error: Error) -> String {

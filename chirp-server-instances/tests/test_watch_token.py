@@ -12,7 +12,8 @@ def test_watch_paths():
     from app.main import watch_may_use as ok
     assert ok("/api/v1/live-detect/analyze")
     assert ok("/api/v1/auth/me")
-    for p in ["/api/v1/recordings", "/api/v1/live-detect/save-session", "/api/v1/auth/watch-token",
+    assert ok("/api/v1/live-detect/save-session")
+    for p in ["/api/v1/recordings", "/api/v1/live-detect/sessions", "/api/v1/auth/watch-token",
               "/api/v1/settings", "/api/v1/auth/me/profile", "/api/v1/live-detect/analyze/x"]:
         assert not ok(p), p
 

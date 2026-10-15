@@ -17,16 +17,25 @@ struct Heard: Identifiable {
 /// Live Detect on the watch: records the microphone, sends overlapping
 /// clips to POST /api/v1/live-detect/analyze (the same endpoint as the
 /// phone's Live Detect) and lists what comes back. A clip with a bird
-/// becomes a recording on the site, as it does from the phone.
+/// is kept on the site, as from the phone. Those clips are temporary until
+/// the session is saved: Save turns them into one recording with the whole
+/// session's audio (kept on the watch as AAC while listening), as the
+/// phone's "Save session" does. Unsaved clips are removed after a day.
 @MainActor
 final class LiveSession: NSObject, ObservableObject, CLLocationManagerDelegate {
     enum State: Equatable { case idle, starting, listening, failed(String) }
+    enum Saving: Equatable { case none, ready, saving, saved, failed(String) }
 
     @Published private(set) var state: State = .idle
     @Published private(set) var heard: [Heard] = []
     @Published private(set) var clipsSent = 0
     @Published private(set) var problem: String?   // shown while listening; clears on the next good reply
     @Published private(set) var level: Float = 0   // 0…1, for the meter
+    @Published private(set) var saving: Saving = .none
+
+    private var recordingIDs: [String] = []
+    private var sessionStart = Date()
+    private var sessionURL: URL?
 
     // Each clip is `window` seconds; a new one starts every `hop` seconds, so
     // a call that falls on a boundary is whole in the next clip.
@@ -56,8 +65,10 @@ final class LiveSession: NSObject, ObservableObject, CLLocationManagerDelegate {
 
     func start() {
         guard !listening else { return }
+        guard saving != .saving else { return }
         state = .starting
         problem = nil
+        discard()
         AVAudioApplication.requestRecordPermission { granted in
             Task { @MainActor in
                 guard granted else {
@@ -76,14 +87,62 @@ final class LiveSession: NSObject, ObservableObject, CLLocationManagerDelegate {
         engine.stop()
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         collector.reset()
+        collector.endSession()
         level = 0
         if listening { state = .idle }
         WKInterfaceDevice.current().play(.stop)
+        if !recordingIDs.isEmpty, sessionURL != nil {
+            saving = .ready
+            save()
+        } else {
+            discard()
+        }
     }
 
     func clear() {
         heard = []
         clipsSent = 0
+        discard()
+    }
+
+    var canRetrySave: Bool {
+        if case .failed = saving { return sessionURL != nil }
+        return false
+    }
+
+    /// Saves the session (automatic on Stop when a bird was heard): waits for
+    /// clips still on their way, then sends the whole session's audio with
+    /// the ids of the clips that found birds.
+    func save() {
+        guard saving == .ready || canRetrySave,
+              let url = sessionURL, let server = Account.shared.server else { return }
+        saving = .saving
+        let start = sessionStart, here = location
+        Task {
+            for _ in 0..<40 where inFlight > 0 { try? await Task.sleep(nanoseconds: 500_000_000) }
+            do {
+                try await Analyzer.saveSession(audio: url, recordingIDs: recordingIDs, start: start,
+                                               server: server, token: Account.shared.token, location: here)
+                saving = .saved
+                recordingIDs = []
+                try? FileManager.default.removeItem(at: url)
+                sessionURL = nil
+                WKInterfaceDevice.current().play(.success)
+            } catch Analyzer.Failure.signedOut {
+                saving = .failed("Signed out. Open Chirp on your iPhone.")
+                Account.shared.tokenRejected()
+            } catch {
+                saving = .failed(Analyzer.describe(error))
+            }
+        }
+    }
+
+    /// Drops the session audio (nothing heard, or a new session starting).
+    private func discard() {
+        if let url = sessionURL { try? FileManager.default.removeItem(at: url) }
+        sessionURL = nil
+        recordingIDs = []
+        saving = .none
     }
 
     private func begin() {
@@ -98,6 +157,9 @@ final class LiveSession: NSObject, ObservableObject, CLLocationManagerDelegate {
                   collector.prepare(from: inFormat, sampleRate: sampleRate, seconds: window) else {
                 throw NSError(domain: "Chirp", code: 1, userInfo: [NSLocalizedDescriptionKey: "No microphone input"])
             }
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("session-\(UUID().uuidString).m4a")
+            sessionURL = collector.startSession(url) ? url : nil
+            sessionStart = Date()
             collector.onLevel = { [weak self] lvl in
                 Task { @MainActor in
                     guard let self else { return }
@@ -141,10 +203,11 @@ final class LiveSession: NSObject, ObservableObject, CLLocationManagerDelegate {
         Task {
             defer { inFlight -= 1 }
             do {
-                let found = try await Analyzer.analyze(wav: wav, server: server, token: token, location: here)
+                let reply = try await Analyzer.analyze(wav: wav, server: server, token: token, location: here)
                 clipsSent += 1
                 problem = nil
-                record(found)
+                if let id = reply.recording_id { recordingIDs.append(id) }
+                record(reply.detections)
             } catch Analyzer.Failure.signedOut {
                 problem = "Signed out. Open Chirp on your iPhone."
                 Account.shared.tokenRejected()
@@ -195,7 +258,25 @@ final class SampleCollector: @unchecked Sendable {
     private var buf: [Int16] = []
     private var capacity = 0
     private var converter: AVAudioConverter?
+    private var sessionFile: AVAudioFile?
     var onLevel: ((Float) -> Void)?
+
+    /// Starts writing everything heard to `url` as AAC. False if it can't.
+    func startSession(_ url: URL) -> Bool {
+        guard let conv = converter else { return false }
+        let settings: [String: Any] = [AVFormatIDKey: kAudioFormatMPEG4AAC,
+                                       AVSampleRateKey: conv.outputFormat.sampleRate,
+                                       AVNumberOfChannelsKey: 1,
+                                       AVEncoderBitRateKey: 64_000]
+        let file = try? AVAudioFile(forWriting: url, settings: settings, commonFormat: .pcmFormatInt16, interleaved: true)
+        lock.lock(); sessionFile = file; lock.unlock()
+        return file != nil
+    }
+
+    /// Closes the session file (released files are finished and flushed).
+    func endSession() {
+        lock.lock(); sessionFile = nil; lock.unlock()
+    }
 
     func prepare(from input: AVAudioFormat, sampleRate: Double, seconds: Double) -> Bool {
         guard let out = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: sampleRate, channels: 1, interleaved: true),
@@ -231,6 +312,7 @@ final class SampleCollector: @unchecked Sendable {
         lock.lock()
         buf.append(contentsOf: samples)
         if capacity > 0, buf.count > capacity { buf.removeFirst(buf.count - capacity) }
+        try? sessionFile?.write(from: out)
         lock.unlock()
         onLevel?(Float(min(peak, Int(Int16.max))) / Float(Int16.max))
     }
