@@ -1,3 +1,9 @@
+## 0.5.13.d — 2026-10-15 — ENHANCEMENT — Clearer Settings text
+
+- Empty Recordings: plain names for the two counts ("show nothing", "nothing from the server") and both delete buttons.
+- Settings descriptions shortened and reworded throughout.
+- AI Second Opinion uses that name in Settings too.
+
 ## 0.5.13.c — 2026-10-15 — BUGFIX — Re-analyze with BirdNET v3, Tailscale on Unraid
 
 - Re-analyze runs BirdNET v3 when it's on, both to compare and as the main model.

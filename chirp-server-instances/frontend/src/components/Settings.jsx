@@ -143,10 +143,8 @@ function DashboardSectionsSettings() {
   return (
     <Section icon={LayoutDashboard} title="Dashboard Sections" id="settings-appearance-dashboard-sections">
       <p className="text-xs mb-4" style={{ color: 'var(--text-secondary)' }}>
-        Choose which cards show up on Dashboard, separately for Detailed and Simplified mode. Unchecking a
-        card skips its data entirely, not just hiding it — a good way to speed up loading if some of these
-        aren't useful to you.
-      </p>
+Choose which Dashboard cards to show in Detailed and Simplified mode. A hidden card's data isn't loaded, so turning off cards you don't use makes the Dashboard faster.
+</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {['full', 'simplified'].map(which => (
           <div key={which}>
@@ -331,7 +329,7 @@ function CardExpandDefaultControl() {
 
   return (
     <Field label="Card expand/collapse default"
-           hint="Controls every collapsible card across Bird Profile, Settings, Statistics, and My Profile. A card you've individually expanded or collapsed remembers your choice regardless of this setting — this only affects cards you haven't touched yet.">
+           hint="Sets whether cards on Bird Profile, Settings, Statistics and My Profile start open or closed. A card you've opened or closed yourself keeps that.">
       <div className="flex items-center gap-2 flex-wrap">
         {[[GLOBAL_DEFAULTS.EXPANDED, 'Expanded'], [GLOBAL_DEFAULTS.COLLAPSED, 'Collapsed']].map(([value, label]) => (
           <button key={value} type="button" onClick={() => choose(value)}
@@ -370,11 +368,8 @@ function BatMicInfoBox() {
       {open && (
         <div className="space-y-1.5 mt-2">
           <p style={{ color: 'var(--pastel-amber-light)' }}>
-            Bat calls run roughly 15–120kHz. A standard USB mic (including the ReSpeaker this
-            project otherwise uses) samples at 48kHz, which can only capture up to 24kHz — it
-            physically cannot pick up echolocation. You need a dedicated ultrasonic mic
-            sampling at 192kHz or higher:
-          </p>
+Bat calls are about 15–120 kHz. A standard USB mic, including the ReSpeaker, records at 48 kHz and can't hear above 24 kHz. You need an ultrasonic mic that records at 192 kHz or more:
+</p>
           <ul className="space-y-1 pl-4 list-disc" style={{ color: 'var(--pastel-amber-light)' }}>
             <li>
               <strong>AudioMoth USB Microphone</strong> (~$80–100) — cheapest option, not a
@@ -397,15 +392,11 @@ function BatMicInfoBox() {
             </li>
           </ul>
           <p style={{ color: 'var(--pastel-amber-light)' }}>
-            Without one of these, enabling this toggle does nothing — the device checks the
-            configured microphone's sample rate on startup and won't start the detector if it
-            can't capture at the required rate.
-          </p>
+Without one this does nothing: the station checks the mic's sample rate at startup and won't start bat detection if it's too low.
+</p>
           <p style={{ color: 'var(--pastel-amber-light)' }}>
-            Runs fine alongside your existing ReSpeaker (or any other) bird mic — this opens its
-            own separate capture stream at the ultrasonic mic's native rate, with no conflict
-            between the two.
-          </p>
+It runs alongside the bird mic; the ultrasonic mic gets a separate audio stream.
+</p>
         </div>
       )}
     </div>
@@ -719,8 +710,8 @@ function CustomThemeBuilder({ customThemes, activeTheme, onApply, onChange }) {
           </div>
 
           <p className="text-xs mb-4" style={{ color: 'var(--text-tertiary)' }}>
-            Every other shade (hover states, secondary text, focus rings, shadows) is generated automatically from these 5 colors.
-          </p>
+Hover colors, secondary text, focus rings and shadows are made from these 5 colors.
+</p>
 
           <div className="flex items-center gap-2">
             <button onClick={handleSave}
@@ -881,9 +872,8 @@ function BackupRestorePanel({ form, setForm }) {
   return (
     <div className="space-y-4">
       <p className="text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-        Download a full copy of the Chirp database, or upload a previous backup to restore it.
-        All recordings, detections, species profiles, settings, and notes are included.
-      </p>
+Download a copy of the Chirp database, or upload a backup to restore it. It holds recordings and detections, species profiles, settings and notes; audio files aren't included.
+</p>
 
       {/* Backup download */}
       <div className="flex items-center justify-between p-4 rounded-xl"
@@ -930,11 +920,8 @@ function BackupRestorePanel({ form, setForm }) {
           <div>
             <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Automatic Backups</p>
             <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
-              On by default — creates a database backup once a day and keeps a rolling window of recent ones.
-              Recordings/media aren't included (that's a much larger, separate job better handled by your own
-              Unraid-level backup tooling) — this covers the database itself: detections, life list, settings,
-              comments, and users.
-            </p>
+On by default: backs up the database once a day and keeps the most recent copies. Audio and media aren't included; back those up with the server's disk backup.
+</p>
           </div>
           <input type="checkbox"
             checked={form?.auto_backup_enabled ?? true}
@@ -1050,10 +1037,10 @@ function BackupRestorePanel({ form, setForm }) {
 // ── ApiKeysPanel — admin can reveal full key values ───────────────────────────
 const AI_FEATURES = [
   { key: 'photo_id', label: 'Photo ID Confirmation', desc: 'Sanity-checks a species when you upload a photo to a Bird Profile.' },
-  { key: 'call_reanalysis', label: 'Bird Call Re-analysis', desc: 'A second-opinion re-check on an uncertain call.' },
+  { key: 'call_reanalysis', label: 'AI Second Opinion', desc: 'A second opinion on a recording\u2019s spectrogram.' },
   { key: 'daily_summary', label: 'Daily Journal Summary', desc: 'An AI-written recap of the day on the Dashboard, in a birder\u2019s-journal tone.' },
-  { key: 'weekly_summary', label: 'Weekly Journal Summary', desc: 'A week-in-review counterpart to Daily Journal \u2014 arrivals/departures data, more room for educational depth.' },
-  { key: 'profile_summary', label: 'Bird Profile Summaries', desc: 'A short AI-written note at the top of each species\u2019 profile about its presence in your yard specifically.' },
+  { key: 'weekly_summary', label: 'Weekly Journal Summary', desc: 'A weekly recap with arrivals and departures and more room for detail.' },
+  { key: 'profile_summary', label: 'Bird Profile Summaries', desc: 'A short note at the top of each bird\u2019s profile about its visits to your yard.' },
 ]
 
 const PROVIDER_META = {
@@ -1063,7 +1050,7 @@ const PROVIDER_META = {
   ollama: { label: 'Ollama', color: '#a78bfa' },
 }
 const FEATURE_LABELS = {
-  photo_id: 'Photo ID', call_reanalysis: 'Call Re-analysis',
+  photo_id: 'Photo ID', call_reanalysis: 'AI Second Opinion',
   daily_summary: 'Daily Journal', weekly_summary: 'Weekly Journal', profile_summary: 'Profile Summaries',
 }
 
@@ -1147,9 +1134,8 @@ function AiSettingsPanel({ form, setForm, settings }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-          Keys and settings for every AI-backed feature in Chirp, in one place — separate from the
-          general API Keys section, where eBird/iNaturalist/device keys live.
-        </p>
+Keys and settings for Chirp's AI features. eBird, iNaturalist and station keys are under API Keys.
+</p>
         <button onClick={handleReveal} disabled={revealing}
                 className="text-xs px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 flex-shrink-0 ml-3"
                 style={{ background: 'var(--bg-raised)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
@@ -1244,10 +1230,8 @@ function AiUsageSection() {
       )}
 
       <p className="text-xs mt-3" style={{ color: 'var(--text-tertiary)' }}>
-        Token counts are reported directly by each provider — pricing varies by model and changes over
-        time, so this shows counts rather than a dollar estimate that could be wrong. Check your provider's own
-        billing dashboard for cost.
-      </p>
+Token counts come from each provider. Prices vary by model and change often, so check the provider's billing page for cost.
+</p>
     </div>
   )
 }
@@ -1389,10 +1373,8 @@ function OllamaSection({ form, setForm }) {
       )}
 
       <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-        Optional — a fourth, self-hosted provider option: no API key, no data leaving your own network, but you're
-        responsible for running the server and having a model pulled there (a vision-capable one — llava,
-        llama3.2-vision, etc. — if you want to assign Ollama to Photo ID or Call Re-analysis specifically).
-      </p>
+Optional: run models on an Ollama server you host. No API key, and nothing leaves your network. Photo ID and AI Second Opinion need a vision model such as llava or llama3.2-vision.
+</p>
     </div>
   )
 }
@@ -1426,10 +1408,8 @@ function AiFeatureProviderSection({ form, setForm, settings }) {
   return (
     <div className="space-y-3">
       <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-        Assign each AI feature to a provider, or disable it entirely. A disabled feature's card,
-        section, or button doesn't show up anywhere in the app — it isn't just hidden behind an
-        error, it simply isn't there.
-      </p>
+Pick a provider for each AI feature, or turn it off. A feature that's off is hidden everywhere in the app.
+</p>
       {AI_FEATURES.map(feat => {
         const current = providers[feat.key] || ''
         return (
@@ -1468,15 +1448,13 @@ function AiFeatureProviderSection({ form, setForm, settings }) {
             )}
             {feat.key === 'profile_summary' && current && (
               <p className="text-xs mt-2 pt-2" style={{ borderTop: '1px solid var(--border-subtle)', color: 'var(--text-tertiary)' }}>
-                This is per-species, not a single global value — visit any Bird Profile page and use the
-                regenerate button next to its summary (only shown once a summary exists).
-              </p>
+Set per species: open a bird's profile and use the regenerate button next to its summary.
+</p>
             )}
             {feat.key === 'call_reanalysis' && current && (
               <p className="text-xs mt-2 pt-2" style={{ borderTop: '1px solid var(--border-subtle)', color: 'var(--text-tertiary)' }}>
-                This is per-recording, not a single global value — open any recording's detail page and
-                use the "Re-check this call" button (only shown when this feature is enabled).
-              </p>
+Run per recording: open a recording and tap AI Second Opinion.
+</p>
             )}
           </div>
         )
@@ -1485,7 +1463,9 @@ function AiFeatureProviderSection({ form, setForm, settings }) {
       {providers.daily_summary && (
         <div className="p-3 rounded-lg" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)' }}>
           <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Daily Journal — generation times</p>
-          <p className="text-xs mt-0.5 mb-3" style={{ color: 'var(--text-tertiary)' }}>In your configured timezone. Regenerates automatically at each time listed — add more than one for a morning and evening entry, for example. A manual regenerate button is also on the Dashboard card and above.</p>
+          <p className="text-xs mt-0.5 mb-3" style={{ color: 'var(--text-tertiary)' }}>
+Times are in your time zone. The journal is rewritten at each time listed; add two for a morning and an evening entry. The Dashboard card also has a regenerate button.
+</p>
           <div className="space-y-2">
             {(form.daily_summary_schedule_times?.length ? form.daily_summary_schedule_times : [form.daily_summary_schedule_time || '07:00']).map((t, i) => (
               <div key={i} className="flex items-center gap-2">
@@ -1522,8 +1502,8 @@ function AiFeatureProviderSection({ form, setForm, settings }) {
         <div className="p-3 rounded-lg" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)' }}>
           <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Weekly Journal — generation time</p>
           <p className="text-xs mt-0.5 mb-3" style={{ color: 'var(--text-tertiary)' }}>
-            Covers the trailing 7 days, in your configured timezone. A manual regenerate button is also on the Dashboard card.
-          </p>
+Covers the last 7 days, in your time zone. The Dashboard card also has a regenerate button.
+</p>
           <div className="flex items-center gap-3">
             <label className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
               Every
@@ -1553,12 +1533,8 @@ function AiFeatureProviderSection({ form, setForm, settings }) {
             <div>
               <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Bird Profile Summaries — auto-refresh</p>
               <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
-                Off by default — without this, a species' summary only ever generates once, on first
-                view, and never updates again even as new detections come in. When on, checks once a
-                day and regenerates any summary older than the interval below (skips anything already
-                failing, same as the first-view behavior — use the per-profile Regenerate button to
-                retry after a fix).
-              </p>
+Off: a species summary is written once, the first time its profile is opened, and never updated. On: once a day, summaries older than the interval below are rewritten. Failed ones are skipped; use Regenerate on the profile to retry.
+</p>
             </div>
             <input type="checkbox"
               checked={form.profile_summary_auto_refresh ?? false}
@@ -1594,12 +1570,8 @@ function AiFeatureProviderSection({ form, setForm, settings }) {
             <div>
               <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Web search grounding</p>
               <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
-                Off by default. When on, Daily and Weekly Journal can pull in a Wikipedia lookup
-                (migration patterns, species facts) and recent news for whichever species is most
-                notable that period. This runs locally from Chirp's own server — not any AI
-                provider's built-in search — so it works the same regardless of which provider is
-                assigned above. Used sparingly and only when genuinely relevant, not on every entry.
-              </p>
+Off by default. On: the Daily and Weekly Journal can look up Wikipedia and recent news about the period's most notable species. The search runs from this server, so it works with any AI provider, and it's only used when relevant.
+</p>
             </div>
             <input type="checkbox"
               checked={form.ai_web_search_enabled ?? false}
@@ -1618,10 +1590,8 @@ function AiFeatureProviderSection({ form, setForm, settings }) {
         <div className="p-4 rounded-lg" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)' }}>
           <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>AI Personality</p>
           <p className="text-xs mt-0.5 mb-4" style={{ color: 'var(--text-tertiary)' }}>
-            Shapes the tone of Daily Journal, Weekly Journal, and Bird Profile Summaries. Defaults match how these
-            always sounded before this existed — moving a slider is what changes anything.
-            Doesn't apply to Call Re-analysis, which is a factual accuracy check, not creative writing.
-          </p>
+Sets the tone of the Daily and Weekly Journal and Bird Profile summaries. The defaults keep the usual tone. AI Second Opinion isn't affected.
+</p>
           <PersonalitySlider
             label="Friendliness" formKey="ai_personality_friendliness" form={form} setForm={setForm}
             defaultValue={60} lowLabel="Neutral" highLabel="Very personal"
@@ -1640,12 +1610,12 @@ function AiFeatureProviderSection({ form, setForm, settings }) {
           <PersonalitySlider
             label="Depth" formKey="ai_personality_depth" form={form} setForm={setForm}
             defaultValue={50} lowLabel="Brief" highLabel="In-depth"
-            hint="How much length and room for teaching/detail an entry gets — not its tone. Higher settings explain concepts more fully and unpack trends instead of just naming them, not just add more words."
+            hint="How long and detailed an entry is, not its tone. Higher explains trends instead of just naming them."
           />
           <PersonalitySlider
             label="Curiosity" formKey="ai_personality_curiosity" form={form} setForm={setForm}
             defaultValue={50} lowLabel="Just the facts" highLabel="Explores why"
-            hint="Whether entries stick to reporting what happened, or actively explore genuine reasons behind it — a plausible ecological or behavioral explanation, always framed as possibility rather than certainty."
+            hint="Whether entries only report what happened or also suggest why, framed as a possibility, not a fact."
           />
         </div>
       )}
@@ -1955,11 +1925,8 @@ function HaikuboxSection({ form, setForm, settings }) {
       <div className="space-y-4">
         <div className="flex items-start justify-between gap-4">
           <p className="text-xs flex-1" style={{ color: 'var(--text-tertiary)' }}>
-            Polls your Haikubox's cloud API every 15 minutes and imports its detections as a
-            virtual device. Turning this off immediately hides every Haikubox device, recording,
-            detection, and page — as if Haikubox were never connected. Your serial number below is
-            preserved, so turning it back on doesn't require re-entering it.
-          </p>
+Checks your Haikubox every 15 minutes and imports its detections as a device. Turning this off hides the Haikubox and everything from it; the serial number below is kept for when you turn it back on.
+</p>
           <input type="checkbox" checked={form.haikubox_enabled ?? false}
                  onChange={e => setForm(f => ({ ...f, haikubox_enabled: e.target.checked }))}
                  className="w-4 h-4 accent-chirp-500 flex-shrink-0 mt-0.5"/>
@@ -1997,12 +1964,8 @@ function BirdBuddySection({ form, setForm, settings }) {
       <div className="space-y-4">
         <div className="flex items-start justify-between gap-4">
           <p className="text-xs flex-1" style={{ color: 'var(--text-tertiary)' }}>
-            Polls your Bird Buddy account every 15 minutes for new postcards and analyzes each
-            video's audio (Bird Buddy has a microphone — audio is embedded in the video, not
-            a separate file) through Chirp's own BirdNET pipeline, same as any manual upload.
-            Bird Buddy's own species ID is not used — Chirp re-identifies independently for
-            consistent confidence scoring across every recording.
-          </p>
+Checks your Bird Buddy every 15 minutes for new postcards and runs each video's audio through BirdNET, like an upload. Bird Buddy's species ID isn't used, so scores match the rest of Chirp.
+</p>
           <input type="checkbox" checked={form.bird_buddy_enabled ?? false}
                  onChange={e => setForm(f => ({ ...f, bird_buddy_enabled: e.target.checked }))}
                  className="w-4 h-4 accent-chirp-500 flex-shrink-0 mt-0.5"/>
@@ -2065,11 +2028,8 @@ function InatSection({ form, setForm, settings }) {
     <Section icon={INatIcon} title="iNaturalist" id="settings-integrations-inat">
       <div className="space-y-4">
         <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-          Used for photo lookups, range data, and submitting recordings as sound observations.
-          The global token below is a fallback used by anyone without their own personal token
-          (set on each person's Profile page) — a personal token always takes priority for that
-          person's own submissions.
-        </p>
+Used for photos, range data and submitting sound observations. The site token below is used by anyone without a personal token (set on their Profile page); a personal token always wins for that person's submissions.
+</p>
 
         {/* iNat token age warning */}
         {settings?.inat_token_set_at && (() => {
@@ -2108,16 +2068,8 @@ function InatSection({ form, setForm, settings }) {
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-200">Auto-Refresh Token</p>
               <p className="text-xs text-gray-500 mt-1">
-                Fetches a fresh token automatically every 12h instead of manually pasting one daily —
-                updates <strong>your own personal token</strong> (Profile page), not the global
-                fallback above, since these credentials authenticate as your iNaturalist account.
-                Needs your iNaturalist username/password. An OAuth app (free, one-time —{' '}
-                <a href="https://www.inaturalist.org/oauth/applications/new" target="_blank" rel="noreferrer"
-                   style={{color:'var(--accent-500)'}}>register here</a>, redirect URI can be anything)
-                is optional but more reliable — without one, this falls back to simulating a normal
-                login instead of the documented API, which is a little more fragile if iNaturalist
-                ever changes their login page.
-              </p>
+Gets a new token every 12 hours so you don't have to paste one daily. It updates <strong>your personal token</strong> (Profile page), not the site token, and needs your iNaturalist username and password. An OAuth app (free,{' '} <a href="https://www.inaturalist.org/oauth/applications/new" target="_blank" rel="noreferrer" style={{color:'var(--accent-500)'}}>register here</a>, any redirect URI) is optional but more reliable; without one Chirp signs in like a browser, which can break if iNaturalist changes its sign-in page.
+</p>
             </div>
             <input type="checkbox" checked={form.inat_auto_refresh_enabled ?? false}
                    onChange={e => setForm(f => ({ ...f, inat_auto_refresh_enabled: e.target.checked }))}
@@ -2199,9 +2151,8 @@ function TailscaleStatusPanel() {
         </p>
       )}
       <p className="text-xs text-gray-600">
-        One Tailscale identity covers this whole server, shared by every location it hosts — configured from{' '}
-        <Link to="/global-admin" className="underline hover:text-gray-400">Global Admin</Link>, not per-location.
-      </p>
+One Tailscale identity covers this server and every location on it. Set it up in{' '} <Link to="/global-admin" className="underline hover:text-gray-400">Global Admin</Link>.
+</p>
     </div>
   )
 }
@@ -2422,7 +2373,7 @@ const CARD_KEYWORDS = {
   'settings-notif-email': 'SMTP host, port, username, password, from address, admin email, test email, new-species emails, registration emails',
   'settings-notif-apns': 'iPhone push, relay token, APNs, team ID, key ID, bundle ID, auth key, push environment',
   'settings-storage': 'disk usage, compression, archive audio, remove old recordings, size limit, soft-deleted cleanup',
-  'settings-storage-empty': 'empty recordings, auto-delete recordings with 0 detections, manual purge',
+  'settings-storage-empty': 'empty recordings, show nothing, nothing from the server, auto-delete, delete now, purge',
   'settings-activity-log': 'activity log, IP address, history retention',
   'settings-experimental-data': 'refresh all bird profiles, range maps refresh',
   'settings-backup': 'database backup, restore, automatic backups',
@@ -3454,8 +3405,8 @@ export default function SettingsPage({ currentUser } = {}) {
       {!isApp() && (
       <Section icon={Smartphone} title="Install as App (PWA)" id="settings-pwa">
         <p className="text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-          Chirp is a <strong style={{ color: 'var(--text-primary)' }}>Progressive Web App</strong> — install it on any device for a native app experience with no app store required.
-        </p>
+Chirp is a <strong style={{ color: 'var(--text-primary)' }}>Progressive Web App</strong>: install it on any device, no app store needed.
+</p>
         <div className="space-y-3 mt-2">
 
           {/* iOS */}
@@ -3527,8 +3478,8 @@ export default function SettingsPage({ currentUser } = {}) {
              style={{ background: 'rgba(34,211,238,.06)', border: '1px solid rgba(34,211,238,.18)' }}>
           <Smartphone size={14} style={{ color: '#22d3ee', flexShrink: 0, marginTop: 1 }}/>
           <p className="text-xs" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-            Once installed, Chirp loads faster, runs full-screen, and stays in your taskbar or home screen. All data stays on your own server.
-          </p>
+Installed, Chirp opens faster, runs full screen and sits on your home screen or taskbar.
+</p>
         </div>
       </Section>
       )}
@@ -3628,11 +3579,8 @@ export default function SettingsPage({ currentUser } = {}) {
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-200">Show deleted recording identifications</p>
               <p className="text-xs text-gray-500 mt-1">
-                When disabled (default), detections from deleted recordings are excluded from all
-                counts — dashboard totals, life list, bird profiles (detection count &amp; max confidence),
-                and the Likely Birds page. When enabled, all detections are counted regardless of
-                whether their recording has been deleted.
-              </p>
+Off (default): detections from deleted recordings are left out of dashboard totals, the life list, bird profiles and Likely Birds. On: they're counted.
+</p>
             </div>
             <input type="checkbox"
               checked={form.show_deleted_detections ?? false}
@@ -3654,7 +3602,7 @@ export default function SettingsPage({ currentUser } = {}) {
       <Section icon={Brain} title="BirdNET Analysis" id="settings-detection">
         <div className="space-y-5">
           <Slider label="Min. Detection Confidence"
-                  hint="Applies to newly analyzed recordings only — does not re-filter existing ones. Lower = more detections but more false positives. Default: 10%."
+                  hint="New recordings only. Lower finds more but with more false alarms. Default 10%."
                   min={0.01} max={0.5} step={0.01}
                   value={form.birdnet_min_confidence}
                   onChange={set('birdnet_min_confidence')}
@@ -3690,11 +3638,8 @@ export default function SettingsPage({ currentUser } = {}) {
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-200">Re-analyze every upload</p>
               <p className="text-xs text-gray-500 mt-1">
-                The server runs its own BirdNET pass on every recording immediately after upload,
-                using your configured location (lat/lon + week-of-year species filter) and full
-                sensitivity settings. Typically more accurate than the device's quick pass.
-                Disable only if server CPU is constrained.
-              </p>
+The server runs BirdNET on every upload with your location, the time of year and the full sensitivity settings. It's usually more accurate than the station's quick pass. Turn off only if the server is short on CPU.
+</p>
             </div>
             <input type="checkbox"
               checked={form.server_reanalyze_on_upload ?? true}
@@ -3709,10 +3654,8 @@ export default function SettingsPage({ currentUser } = {}) {
               <div className="flex-1">
                 <p className="text-sm font-medium text-gray-300">Auto-delete device identifications</p>
                 <p className="text-xs text-gray-500 mt-1">
-                  When server re-analysis completes, remove the device's original identifications
-                  and keep only the server results. Keeps the recording detail view clean.
-                  Disable to show both device and server identifications side by side.
-                </p>
+After the server pass, remove the station's identifications and keep the server's. Turn off to show both.
+</p>
               </div>
               <input type="checkbox"
                 checked={form.server_reanalyze_delete_device ?? true}
@@ -3727,13 +3670,8 @@ export default function SettingsPage({ currentUser } = {}) {
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-200">Allow manual re-analyze</p>
               <p className="text-xs text-gray-500 mt-1">
-                Shows a "Re-analyze" button on each recording's own detail page, letting anyone
-                re-trigger BirdNET (or the bat pipeline) on demand — useful for a recording that
-                came back empty, or after changing a confidence threshold. Separate from the
-                automatic re-analysis above, which runs once on every upload regardless of this
-                setting. Disable to stop people re-triggering analysis at will, e.g. to control
-                server load.
-              </p>
+Shows a Re-analyze button on each recording so anyone can run BirdNET (or bat analysis) again, for example on an empty recording or after changing a threshold. The automatic pass on upload runs either way. Turn off to limit server load.
+</p>
             </div>
             <input type="checkbox"
               checked={form.allow_manual_reanalyze ?? true}
@@ -3747,14 +3685,8 @@ export default function SettingsPage({ currentUser } = {}) {
             <div>
               <p className="text-sm font-medium text-gray-200">Rumble Removal</p>
               <p className="text-xs text-gray-500 mt-1">
-                Species-aware high-pass filter that cuts low-frequency rumble (traffic, wind, HVAC)
-                from recording playback — a plain filter matching Live Detect's own "Cut low rumble"
-                behavior, nothing above the cutoff is touched. <strong>Enabled (on)</strong>: shown as
-                a toggle on each recording, on by default. <strong>Enabled (off)</strong>: same toggle,
-                shown but off by default — for when people should be able to turn it on themselves
-                without it being applied automatically. <strong>Disabled</strong>: the toggle isn't
-                shown at all, never applied.
-              </p>
+Cuts low rumble (traffic, wind, HVAC) from playback with the same filter as Live Detect's "Cut low rumble"; nothing above the cutoff changes. <strong>Enabled (on)</strong>: a toggle on each recording, on by default. <strong>Enabled (off)</strong>: the toggle shows but starts off. <strong>Disabled</strong>: no toggle, never applied.
+</p>
               <div className="flex gap-2 mt-2">
                 {[
                   { key: 'auto', label: 'Enabled (on)' },
@@ -3779,11 +3711,8 @@ export default function SettingsPage({ currentUser } = {}) {
           <div>
             <p className="text-sm font-medium text-gray-200">Detection colors</p>
             <p className="text-xs text-gray-500 mt-1 mb-3">
-              Which colors each detected species gets in a recording's detection list, waveform,
-              and spectrogram overlay. Colors are spread evenly across the palette based on how
-              many species are actually in a recording, so even just two or three species land on
-              clearly different colors rather than similar neighboring ones.
-            </p>
+Colors for each species in a recording's detection list, waveform and spectrogram. They're spread across the palette by how many species the recording has, so even two or three species get clearly different colors.
+</p>
             <div className="grid grid-cols-2 gap-2">
               {Object.entries(PALETTES).map(([key, palette]) => {
                 const selected = (form.detection_color_palette || DEFAULT_PALETTE) === key
@@ -3833,7 +3762,7 @@ export default function SettingsPage({ currentUser } = {}) {
         </p>
         <div className="space-y-5">
           <Field label="Min. Gap Between Recordings"
-                 hint="Cooldown period — a new recording cannot start until this many seconds after the previous one ends. Prevents re-triggering on the same call.">
+                 hint="Seconds to wait after a recording ends before another can start, so one call isn't recorded twice.">
             <div className="flex items-center gap-3">
               <input type="number" min={0} max={3600} step={1}
                 className="input w-28"
@@ -3845,7 +3774,7 @@ export default function SettingsPage({ currentUser } = {}) {
           </Field>
 
           <Field label="Max Recording Length"
-                 hint="Hard cap on recording duration. The device will stop recording after this many seconds even if the bird is still calling.">
+                 hint="Longest a recording can be. The station stops at this length even if the bird is still calling.">
             <div className="flex items-center gap-3">
               <input type="number" min={5} max={3600} step={5}
                 className="input w-28"
@@ -3857,7 +3786,7 @@ export default function SettingsPage({ currentUser } = {}) {
           </Field>
 
           <Field label="Max Recordings Per Hour"
-                 hint="Rate limit. The device will stop triggering new recordings once this many have been made in the last 60 minutes. 0 = unlimited.">
+                 hint="Most recordings the station makes in any 60 minutes. 0 = no limit.">
             <div className="flex items-center gap-3">
               <input type="number" min={0} max={3600} step={1}
                 className="input w-28"
@@ -4196,20 +4125,16 @@ export default function SettingsPage({ currentUser } = {}) {
               </div>
               {acc.soft_deleted_with_file_on_disk > 0 && (
                 <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                  These are recordings someone deleted without checking "also delete files," or
-                  deleted before auto-purge was configured. Use "Clean up deleted" below, or set an
-                  auto-delete age, to free this space — this section is read-only.
-                </p>
+Recordings deleted without "also delete files", or before auto-purge was set up. Free the space with "Clean up deleted" below or an auto-delete age.
+</p>
               )}
 
               {/* True orphans — files with no DB row at all */}
               {(recOrphans?.orphaned_count > 0 || clipOrphans?.orphaned_count > 0 || enhOrphans?.orphaned_count > 0 || specOrphans?.orphaned_count > 0) && (
                 <div className="pt-2 border-t space-y-2" style={{ borderColor: 'var(--border-subtle)' }}>
                   <p className="text-xs text-gray-500">
-                    Files no recording needs: leftovers with <em>no matching recording at all</em>
-                    (failed cleanups, interrupted compressions, pre-migration leftovers) and
-                    spectrograms cached for old settings, which redraw when opened. Safe to remove:
-                  </p>
+Files no recording needs: leftovers with <em>no matching recording</em> (failed cleanups, interrupted compressions, old migrations) and spectrograms cached for old settings, which are redrawn when opened. Safe to remove:
+</p>
                   {recOrphans?.orphaned_count > 0 && (
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-gray-400">Recordings dir: {recOrphans.orphaned_count} orphaned file(s) ({recOrphans.orphaned_human})</span>
@@ -4314,9 +4239,8 @@ export default function SettingsPage({ currentUser } = {}) {
               <div>
                 <p className="text-sm font-medium text-gray-200">Compress recordings on upload</p>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Transcodes WAV files to FLAC (lossless) or Opus (lossy) after upload.
-                  Spectrograms and playback work with compressed files. Original WAV is removed.
-                </p>
+Converts WAV uploads to FLAC (lossless) or Opus (smaller, lossy) and removes the WAV. Spectrograms and playback work the same.
+</p>
               </div>
               <input type="checkbox"
                 checked={form.storage_compress_on_upload ?? true}
@@ -4358,9 +4282,8 @@ export default function SettingsPage({ currentUser } = {}) {
                 Automatic recording lifecycle
               </p>
               <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
-                Three separate, independent options — each one progressively more permanent.
-                Set any to 0 to disable it.
-              </p>
+Three separate options, each more permanent than the last. Set any to 0 to turn it off.
+</p>
             </div>
 
             {/* Lifecycle diagram */}
@@ -4392,12 +4315,8 @@ export default function SettingsPage({ currentUser } = {}) {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold" style={{ color:'#fbbf24' }}>Archive — gentlest option</p>
                     <p className="text-xs mt-1" style={{ color:'var(--text-secondary)', lineHeight:1.6 }}>
-                      Deletes <strong style={{ color:'var(--text-primary)' }}>only the audio file</strong> to recover disk space.
-                      The recording stays fully visible in your list, detections are preserved, it still counts in
-                      all statistics and the Life List, and the spectrogram remains. Playback, WAV download, and
-                      iNaturalist audio submission are disabled since there's no audio left.
-                      <span style={{ color:'#fbbf24' }}> The audio cannot be recovered.</span>
-                    </p>
+Deletes <strong style={{ color:'var(--text-primary)' }}>only the audio</strong> to free space. The recording, its detections and spectrogram stay and still count everywhere, including the Life List; playback, download and iNaturalist submission stop working. <span style={{ color:'#fbbf24' }}> The audio can't be recovered.</span>
+</p>
                     <div className="mt-3 flex items-center gap-3">
                       <label className="text-xs font-medium" style={{ color:'var(--text-tertiary)' }}>
                         Archive audio older than
@@ -4424,12 +4343,8 @@ export default function SettingsPage({ currentUser } = {}) {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold" style={{ color:'#f97316' }}>Age-based removal</p>
                     <p className="text-xs mt-1" style={{ color:'var(--text-secondary)', lineHeight:1.6 }}>
-                      Removes the recording from your list and from all statistics — it disappears from the Life List,
-                      detection counts, and charts. Audio, spectrogram, and clips files are also deleted.
-                      <span style={{ color:'#f97316' }}> The recording and its history are gone from the UI.</span>
-                      {' '}The raw DB row is soft-deleted and can be recovered manually, but in practice this should
-                      be treated as permanent.
-                    </p>
+Removes the recording from the list, statistics, Life List and charts, and deletes its audio, spectrogram and clips. <span style={{ color:'#f97316' }}> Treat this as permanent;</span> the database row is only marked deleted and can be restored by hand.
+</p>
                     <div className="mt-3 flex items-center gap-3">
                       <label className="text-xs font-medium" style={{ color:'var(--text-tertiary)' }}>
                         Remove recordings older than
@@ -4465,11 +4380,8 @@ export default function SettingsPage({ currentUser } = {}) {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold" style={{ color:'#f87171' }}>Size-based removal</p>
                     <p className="text-xs mt-1" style={{ color:'var(--text-secondary)', lineHeight:1.6 }}>
-                      When the recordings directory exceeds this size, the <strong style={{ color:'var(--text-primary)' }}>oldest recordings</strong> are
-                      permanently deleted until usage drops to 90% of the limit. Same effect as age-based removal —
-                      the recording disappears from the UI and statistics.
-                      <span style={{ color:'#f87171' }}> Recordings with labels or notes are protected if the option below is enabled.</span>
-                    </p>
+When recordings take more than this, the <strong style={{ color:'var(--text-primary)' }}>oldest</strong> are deleted until usage is back to 90% of the limit, the same as age-based removal. <span style={{ color:'#f87171' }}> Labeled or noted recordings are kept if the option below is on.</span>
+</p>
                     <div className="mt-3 flex items-center gap-3">
                       <label className="text-xs font-medium" style={{ color:'var(--text-tertiary)' }}>
                         Max recordings directory size
@@ -4502,10 +4414,8 @@ export default function SettingsPage({ currentUser } = {}) {
                       Protect recordings with labels or notes
                     </p>
                     <p className="text-xs mt-0.5" style={{ color:'var(--text-tertiary)' }}>
-                      When enabled, recordings you've labeled or added notes to are never touched by any of the
-                      automatic options above — archive, age removal, or size removal. Disable only if you want
-                      cleanup to run without exceptions.
-                    </p>
+On: recordings you've labeled or noted are skipped by archive, age removal and size removal.
+</p>
                   </div>
                 </label>
               </div>
@@ -4605,29 +4515,33 @@ export default function SettingsPage({ currentUser } = {}) {
             <div className="flex flex-wrap gap-3">
               <div className="card px-3 py-2 text-center min-w-[110px]">
                 <p className="text-lg font-bold text-red-400">{emptyCount.no_detections}</p>
-                <p className="text-xs text-gray-500 mt-0.5">0 shown detections</p>
+                <p className="text-xs text-gray-500 mt-0.5">show nothing</p>
               </div>
               <div className="card px-3 py-2 text-center min-w-[130px]">
                 <p className="text-lg font-bold text-yellow-400">{emptyCount.no_server_detections}</p>
-                <p className="text-xs text-gray-500 mt-0.5">0 shown server detections</p>
+                <p className="text-xs text-gray-500 mt-0.5">nothing from the server</p>
               </div>
             </div>
           )}
-          <p className="text-xs text-gray-500">
-            Detections under the display threshold don't count, matching the recordings list ("Unknown"
-            cards). The one exception is an owl the server pass kept after hearing a hoot at its pitch.
-            With auto-purge on, these are also cleared every 15 minutes, not only at upload.
-          </p>
+          <div className="text-xs text-gray-500 space-y-1">
+            <p>
+              <span className="text-gray-300">Show nothing</span>: no detection at the display threshold, from
+              the station or the server. These are the "Unknown" cards in Recordings.
+            </p>
+            <p>
+              <span className="text-gray-300">Nothing from the server</span>: the server's BirdNET pass found
+              nothing, though the station's detections may still show. It covers almost everything in the first count too.
+            </p>
+            <p>Owls the server kept after hearing a hoot never count as empty.</p>
+          </div>
 
           {/* Auto-purge toggle */}
           <div className="settings-row">
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-200">Auto-delete recordings with 0 server detections</p>
+              <p className="text-sm font-medium text-gray-200">Auto-delete station recordings that show nothing</p>
               <p className="text-xs text-gray-500 mt-1">
-                After server-side re-analysis, automatically delete recordings where
-                BirdNET found nothing <em>and</em> the device confidence was below the
-                "Keep if Pi confidence ≥" threshold you can set after enabling this
-                (65% by default). High-confidence detections are always kept.
+                Checked after the server pass on each upload, and every 15 minutes for older ones.
+                Recordings with a label, notes or an iNaturalist submission are kept.
               </p>
             </div>
             <input type="checkbox" className="toggle flex-shrink-0 mt-0.5"
@@ -4643,11 +4557,12 @@ export default function SettingsPage({ currentUser } = {}) {
               <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0">
                   <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                    Delete ALL device recordings
+                    Delete even if the Pi was confident
                   </p>
                   <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
-                    When on, every recording where the server found no birds is deleted —
-                    the Pi's confidence score is ignored entirely.
+                    {form.auto_purge_all_device
+                      ? 'On: every recording that shows nothing is deleted, whatever the Pi scored.'
+                      : 'Off: a recording the Pi scored highly is kept even when it shows nothing.'}
                   </p>
                 </div>
                 <input type="checkbox" className="toggle flex-shrink-0"
@@ -4660,11 +4575,10 @@ export default function SettingsPage({ currentUser } = {}) {
                 <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0">
                     <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                      Keep if Pi confidence ≥
+                      Keep if the Pi scored at least
                     </p>
                     <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
-                      Recordings where the Pi exceeded this threshold are kept even if
-                      the server found nothing. Default 65%.
+                      The Pi's top score for the recording, before the server pass. Default 65%.
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
@@ -4688,47 +4602,50 @@ export default function SettingsPage({ currentUser } = {}) {
 
           {/* Manual purge */}
           <div className="border-t border-surface-600 pt-4 space-y-3">
-            <p className="text-sm font-medium text-gray-200">Manual purge</p>
+            <p className="text-sm font-medium text-gray-200">Delete now</p>
             <div className="flex flex-wrap gap-2">
               <button
                 disabled={purging || (emptyCount !== null && emptyCount.no_detections === 0)}
                 onClick={async () => {
                   const n = emptyCount?.no_detections ?? '?'
-                  if (!window.confirm(`Hard-delete ${n} recording${n === 1 ? '' : 's'} with 0 detections? This cannot be undone.`)) return
+                  if (!window.confirm(`Delete ${n} recording${n === 1 ? '' : 's'} that show nothing, with their audio? This can't be undone.`)) return
                   setPurging('all')
                   try {
                     const r = await api.settings.purgeEmpty('no_detections', true)
                     setEmptyCount(null)
                     api.settings.emptyCount().then(setEmptyCount).catch(() => {})
                     alert(`✓ Deleted ${r.purged} recording${r.purged === 1 ? '' : 's'}, freed ${r.freed_mb} MB`)
-                  } catch (e) { alert('Purge failed: ' + e.message) }
+                  } catch (e) { alert('Delete failed: ' + e.message) }
                   setPurging(null)
                 }}
                 className="btn-danger flex items-center gap-2">
                 <Trash2 size={13}/>
-                {purging === 'all' ? 'Purging…' : `Purge ${emptyCount?.no_detections ?? '…'} with 0 detections`}
+                {purging === 'all' ? 'Deleting…' : `Delete ${emptyCount?.no_detections ?? '…'} that show nothing`}
               </button>
 
               <button
                 disabled={purging || (emptyCount !== null && emptyCount.no_server_detections === 0)}
                 onClick={async () => {
                   const n = emptyCount?.no_server_detections ?? '?'
-                  if (!window.confirm(`Hard-delete ${n} recording${n === 1 ? '' : 's'} with 0 server detections? This cannot be undone.`)) return
+                  if (!window.confirm(`Delete ${n} recording${n === 1 ? '' : 's'} with nothing from the server, with their audio? This includes recordings where only the station's detections show. This can't be undone.`)) return
                   setPurging('server')
                   try {
                     const r = await api.settings.purgeEmpty('no_server_detections', true)
                     setEmptyCount(null)
                     api.settings.emptyCount().then(setEmptyCount).catch(() => {})
                     alert(`✓ Deleted ${r.purged} recording${r.purged === 1 ? '' : 's'}, freed ${r.freed_mb} MB`)
-                  } catch (e) { alert('Purge failed: ' + e.message) }
+                  } catch (e) { alert('Delete failed: ' + e.message) }
                   setPurging(null)
                 }}
                 className="btn-danger flex items-center gap-2">
                 <Trash2 size={13}/>
-                {purging === 'server' ? 'Purging…' : `Purge ${emptyCount?.no_server_detections ?? '…'} with 0 server detections`}
+                {purging === 'server' ? 'Deleting…' : `Delete ${emptyCount?.no_server_detections ?? '…'} with nothing from the server`}
               </button>
             </div>
-            <p className="text-xs text-gray-600">Both options permanently delete files from disk.</p>
+            <p className="text-xs text-gray-600">
+              Unlike auto-delete, these also take uploads and recordings with labels or notes. Audio is deleted
+              for good.
+            </p>
           </div>
         </div>
       </Section>
@@ -4738,7 +4655,7 @@ export default function SettingsPage({ currentUser } = {}) {
       <Section icon={RefreshCw} title="Bird Data and Range Maps" id="settings-experimental-data">
         <div className="space-y-4">
           <Field label="Refresh All Bird Profiles"
-                 hint="Re-fetches Wikipedia descriptions, range maps (every enabled source — AAB, Macaulay, iNat Geomodel, BirdLife, eBird S&T, GBIF), and iNaturalist data for every bird in your life list. Runs in the background — takes ~30-60 seconds per bird.">
+                 hint="Reloads Wikipedia text, range maps from every enabled source and iNaturalist data for every bird on your life list. Runs in the background, about 30–60 seconds per bird.">
             <div className="flex items-center gap-2 flex-wrap">
               <button onClick={async () => {
                 setBulkRefreshing(true)
@@ -4869,10 +4786,8 @@ export default function SettingsPage({ currentUser } = {}) {
       <Section icon={Key} title="Device API Keys" id="settings-api-device">
         <div className="space-y-4">
           <p className="text-xs text-gray-500">
-            Generate keys for Raspberry Pi devices to authenticate when uploading recordings.
-            Values are hidden by default — tap the eye icon to check a key before deciding whether
-            to prune it (helps identify unused/duplicate keys).
-          </p>
+Keys stations use to upload. Tap the eye to see a key, for example to spot unused or duplicate ones before deleting them.
+</p>
           {deviceKeys.length > 0 && (
             <div className="space-y-2">
               {deviceKeys.map(k => (
@@ -4908,19 +4823,15 @@ export default function SettingsPage({ currentUser } = {}) {
       <Section icon={Activity} title="Activity Log" id="settings-activity-log">
         <div className="space-y-4">
           <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-            Tracks logins and page views so admins can see who's using the system and
-            when — nothing beyond that. No request bodies, no recording/note content,
-            no passwords or tokens are ever recorded. See the Activity page (admin nav)
-            for the login history and browsing feed this collects.
-          </p>
+Records sign-ins and page views so admins can see who uses the site and when. No passwords, tokens, notes or recording content are stored. The Activity page shows the log.
+</p>
 
           <div className="settings-row">
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-200">Enable activity log</p>
               <p className="text-xs text-gray-500 mt-1">
-                Off means nothing is written at all — not even login timestamps beyond
-                the existing "last login" on each account.
-              </p>
+Off: nothing is recorded beyond each account's last sign-in.
+</p>
             </div>
             <input type="checkbox" className="toggle flex-shrink-0 mt-0.5"
               checked={form.activity_log_enabled ?? true}
@@ -4973,8 +4884,8 @@ export default function SettingsPage({ currentUser } = {}) {
                 <div>
                   <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Run cleanup now</p>
                   <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
-                    Enforces the retention setting above immediately. Runs automatically every hour regardless.
-                  </p>
+Applies the retention setting now. It also runs every hour.
+</p>
                   {activityPurgeResult && (
                     <p className="text-xs mt-1" style={{ color: activityPurgeResult.status === 'ok' ? 'var(--pastel-green)' : 'var(--pastel-red)' }}>
                       {activityPurgeResult.status === 'ok'
@@ -5017,7 +4928,7 @@ export default function SettingsPage({ currentUser } = {}) {
       <GroupHeader id="settings-experimental"/>
       <div className="space-y-3">
       <ExpCard id="range_maps" title="Range Maps" collapsed={expCollapsed} setCollapsed={setExpCollapsed}
-               subtitle="Fetch and display species distribution range maps on bird profiles, sourced from Cornell Macaulay Library, All About Birds, and Wikipedia. Maps may load slowly or fail for some species. Requires a stable internet connection from the server.">
+               subtitle="Range maps on bird profiles, from All About Birds, iNaturalist, BirdLife and others. Some species load slowly or have no map.">
         <div className="flex items-center justify-between gap-4">
           <p className="text-sm text-gray-300">Enable range maps</p>
           <input
@@ -5085,7 +4996,7 @@ export default function SettingsPage({ currentUser } = {}) {
       </ExpCard>
 
       <ExpCard id="heatmap" title="Observation Heatmap" collapsed={expCollapsed} setCollapsed={setExpCollapsed}
-               subtitle="Show an interactive iNaturalist observation heatmap on bird profiles, rendered via Leaflet and the iNaturalist tile API. Requires an internet connection from the client browser. Currently unreliable — tiles may fail to load for some species or regions.">
+               subtitle="A map of iNaturalist sightings on bird profiles. Unreliable for now: some species or regions don't load.">
         <div className="flex items-center justify-between gap-4">
           <p className="text-sm text-gray-300">Enable observation heatmap</p>
           <input
@@ -5126,10 +5037,8 @@ export default function SettingsPage({ currentUser } = {}) {
                   onChange={e => setForm(f => ({ ...f, bat_detection_device_name: e.target.value }))}
                 />
                 <p className="text-xs text-gray-500 mt-1.5">
-                  Substring match against the device name reported by the Pi's audio system. Leave
-                  blank to auto-select whichever connected input device reports the highest native
-                  sample rate.
-                </p>
+Matches part of the mic name the Pi reports. Leave blank to use the input with the highest sample rate.
+</p>
               </div>
             )}
             {form.bat_detection_enabled && (
@@ -5137,9 +5046,8 @@ export default function SettingsPage({ currentUser } = {}) {
                 <div className="px-4 py-3" style={{ background: 'var(--bg-raised)', borderBottom: '1px solid var(--border-subtle)' }}>
                   <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Noise rejection &amp; scheduling</p>
                   <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
-                    Prevents machine noise (lawnmowers, motors) from triggering false bat detections.
-                    Changes are pushed to the device via managed config.
-                  </p>
+Keeps machine noise (lawnmowers, motors) from counting as bats. Sent to the station automatically.
+</p>
                 </div>
                 <div className="p-4 space-y-4">
                   {/* Time-of-day gate */}
@@ -5148,10 +5056,8 @@ export default function SettingsPage({ currentUser } = {}) {
                       Active hours (local time)
                     </p>
                     <p className="text-xs mb-3" style={{ color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
-                      Only record bat activity during this window. Bats in Massachusetts are active from
-                      ~sunset to ~sunrise. Gating out daytime eliminates most false positives from
-                      equipment like lawnmowers. Set 00:00–23:59 to disable gating.
-                    </p>
+Only record bats between these times. Bats fly from about sunset to sunrise, and skipping daytime cuts most false alarms from equipment. 00:00–23:59 records all day.
+</p>
                     <div className="flex items-center gap-3 flex-wrap">
                       <div className="flex items-center gap-2">
                         <label className="text-xs font-medium" style={{ color: 'var(--text-tertiary)' }}>Start</label>
@@ -5179,11 +5085,8 @@ export default function SettingsPage({ currentUser } = {}) {
                       FM sweep filter — min swept fraction
                     </p>
                     <p className="text-xs mb-2" style={{ color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
-                      Bat calls frequency-modulate (sweep) during each pulse. Machine noise
-                      (lawnmowers, motors) produces flat-spectrum bursts with no sweep. At least this
-                      fraction of pulses must show an FM sweep for an event to be logged.
-                      0 = disabled. Recommended: 0.3.
-                    </p>
+Bat calls sweep in pitch during each pulse; machine noise doesn't. This is the share of pulses that must sweep for an event to count. 0 turns it off; 0.3 is recommended.
+</p>
                     <div className="flex items-center gap-3">
                       <input type="number" min={0} max={1} step={0.05} className="input w-24 text-sm"
                         value={form.bat_min_swept_fraction ?? 0.3}
@@ -5199,9 +5102,8 @@ export default function SettingsPage({ currentUser } = {}) {
                       Max pulse rate (pulses/sec)
                     </p>
                     <p className="text-xs mb-2" style={{ color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
-                      Bats call 5–30 times/second. Continuous noise sources (motors, fans) produce
-                      far higher apparent pulse rates. Events with a higher pulse rate are suppressed.
-                    </p>
+Bats call 5–30 times a second; motors and fans look much faster. Events above this rate are dropped.
+</p>
                     <div className="flex items-center gap-3">
                       <input type="number" min={10} max={300} step={5} className="input w-24 text-sm"
                         value={form.bat_max_pulse_rate ?? 60}
@@ -5216,13 +5118,8 @@ export default function SettingsPage({ currentUser } = {}) {
                           Discard likely electrical/mechanical interference
                         </p>
                         <p className="text-xs" style={{ color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
-                          Off by default — flagged recordings (an unusually regular timing pattern,
-                          a common signature of electrical noise rather than a bat) still get
-                          saved, just marked. Turning this on drops them before they're ever saved
-                          instead. a bat pass is never expected to trip this, but if it ever
-                          did, there'd be no way to recover it afterward — leave off unless flagged
-                          noise is genuinely cluttering your recordings.
-                        </p>
+Off (default): recordings with a very regular timing pattern, usually electrical noise, are saved and flagged. On: they're dropped before saving and can't be recovered. A bat pass shouldn't trip this, but leave it off unless flagged noise is cluttering your recordings.
+</p>
                       </div>
                       <input type="checkbox"
                         checked={form.bat_discard_likely_interference ?? false}
@@ -5237,18 +5134,8 @@ export default function SettingsPage({ currentUser } = {}) {
                           Auto-generate wobble-removed audio (experimental)
                         </p>
                         <p className="text-xs" style={{ color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
-                          Off by default. When on, every new bat recording gets a
-                          wobble-attenuated version pre-generated in the background — a per-frame
-                          adaptive notch targeting the persistent AudioMoth/fan interference ridge.
-                          Combinable with the Enhanced audio toggle, not a replacement for it. This
-                          doesn't change what plays by default; it's still a manual choice per
-                          recording, this setting only controls whether it's ready instantly or
-                          generated on first request. Modest, not dramatic, on recordings —
-                          roughly 11dB of reduction in testing against a clip (vs. ~24dB
-                          on an idealized synthetic signal) — and can occasionally clip a 
-                          call if its frequency briefly overlaps the tracked interference band in
-                          the same instant.
-                        </p>
+Off by default. On: each new bat recording also gets a version with the AudioMoth/fan whine reduced, made in the background so it plays instantly. You still pick it per recording, and it works with Enhanced audio. Expect about 11 dB less whine; a call that crosses the whine's pitch can be clipped.
+</p>
                       </div>
                       <input type="checkbox"
                         checked={form.bat_auto_remove_wobble ?? false}
@@ -5266,20 +5153,8 @@ export default function SettingsPage({ currentUser } = {}) {
                     Identify bat species
                   </p>
                   <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
-                    Attempts to identify the species (Little brown bat, Big brown bat, etc.)
-                    instead of just generic "Bat" activity, using a classifier trained on the NABat
-                    (North American Bat Monitoring Program) dataset for species relevant to the
-                    northeastern US. <strong>Limitation found during testing, not just a
-                    theoretical caveat:</strong> on pure silence, the classifier confidently reported
-                    a specific species at 97% confidence instead of recognizing silence — the same
-                    false-positive pattern documented in peer-reviewed literature on automated bat
-                    classifiers generally, especially among acoustically similar species. A species
-                    only ever gets asserted (as the detection's name, in the Field Guide, Life List,
-                    and iNaturalist submissions) when it clears the confidence threshold below AND
-                    is more likely than the classifier's own noise/cricket/silence categories —
-                    otherwise the recording stays generic "Bat," and the raw guess is kept for your
-                    own reference but never asserted anywhere.
-                  </p>
+Tries to name the bat species (Little brown bat, Big brown bat…) with a classifier trained on NABat data for the Northeast. It can be confidently wrong: in testing it named a species at 97% on silence. So a species is only shown, including in the Field Guide, Life List and iNaturalist submissions, when it clears the threshold below and beats the classifier's noise, cricket and silence scores. Otherwise the recording stays "Bat" and the guess is saved but not shown.
+</p>
                 </div>
                 <div className="p-4 space-y-4">
                   <div className="flex items-center justify-between gap-4">
@@ -5292,7 +5167,7 @@ export default function SettingsPage({ currentUser } = {}) {
                   </div>
                   {form.bat_species_id_enabled && (
                     <Slider label="Minimum confidence to assert a species"
-                            hint="Below this, a recording stays labeled generic 'Bat' — the raw guess is still saved for reference, just never asserted anywhere as an identification."
+                            hint="Below this the recording stays “Bat”; the guess is saved but not shown."
                             min={0.5} max={0.99} step={0.01}
                             value={form.bat_species_id_min_confidence ?? 0.75}
                             onChange={set('bat_species_id_min_confidence')}
@@ -5316,7 +5191,7 @@ export default function SettingsPage({ currentUser } = {}) {
       </ExpCard>
 
       <ExpCard id="ai" title="AI Features" collapsed={expCollapsed} setCollapsed={setExpCollapsed}
-               subtitle="Daily Journal, Bird Profile presence summaries, and Call Re-analysis — each independently assignable to Anthropic, OpenAI, Gemini, or a self-hosted Ollama server, or turned off entirely. Every feature here is off by default and stays fully hidden from the rest of the app until you assign it a provider below.">
+               subtitle="Daily and Weekly Journal, Bird Profile summaries and AI Second Opinion. Pick Anthropic, OpenAI, Gemini or Ollama for each, or leave it off; a feature without a provider stays hidden.">
         <AiSettingsPanel form={form} setForm={setForm} settings={settings}/>
 
         {/* AI Enhance (Experimental) — a local neural-network model, not
@@ -5327,16 +5202,8 @@ export default function SettingsPage({ currentUser } = {}) {
             <div>
               <p className="text-sm font-medium text-gray-200">AI Enhance (Experimental)</p>
               <p className="text-xs text-gray-500 mt-1 max-w-2xl">
-                Neural-network denoising for bird recordings/clips — a separate, independent
-                alternative to the classical Enhanced/Rumble removed toggles, using a pretrained
-                model (biodenoising, Earth Species Project) that isolates the call and boosts its
-                level relative to the background. Runs locally on this server, not a cloud
-                provider — no API key needed. Requires <code>torch</code>/<code>torchaudio</code>
-                (not installed by default — several hundred MB; see requirements.txt) and
-                downloads a ~75MB model on first use. Real limitation: the model runs at 16kHz, so
-                content above 8kHz is lost in the denoised result — for high-pitched callers, the
-                classical toggles preserve full bandwidth. Bird recordings only.
-              </p>
+Neural denoising for bird recordings and clips (biodenoising, Earth Species Project): isolates the call and lowers the background. An alternative to Enhanced and Rumble removed. Runs on this server with no API key, but needs <code>torch</code>/<code>torchaudio</code> (several hundred MB, not installed by default) and downloads a 75 MB model on first use. It works at 16 kHz, so sound above 8 kHz is lost; for high-pitched birds use Enhanced instead.
+</p>
             </div>
             <input type="checkbox"
               checked={form.ai_enhance_enabled ?? false}
@@ -5349,10 +5216,8 @@ export default function SettingsPage({ currentUser } = {}) {
               <div>
                 <p className="text-xs font-medium text-gray-300">Default to AI Enhance for new bird recordings</p>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Still a real toggle on each recording either way — this only changes which
-                  playback mode a recording opens in by default, same as Rumble Removal's own
-                  "Auto" default above.
-                </p>
+Each recording keeps its toggle either way; this only sets which mode playback starts in, like Rumble Removal's "Auto".
+</p>
               </div>
               <input type="checkbox"
                 checked={form.ai_enhance_auto_apply ?? false}
@@ -5625,9 +5490,8 @@ export default function SettingsPage({ currentUser } = {}) {
                       {vacuumError && <span className="text-xs" style={{ color: '#f87171' }}>{vacuumError}</span>}
                     </div>
                     <p className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>
-                      Reclaims space left behind by deletes/archives. Locks the database for the full rewrite —
-                      for a large database this can take a while, so run it during low-traffic hours.
-                    </p>
+Reclaims space left by deletes and archives. The database is locked until it finishes, which can take a while on a big database, so run it when the site is quiet.
+</p>
                     <div className="flex items-center gap-2 py-1">
                       <button onClick={runQueryPlan} disabled={queryPlanRunning}
                               className="px-3 py-1.5 rounded-lg text-xs font-semibold"
@@ -5637,9 +5501,8 @@ export default function SettingsPage({ currentUser } = {}) {
                       {queryPlanError && <span className="text-xs" style={{ color: '#f87171' }}>{queryPlanError}</span>}
                     </div>
                     <p className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>
-                      Checks whether the app's heaviest queries are using an index or scanning the whole
-                      table — the concrete way to tell if database size is actually slowing anything down.
-                    </p>
+Checks whether the slowest queries use an index or scan the whole table, to tell whether database size is slowing things down.
+</p>
                     {queryPlanResult && (
                       <div className="rounded-lg p-2 mt-1 space-y-1.5" style={{ background: 'var(--bg-panel)' }}>
                         <p className="text-xs font-medium" style={{ color: queryPlanResult.checks.some(c => c.concern) ? '#fbbf24' : '#4ade80' }}>
