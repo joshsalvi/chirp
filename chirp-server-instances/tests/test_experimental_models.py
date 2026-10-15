@@ -229,6 +229,55 @@ def test_server_pass_shadow_then_main(monkeypatch, tmp_path):
     db.commit(); db.close()
 
 
+
+@pytest.mark.skipif(not os.environ.get("CHIRP_TEST_BN3_DIR") or not os.environ.get("CHIRP_TEST_BIRD_WAV"),
+                    reason="BirdNET v3 model not available")
+def test_reanalyze_uses_birdnet3(monkeypatch, tmp_path):
+    """Reanalyze (_process_manual_upload) runs the comparison pass, and
+    BirdNET v3 itself in main mode."""
+    pytest.importorskip("birdnetlib")
+    import shutil
+    from app.config import settings
+    from app.api.recordings import _process_manual_upload
+    from app.models import AppSettings, Detection, ReanalysisRun, Recording, ShadowDetection
+    monkeypatch.setattr(settings, "ai_models_dir", os.environ["CHIRP_TEST_BN3_DIR"])
+    db = _db()
+    rid = "rec-bn3-reanalyze"
+    for M in (ShadowDetection, Detection, ReanalysisRun):
+        db.query(M).filter(M.recording_id == rid).delete()
+    db.query(Recording).filter(Recording.id == rid).delete(); db.commit()
+    wav = str(tmp_path / "r.wav")
+    shutil.copy(os.environ["CHIRP_TEST_BIRD_WAV"], wav)
+    db.add(Recording(id=rid, filename="r.wav", wav_path=wav,
+                     trigger_timestamp=datetime.datetime(2017, 5, 13, 12), latitude=42.48, longitude=-76.45,
+                     duration_seconds=60, sample_rate=32000, channels=1, pre_roll_seconds=0, device_count=1,
+                     processing_status="pending"))
+    s = db.query(AppSettings).filter(AppSettings.id == 1).first() or AppSettings(id=1)
+    s.exp_birdnet3_shadow, s.exp_birdnet3_main, s.exp_birdnet3_min_conf = True, False, 0.5
+    db.merge(s); db.commit()
+
+    _process_manual_upload(rid)                                     # compare mode
+    db.expire_all()
+    rec = db.query(Recording).filter(Recording.id == rid).first()
+    shadow = db.query(ShadowDetection).filter(ShadowDetection.recording_id == rid).all()
+    assert rec.shadow_checked_at is not None and shadow
+    n24 = len(rec.detections)
+
+    s = db.query(AppSettings).filter(AppSettings.id == 1).first(); s.exp_birdnet3_main = True; db.commit()
+    run = ReanalysisRun(recording_id=rid, before=[]); db.add(run); db.commit()
+    db.query(Detection).filter(Detection.recording_id == rid, Detection.source == "server").delete(); db.commit()
+    _process_manual_upload(rid, run_id=run.id)                      # main mode
+    db.expire_all()
+    rec = db.query(Recording).filter(Recording.id == rid).first()
+    names = {d.common_name for d in rec.detections if d.source == "server"}
+    assert names == {x.common_name for x in shadow}
+    assert all(d.confidence >= 0.5 for d in rec.detections if d.source == "server")
+    assert "BirdNET v3" in (db.query(ReanalysisRun).filter(ReanalysisRun.id == run.id).first().summary or "")
+    print("reanalyze BirdNET 2.4:", n24, "| BirdNET v3:", sorted(names))
+    s = db.query(AppSettings).filter(AppSettings.id == 1).first(); s.exp_birdnet3_main = s.exp_birdnet3_shadow = False
+    db.delete(db.query(Recording).filter(Recording.id == rid).first())
+    db.commit(); db.close()
+
 def test_nighthawk_display_names():
     nh = pytest.importorskip("app.services.nighthawk_service")
     try:

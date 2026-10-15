@@ -1,3 +1,10 @@
+## 0.5.13.c — 2026-10-15 — BUGFIX — Re-analyze with BirdNET v3, Tailscale on Unraid
+
+- Re-analyze runs BirdNET v3 when it's on, both to compare and as the main model.
+- AI Second Opinion no longer fails when Re-analyze replaces the detections mid-run.
+- Tailscale socket moved off the Unraid share; the hourly mover broke it every hour.
+- tailscaled gets a state directory (stops the tailnet-lock log spam) and its log is trimmed past 20 MB.
+
 ## 0.5.13.b — 2026-10-15 — ENHANCEMENT — Station offline alert delay
 
 - Station offline alerts wait 15 minutes by default; set the delay in Settings → Alerts & Email.

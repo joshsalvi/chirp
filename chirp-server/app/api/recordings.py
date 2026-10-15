@@ -3930,6 +3930,7 @@ def _process_manual_upload(rec_id: str, label: Optional[str] = None, use_ai_enha
         # ── Step 2: Run BirdNET on the normalized file ────────────────────────
         detections_raw = []
         analysis_error = None
+        used_bn3 = False
         try:
             from datetime import date as dt_date
 
@@ -3950,25 +3951,49 @@ def _process_manual_upload(rec_id: str, label: Optional[str] = None, use_ai_enha
             logger.info("BirdNET analysis: min_conf=%.2f overlap=%.1f sensitivity=%.1f for %s",
                         birdnet_min_conf, birdnet_overlap, birdnet_sensitivity, rec_id)
 
-            raw = _run_birdnet_pass(
-                analysis_wav, lat=rec_lat, lon=rec_lon,
-                when=rec.trigger_timestamp.date() if rec.trigger_timestamp else dt_date.today(),
-                min_conf=birdnet_min_conf, sensitivity=birdnet_sensitivity, overlap=birdnet_overlap,
-                # Earlier server results came from the original WAV; keep the
-                # ones compression or AI Enhance nudged just under threshold.
-                prior=prior if (use_ai_enhance or rec.wav_path.lower().endswith(_LOSSY_EXTS)) else None,
-                diag=_diag, **_bn_rules(app_s_bn))
-            if analysis_source != rec.wav_path:
-                # AI Enhance can erase calls (a Tufted Titmouse went from 0.36
-                # to 0.07), so the enhanced pass only adds: the original audio
-                # is scored too and each species/window keeps its higher score.
-                raw = _merge_with_original_pass(
-                    raw, rec.wav_path, _diag, lat=rec_lat, lon=rec_lon,
-                    when=rec.trigger_timestamp.date() if rec.trigger_timestamp else dt_date.today(),
-                    min_conf=birdnet_min_conf, sensitivity=birdnet_sensitivity,
-                    overlap=birdnet_overlap, rec_id=rec_id, rules=_bn_rules(app_s_bn))
-            logger.info("BirdNET returned %d detections for %s", len(raw), rec_id)
-            _store_near_misses(db, rec_id, _diag, raw)
+            rec_when = rec.trigger_timestamp.date() if rec.trigger_timestamp else dt_date.today()
+            raw = None
+            if _bn3_main(app_s_bn):
+                # Settings → Experimental: BirdNET v3 as the main model, as in
+                # _run_server_birdnet. With AI Enhance, the original is scored
+                # too and each species/window keeps its higher score.
+                try:
+                    from ..services import birdnet3
+                    bn3_conf = float(min_conf_override) if min_conf_override is not None \
+                        else float(getattr(app_s_bn, "exp_birdnet3_min_conf", None) or birdnet3.DEFAULT_MIN_CONF)
+                    best = {}
+                    for src in dict.fromkeys([analysis_source, rec.wav_path]):
+                        for d in birdnet3.analyze(src, lat=rec_lat, lon=rec_lon, when=rec_when, min_conf=bn3_conf):
+                            k = (d["label"], round(float(d["start_time"]), 1))
+                            if k not in best or d["confidence"] > best[k]["confidence"]:
+                                best[k] = d
+                    raw = sorted(best.values(), key=lambda d: (d["start_time"], -d["confidence"]))
+                    birdnet_min_conf = bn3_conf
+                    used_bn3 = True
+                    logger.info("BirdNET v3 (main) returned %d detections for %s", len(raw), rec_id)
+                except Exception as e:
+                    logger.warning("BirdNET v3 unavailable for %s (%s) — using BirdNET 2.4", rec_id, e)
+                    raw = None
+            if raw is None:
+                raw = _run_birdnet_pass(
+                    analysis_wav, lat=rec_lat, lon=rec_lon, when=rec_when,
+                    min_conf=birdnet_min_conf, sensitivity=birdnet_sensitivity, overlap=birdnet_overlap,
+                    # Earlier server results came from the original WAV; keep the
+                    # ones compression or AI Enhance nudged just under threshold.
+                    prior=prior if (use_ai_enhance or rec.wav_path.lower().endswith(_LOSSY_EXTS)) else None,
+                    diag=_diag, **_bn_rules(app_s_bn))
+                if analysis_source != rec.wav_path:
+                    # AI Enhance can erase calls (a Tufted Titmouse went from 0.36
+                    # to 0.07), so the enhanced pass only adds: the original audio
+                    # is scored too and each species/window keeps its higher score.
+                    raw = _merge_with_original_pass(
+                        raw, rec.wav_path, _diag, lat=rec_lat, lon=rec_lon, when=rec_when,
+                        min_conf=birdnet_min_conf, sensitivity=birdnet_sensitivity,
+                        overlap=birdnet_overlap, rec_id=rec_id, rules=_bn_rules(app_s_bn))
+                logger.info("BirdNET returned %d detections for %s", len(raw), rec_id)
+                _store_near_misses(db, rec_id, _diag, raw)
+                if _bn3_shadow(app_s_bn) and not rec.is_live_detect_clip:
+                    _store_shadow(db, rec_id, rec.wav_path, rec_lat, rec_lon, rec_when, app_s_bn)
             _drop_superseded_device_detections(db, rec_id, raw)
 
             for det in raw:
@@ -4038,7 +4063,8 @@ def _process_manual_upload(rec_id: str, label: Optional[str] = None, use_ai_enha
                 n = {k: sum(1 for c in _changes if c["change"] == k) for k in ("added", "removed", "hidden")}
                 _run.summary = (f"BirdNET error: {analysis_error}"[:250] if analysis_error else
                                 f"{n['added']} added, {n['removed']} removed, {n['hidden']} now hidden"
-                                + (" (AI-Enhanced + original)" if use_ai_enhance else ""))
+                                + (" (AI-Enhanced + original)" if use_ai_enhance else "")
+                                + (" (BirdNET v3)" if used_bn3 else ""))
                 db.commit()
 
         # ── Step 4: Spectrogram + clips ──────────────────────────────────────

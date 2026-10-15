@@ -1198,6 +1198,16 @@ def _survey_empty_recording(db, recording, hidden, proc, provider, api_key) -> s
     return _ensure_background_reported(text, bg)
 
 
+def _snapshot(rows) -> list:
+    """Plain copies of Detection rows. The model call takes 10-30 s, and a
+    Reanalyze in that time replaces the server detections; reading a deleted
+    row afterwards raised "Instance <Detection> has been deleted"."""
+    from types import SimpleNamespace
+    from ..models import Detection
+    cols = [c.key for c in Detection.__table__.columns]
+    return [SimpleNamespace(**{k: getattr(r, k) for k in cols}) for r in rows]
+
+
 def reanalyze_call(db, recording) -> None:
     """
     Generates a second-opinion note for one Recording and stores it, or
@@ -1236,7 +1246,7 @@ def reanalyze_call(db, recording) -> None:
         app_s = db.query(AppSettings).filter(AppSettings.id == 1).first()
         display_min_conf = float(getattr(app_s, "min_confidence_display", 0.0) or 0.0) if app_s else 0.0
 
-        detections = (
+        detections = _snapshot(
             db.query(Detection)
             .filter(Detection.recording_id == recording.id)
             .filter(Detection.confidence >= display_min_conf)
@@ -1255,10 +1265,10 @@ def reanalyze_call(db, recording) -> None:
         top = detections[0] if detections else None
         if top is None:
             # Nothing shown: survey the whole recording for birds instead.
-            hidden = (db.query(Detection)
-                      .filter(Detection.recording_id == recording.id)
-                      .filter(Detection.confidence < display_min_conf)
-                      .order_by(Detection.confidence.desc()).all())
+            hidden = _snapshot(db.query(Detection)
+                               .filter(Detection.recording_id == recording.id)
+                               .filter(Detection.confidence < display_min_conf)
+                               .order_by(Detection.confidence.desc()).all())
             text = _survey_empty_recording(db, recording, hidden, proc, provider, api_key)
         elif recording.is_bat:
             text = _reanalyze_bat_call(db, recording, top, proc, provider, api_key)

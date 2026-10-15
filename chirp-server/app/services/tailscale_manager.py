@@ -238,7 +238,7 @@ class TailscaleManager:
         permission issue, a stale lock from a previous crash, etc.)
         used to fail completely silently.
         """
-        state_dir = "/app/data/.tailscale"
+        state_dir = self._STATE_DIR
         socket_path = self._TAILSCALE_SOCKET
         if self._daemon_proc is not None and self._daemon_proc.poll() is None:
             return  # already launched and still alive — nothing to do
@@ -257,6 +257,7 @@ class TailscaleManager:
         except OSError:
             pass
         os.makedirs(state_dir, exist_ok=True)
+        os.makedirs(os.path.dirname(socket_path), exist_ok=True)
         tailscaled = shutil.which("tailscaled")
         if not tailscaled:
             logger.warning("tailscaled binary not found alongside tailscale — was the image built from the current Dockerfile?")
@@ -271,6 +272,9 @@ class TailscaleManager:
         cmd = [
             tailscaled,
             f"--state={state_dir}/tailscaled.state",
+            # Without a state directory tailscaled logs "cannot fetch existing
+            # TKA state" on every status call (665k lines, most of an 832 MB log).
+            f"--statedir={state_dir}",
             f"--socket={socket_path}",
             # Local proxies so the server can reach devices' Tailscale IPs
             # even in userspace mode (no tailscale0 route); see device_net.py.
@@ -281,7 +285,8 @@ class TailscaleManager:
             cmd.append(f"--tun={tun_mode}")
             if not force_userspace:
                 logger.warning("/dev/net/tun not available — falling back to userspace networking (slower, but functional). Check docker-compose.yml's devices: entry if this is unexpected.")
-        log_path = f"{state_dir}/tailscaled.log"
+        log_path = self._LOG_PATH
+        self._trim_log(log_path)
         try:
             log_f = open(log_path, "ab")
             self._daemon_proc = subprocess.Popen(cmd, stdout=log_f, stderr=log_f)
@@ -328,7 +333,35 @@ class TailscaleManager:
         if tail:
             logger.warning("tailscaled's own recent log:\n%s", tail)
 
-    _TAILSCALE_SOCKET = "/app/data/.tailscale/tailscaled.sock"
+    _STATE_DIR = "/app/data/.tailscale"
+    _LOG_PATH = "/app/data/.tailscale/tailscaled.log"
+    # The socket lives inside the container, not under /app/data: on Unraid
+    # /app/data is a user share, and the hourly mover moved the socket file
+    # to the array, leaving a socket with no listener ("connection refused"
+    # at 10:01 and 11:01 right after each mover run).
+    _TAILSCALE_SOCKET = "/tmp/chirp-tailscale/tailscaled.sock"
+    _LOG_MAX_BYTES = 20_000_000
+    _LOG_KEEP_BYTES = 2_000_000
+
+    @classmethod
+    def _trim_log(cls, log_path: str) -> None:
+        """Keep the daemon log bounded: past _LOG_MAX_BYTES keep the tail."""
+        try:
+            size = os.path.getsize(log_path)
+        except OSError:
+            return
+        if size <= cls._LOG_MAX_BYTES:
+            return
+        try:
+            with open(log_path, "rb") as f:
+                f.seek(size - cls._LOG_KEEP_BYTES)
+                tail = f.read()
+            tail = tail[tail.find(b"\n") + 1:]
+            with open(log_path, "wb") as f:
+                f.write(b"[log trimmed by Chirp]\n" + tail)
+            logger.info("Trimmed tailscaled.log from %.0f MB to %.1f MB", size / 1e6, len(tail) / 1e6)
+        except OSError as e:
+            logger.warning("Could not trim tailscaled.log: %s", e)
 
     def _socket_responds(self) -> bool:
         """The daemon's local API socket exists and accepts a connection."""
@@ -374,7 +407,7 @@ class TailscaleManager:
                     # proxy ports, so every later start fails). The next
                     # _ensure_daemon_running() stops it and starts clean.
                     self._daemon_proc = None
-                    self._log_daemon_tail("/app/data/.tailscale/tailscaled.log")
+                    self._log_daemon_tail(self._LOG_PATH)
             else:
                 logger.info("tailscale up succeeded")
         except subprocess.TimeoutExpired:
@@ -387,7 +420,7 @@ class TailscaleManager:
             # on DERP, a slow/blocked path to login_server, something
             # about the auth key) — surfaced here since this is exactly
             # the moment that log actually has something useful in it.
-            self._log_daemon_tail("/app/data/.tailscale/tailscaled.log", lines=25)
+            self._log_daemon_tail(self._LOG_PATH, lines=25)
         except Exception as e:
             logger.warning("tailscale up raised an exception: %s", e)
 
