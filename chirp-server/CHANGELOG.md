@@ -1,3 +1,10 @@
+## 0.5.13.e — 2026-10-16 — BUGFIX — Night Calls playback and labels
+
+- Play works: a page of thumbnails no longer uses up the database connections; clips play as WAV.
+- Spectrograms are made when a call is found, not when the page opens.
+- Sound-alike groups are named for what they could be ("Swamp or Lincoln's Sparrow", "Warbler, one of 13") and list every species.
+- Calls only placed as "songbird" are hidden behind a button; a "How sure is each call?" key explains each level.
+
 ## 0.5.13.d — 2026-10-15 — ENHANCEMENT — Clearer Settings text
 
 - Empty Recordings: plain names for the two counts ("show nothing", "nothing from the server") and both delete buttons.

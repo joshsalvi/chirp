@@ -814,7 +814,7 @@ export const api = {
     status: () => request('/night-calls/status'),
     downloadBirdnet3: () => request('/night-calls/birdnet3/download', { method: 'POST' }),
     nights: () => request('/night-calls/nights'),
-    list: (night) => request(`/night-calls?night=${encodeURIComponent(night)}`),
+    list: (night, includeUnnarrowed = false) => request(`/night-calls?night=${encodeURIComponent(night)}${includeUnnarrowed ? '&include_unnarrowed=true' : ''}`),
     remove: (id) => request(`/night-calls/${id}`, { method: 'DELETE' }),
   },
   batActivity: {

@@ -69,6 +69,9 @@ def _fake_dets():
         {"start_sec": 5.0, "end_sec": 5.3, "order": "Passeriformes", "prob_order": 0.98, "family": "Parulidae",
          "prob_family": 0.95, "group": "ZEEP", "prob_group": 0.88, "species": float("nan"), "prob_species": float("nan"),
          "predicted_category": "ZEEP", "prob": 0.88},
+        {"start_sec": 7.0, "end_sec": 7.2, "order": "Passeriformes", "prob_order": 0.93, "family": float("nan"),
+         "prob_family": float("nan"), "group": float("nan"), "prob_group": float("nan"), "species": float("nan"),
+         "prob_species": float("nan"), "predicted_category": "Passeriformes", "prob": 0.93},
     ]
 
 
@@ -84,7 +87,8 @@ def test_night_upload_and_listing(tmp_path, monkeypatch):
     monkeypatch.setattr(nh, "available", lambda: None)
     monkeypatch.setattr(nh, "detect", lambda path, threshold=80: _fake_dets())
     monkeypatch.setattr(nh, "taxonomy", lambda: {"species": {"amered": ("American Redstart", "Setophaga ruticilla", "Parulidae")},
-                                                 "groups": {"ZEEP": ["Blackpoll Warbler", "Bay-breasted Warbler"]}})
+                                                 "groups": {"ZEEP": ["Blackpoll Warbler", "Bay-breasted Warbler"]},
+                                                 "families": {"Parulidae": "New World Warblers"}})
     db = _db()
     s = db.query(AppSettings).filter(AppSettings.id == 1).first() or AppSettings(id=1)
     s.device_api_keys = [{"id": "k1", "key": "night-key"}]
@@ -110,17 +114,26 @@ def test_night_upload_and_listing(tmp_path, monkeypatch):
     cid = r.json()["chunk_id"]
     db.expire_all()
     ch = db.query(NightChunk).filter(NightChunk.id == cid).first()
-    assert ch.status == "done" and ch.calls == 2 and ch.path is None
+    assert ch.status == "done" and ch.calls == 3 and ch.path is None
     assert not list((tmp_path / "night_audio").iterdir())           # chunk audio deleted
-    calls = c.get("/api/v1/night-calls", params={"night": "2026-09-19"}).json()["calls"]
+    listing = c.get("/api/v1/night-calls", params={"night": "2026-09-19"}).json()
+    calls = listing["calls"]
+    assert listing["unnarrowed"] == 1 and {x["level"] for x in calls} == {"species", "group"}   # "Songbird" hidden
+    every = c.get("/api/v1/night-calls", params={"night": "2026-09-19", "include_unnarrowed": True}).json()["calls"]
+    assert {x["name"] for x in every if x["level"] == "order"} == {"Songbird"}
     by = {x["level"]: x for x in calls}
-    assert by["species"]["name"] == "American Redstart"
-    assert by["group"]["name"] == "ZEEP group" and by["group"]["group_members"][0] == "Blackpoll Warbler"
+    assert by["species"]["name"] == "American Redstart" and by["species"]["family_name"] == "New World Warblers"
+    assert by["group"]["name"] == "Blackpoll or Bay-breasted Warbler" and by["group"]["level_label"] == "Sound-alike group"
+    assert by["group"]["group_members"] == ["Blackpoll Warbler", "Bay-breasted Warbler"]
+    import glob
+    assert len(glob.glob(str(tmp_path / "night_calls" / "*.png"))) == 3                  # spectrograms made up front
     assert by["species"]["detected_at"].startswith("2026-09-20T06:00:02")
     nights = c.get("/api/v1/night-calls/nights").json()["nights"]
-    assert nights[0]["night"] == "2026-09-19" and nights[0]["calls"] >= 2
+    assert nights[0]["night"] == "2026-09-19" and nights[0]["calls"] == 3
+    assert nights[0]["by_level"] == {"species": 1, "group": 1, "order": 1}
+    assert "Songbird" not in {t["name"] for t in nights[0]["top"]}
     a = c.get(f"/api/v1/night-calls/{by['species']['id']}/audio")
-    assert a.status_code == 200 and len(a.content) > 1000
+    assert a.status_code == 200 and a.headers["content-type"] == "audio/wav" and a.content[:4] == b"RIFF"
     assert c.get(f"/api/v1/night-calls/{by['species']['id']}/spectrogram").headers["content-type"] == "image/png"
     st = c.get("/api/v1/night-calls/status").json()
     assert st["nighthawk"]["enabled"] and st["nighthawk"]["calls"] >= 2
@@ -285,6 +298,8 @@ def test_nighthawk_display_names():
     except Exception:
         pytest.skip("nighthawk not installed")
     assert nh.display_name("family", "Parulidae", family="Parulidae") == "New World Warblers"
-    assert nh.display_name("group", "ZEEP") == "ZEEP group"
+    assert nh.display_name("group", "ZEEP") == "Warbler, one of 13"
+    assert nh.display_name("group", "SWLI") == "Swamp or Lincoln's Sparrow"
+    assert nh.display_name("group", "GCBI") == "Gray-cheeked or Bicknell's Thrush"
     assert nh.display_name("species", "swathr", "Swainson's Thrush") == "Swainson's Thrush"
-    assert nh.display_name("order", "Passeriformes", order="Passeriformes") == "Passeriformes"
+    assert nh.display_name("order", "Passeriformes", order="Passeriformes") == "Songbird"

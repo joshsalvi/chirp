@@ -14,7 +14,7 @@
 // WHATS_NEW.version must match the VERSION file (stamp-sw-version.mjs
 // checks it). Set `popup` to the new version when `latest` changes.
 export const WHATS_NEW = {
-  version: '0.5.13.d',
+  version: '0.5.13.e',
   // The release whose `latest` text this is. The popup shows once per value,
   // so small fixes that don't change `latest` don't bring it back.
   popup: '0.5.13.a',
@@ -37,6 +37,7 @@ export const WHATS_NEW = {
     ],
   },
   recent: [
+    { version: '0.5.13.e', summary: 'Night Calls: playback fixed and plainer names for each call.' },
     { version: '0.5.13.d', summary: 'Clearer Settings descriptions, including Empty Recordings.' },
     { version: '0.5.13.b', summary: 'Station offline alerts wait 15 minutes by default; the delay is in Settings.' },
     { version: '0.5.13.a', summary: 'BirdNET v3 and night flight calls in Settings → Experimental; delete confirmations.' },

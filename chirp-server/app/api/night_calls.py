@@ -7,6 +7,7 @@ is for the app. Experimental model status lives here too (/status).
 """
 import logging
 import os
+import threading
 import uuid
 from collections import Counter
 from datetime import datetime, timezone
@@ -15,7 +16,7 @@ from typing import Optional
 
 from fastapi import (APIRouter, BackgroundTasks, Depends, File, Form, Header, HTTPException,
                      Query, UploadFile, status)
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sqlalchemy.orm import Session
 
 from ..config import settings
@@ -101,14 +102,14 @@ async def upload_night_audio(
     return {"chunk_id": cid, "status": "queued"}
 
 
-def _call_out(c: FlightCall, groups: dict) -> dict:
-    name = nh.display_name(c.level, c.category, c.common_name, c.family, c.order)
+def _call_out(c: FlightCall) -> dict:
+    d = nh.describe(c.level, c.category, c.common_name, c.family, c.order, c.group)
     return {
         "id": c.id, "detected_at": c.detected_at.isoformat() + "Z", "night": c.night,
-        "level": c.level, "category": c.category, "name": name,
+        "level": c.level, "level_label": d["level_label"], "category": c.category, "name": d["name"],
         "common_name": c.common_name, "scientific_name": c.scientific_name,
-        "family": c.family, "order": c.order, "group": c.group,
-        "group_members": groups.get(c.group or "", [])[:6] if c.level == "group" else None,
+        "family": c.family, "family_name": d["family_name"], "order": c.order, "group": c.group,
+        "group_members": d["members"] if c.level == "group" else None,
         "prob": round(c.prob or 0, 3), "duration": round(c.duration or 0, 2),
         "has_clip": bool(c.clip_path and os.path.exists(c.clip_path)),
     }
@@ -118,32 +119,43 @@ def _call_out(c: FlightCall, groups: dict) -> dict:
 def list_nights(limit: int = Query(60, ge=1, le=366), db: Session = Depends(get_db)):
     """Nights with calls, newest first: counts by name."""
     rows = db.query(FlightCall.night, FlightCall.level, FlightCall.common_name, FlightCall.category,
-                     FlightCall.family, FlightCall.order).all()
+                     FlightCall.family, FlightCall.order, FlightCall.group).all()
     by = {}
-    for night, level, com, cat, fam, order in rows:
-        n = by.setdefault(night, {"night": night, "calls": 0, "names": Counter(), "levels": {}})
+    for night, level, com, cat, fam, order, grp in rows:
+        n = by.setdefault(night, {"night": night, "calls": 0, "names": Counter(), "levels": {},
+                                  "by_level": Counter()})
         n["calls"] += 1
-        name = nh.display_name(level, cat, com, fam, order)
+        n["by_level"][level] += 1
+        if level == "order":          # "Songbird" alone says little; counted, not listed
+            continue
+        name = nh.describe(level, cat, com, fam, order, grp)["name"]
         n["names"][name] += 1
         n["levels"][name] = level
     out = []
     for night in sorted(by, reverse=True)[:limit]:
         n = by[night]
-        out.append({"night": night, "calls": n["calls"],
-                    "top": [{"name": k, "count": v} for k, v in n["names"].most_common(5)],
+        out.append({"night": night, "calls": n["calls"], "by_level": dict(n["by_level"]),
+                    "top": [{"name": k, "count": v, "level": n["levels"][k]}
+                            for k, v in n["names"].most_common(8)],
                     "species": sum(1 for k in n["names"] if n["levels"][k] == "species")})
     return {"nights": out}
 
 
 @router.get("")
-def list_calls(night: Optional[str] = None, limit: int = Query(500, ge=1, le=2000),
+def list_calls(night: Optional[str] = None, include_unnarrowed: bool = False,
+               limit: int = Query(500, ge=1, le=2000), offset: int = Query(0, ge=0),
                db: Session = Depends(get_db)):
+    """Calls for a night, newest first. Order-level calls ("Songbird") are
+    left out unless include_unnarrowed; "unnarrowed" says how many there are."""
     q = db.query(FlightCall)
     if night:
         q = q.filter(FlightCall.night == night)
-    rows = q.order_by(FlightCall.detected_at.desc()).limit(limit).all()
-    groups = nh.taxonomy()["groups"] if not nh.available() else {}
-    return {"calls": [_call_out(c, groups) for c in rows]}
+    unnarrowed = q.filter(FlightCall.level == "order").count()
+    if not include_unnarrowed:
+        q = q.filter(FlightCall.level != "order")
+    total = q.count()
+    rows = q.order_by(FlightCall.detected_at.desc()).offset(offset).limit(limit).all()
+    return {"calls": [_call_out(c) for c in rows], "total": total, "unnarrowed": unnarrowed}
 
 
 @router.get("/status")
@@ -174,43 +186,46 @@ def birdnet3_download():
     return birdnet3.ensure_downloaded()
 
 
+_render_lock = threading.Semaphore(2)    # on-demand spectrograms for older calls
+
+
+def _clip_for(db: Session, call_id: str) -> str:
+    """Clip path for a call; the session is closed before any file work so a
+    page of thumbnails can't use up the connection pool (it did: 1,151 calls
+    on the first night, and Play then timed out waiting for a connection)."""
+    c = db.query(FlightCall.clip_path).filter(FlightCall.id == call_id).first()
+    db.close()
+    if not c or not c[0] or not os.path.exists(c[0]):
+        raise HTTPException(status_code=404, detail="No clip for this call")
+    return c[0]
+
+
 @router.get("/{call_id}/audio")
 def call_audio(call_id: str, db: Session = Depends(get_db)):
-    c = db.query(FlightCall).filter(FlightCall.id == call_id).first()
-    if not c or not c.clip_path or not os.path.exists(c.clip_path):
-        raise HTTPException(status_code=404, detail="No clip for this call")
-    return FileResponse(c.clip_path, media_type="audio/flac", filename=f"flight_call_{c.id[:8]}.flac",
-                        headers={"Cache-Control": "public, max-age=2592000, immutable"})
+    """The clip as WAV: short, and every browser and the iPhone app play it."""
+    import io
+    import soundfile as sf
+    path = _clip_for(db, call_id)
+    y, sr = sf.read(path, dtype="int16", always_2d=False)
+    buf = io.BytesIO()
+    sf.write(buf, y, sr, format="WAV", subtype="PCM_16")
+    return Response(buf.getvalue(), media_type="audio/wav",
+                    headers={"Cache-Control": "public, max-age=2592000, immutable",
+                             "Content-Disposition": f'inline; filename="flight_call_{call_id[:8]}.wav"'})
 
 
 @router.get("/{call_id}/spectrogram")
 def call_spectrogram(call_id: str, db: Session = Depends(get_db)):
-    """Small spectrogram of the clip, made on first request and kept."""
-    c = db.query(FlightCall).filter(FlightCall.id == call_id).first()
-    if not c or not c.clip_path or not os.path.exists(c.clip_path):
-        raise HTTPException(status_code=404, detail="No clip for this call")
-    png = Path(c.clip_path).with_suffix(".png")
-    if not png.exists():
-        _spectrogram(c.clip_path, str(png))
-    return FileResponse(str(png), media_type="image/png",
+    """Small spectrogram of the clip (made when the call was found; older
+    calls get one on first request)."""
+    path = _clip_for(db, call_id)
+    png = nh.spectrogram_path(path)
+    if not os.path.exists(png):
+        with _render_lock:
+            if not os.path.exists(png):
+                nh.render_spectrogram(path, png)
+    return FileResponse(png, media_type="image/png",
                         headers={"Cache-Control": "public, max-age=2592000, immutable"})
-
-
-def _spectrogram(src: str, dest: str):
-    """Flight calls sit at 2–10 kHz: a linear axis to 11 kHz shows them best."""
-    import librosa
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-    import numpy as np
-    y, sr = librosa.load(src, sr=None, mono=True)
-    S = librosa.amplitude_to_db(np.abs(librosa.stft(y, n_fft=512, hop_length=64)), ref=np.max)
-    fig = plt.figure(figsize=(4, 2), dpi=110)
-    ax = fig.add_axes([0, 0, 1, 1])
-    ax.imshow(S, origin="lower", aspect="auto", cmap="magma", vmin=-80, vmax=0,
-              extent=[0, len(y) / sr, 0, sr / 2])
-    ax.set_ylim(0, min(11000, sr / 2)); ax.axis("off")
-    fig.savefig(dest); plt.close(fig)
 
 
 @router.delete("/{call_id}")

@@ -83,23 +83,90 @@ def taxonomy() -> dict:
     return _tax
 
 
+ORDER_NAMES = {
+    "Passeriformes": "Songbird",
+    "Charadriiformes": "Shorebird",
+    "Pelecaniformes": "Heron or egret",
+    "Cuculiformes": "Cuckoo",
+}
+LEVEL_LABELS = {
+    "species": "Species",
+    "group": "Sound-alike group",
+    "family": "Family only",
+    "order": "Not narrowed down",
+}
+
+
+def _group_name(members: list, code: str) -> str:
+    """Two members: "Swamp or Lincoln's Sparrow". More: "Warbler, one of 13"
+    (the word most members' names end in)."""
+    if len(members) == 2:
+        a, b = members
+        la, lb = a.rsplit(" ", 1), b.rsplit(" ", 1)
+        if len(la) == 2 and len(lb) == 2 and la[1] == lb[1]:
+            return f"{la[0]} or {lb[0]} {la[1]}"
+        return f"{a} or {b}"
+    if not members:
+        return f"{code} group"
+    from collections import Counter
+    kind = Counter(m.rsplit(" ", 1)[-1] for m in members).most_common(1)[0][0]
+    return f"{kind}, one of {len(members)}"
+
+
+def describe(level: str, category: str, common: Optional[str] = None,
+             family: Optional[str] = None, order: Optional[str] = None,
+             group: Optional[str] = None) -> dict:
+    """What to call a Nighthawk call and how sure it is.
+    name: what the list shows; level_label: how far it got; members: for a
+    sound-alike group, the species it could be."""
+    try:
+        tax = taxonomy()
+    except Exception:
+        tax = {"groups": {}, "families": {}}
+    fam_name = tax["families"].get(family or "", family) if family else None
+    members = tax["groups"].get(group or category, []) if level == "group" else []
+    if common:
+        name = common
+    elif level == "group":
+        name = _group_name(members, category)
+    elif level == "family":
+        name = tax["families"].get(family or category, family or category)
+    elif level == "order":
+        name = ORDER_NAMES.get(order or category, order or category)
+    else:
+        name = category
+    return {"name": name, "level_label": LEVEL_LABELS.get(level, level),
+            "family_name": fam_name, "members": members}
+
+
 def display_name(level: str, category: str, common: Optional[str] = None,
                  family: Optional[str] = None, order: Optional[str] = None) -> str:
-    """Species: common name; group: "ZEEP group"; family: its English name
-    ("New World Warblers"); order: the order."""
-    if common:
-        return common
-    if level == "group":
-        return f"{category} group"
-    if level == "family":
-        fam = family or category
-        try:
-            return taxonomy()["families"].get(fam, fam)
-        except Exception:
-            return fam
-    if level == "order":
-        return order or category
-    return category
+    return describe(level, category, common, family, order, category if level == "group" else None)["name"]
+
+
+def render_spectrogram(src: str, dest: str) -> None:
+    """Small spectrogram for a call clip. Flight calls sit at 2-10 kHz, so a
+    linear axis to 11 kHz. Uses Figure directly (pyplot isn't thread-safe)."""
+    import numpy as np
+    import soundfile as sf
+    from matplotlib.figure import Figure
+    from scipy.signal import stft
+    y, sr = sf.read(src, dtype="float32", always_2d=False)
+    if getattr(y, "ndim", 1) > 1:
+        y = y.mean(axis=1)
+    _, _, Z = stft(y, fs=sr, nperseg=512, noverlap=448)
+    S = 20 * np.log10(np.abs(Z) + 1e-10)
+    S -= S.max()
+    fig = Figure(figsize=(4, 2), dpi=110)
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.imshow(S, origin="lower", aspect="auto", cmap="magma", vmin=-80, vmax=0,
+              extent=[0, len(y) / sr, 0, sr / 2])
+    ax.set_ylim(0, min(11000, sr / 2)); ax.axis("off")
+    fig.savefig(dest)
+
+
+def spectrogram_path(clip_path: str) -> str:
+    return str(Path(clip_path).with_suffix(".png"))
 
 
 def _get_model():
@@ -200,6 +267,11 @@ def process_chunk(chunk_id: str) -> int:
                         _cut_clip(y, sr, start, end, clip)
                     except Exception as e:
                         logger.warning("Night call clip failed: %s", e); clip = None
+                    if clip:
+                        try:   # made now so the list never renders a page of images at once
+                            render_spectrogram(clip, spectrogram_path(clip))
+                        except Exception as e:
+                            logger.warning("Night call spectrogram failed: %s", e)
                     db.add(FlightCall(
                         id=fid, chunk_id=ch.id, device_id=ch.device_id, detected_at=when,
                         night=night_of(when, tz), level=lvl, category=str(d.get("predicted_category")),
