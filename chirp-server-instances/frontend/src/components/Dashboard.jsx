@@ -961,15 +961,15 @@ function LiveDetectionCard({ recordingId }) {
           gives every photo, regardless of its own orientation, a sane,
           predictable crop target. */}
       {/* The panel runs the card's full height (at least square) and the
-          photo fades into the card on its right and bottom edges, so a
-          taller card never shows a hard-edged block above empty space. */}
+          photo softens slightly at its right and bottom edges, so a taller
+          card never shows a hard-edged block above empty space. */}
       <div className="relative flex-shrink-0 self-stretch"
            style={{ width: 'clamp(120px, 30vw, 200px)', minHeight: 'clamp(120px, 30vw, 180px)' }}>
         <div className="absolute inset-0"
              style={{ background: 'linear-gradient(135deg, var(--bg-raised), var(--bg-card))',
-                      WebkitMaskImage: 'linear-gradient(to right, #000 62%, transparent), linear-gradient(to bottom, #000 80%, transparent)',
+                      WebkitMaskImage: 'linear-gradient(to right, #000 82%, rgba(0,0,0,.45)), linear-gradient(to bottom, #000 90%, rgba(0,0,0,.75))',
                       WebkitMaskComposite: 'source-in',
-                      maskImage: 'linear-gradient(to right, #000 62%, transparent), linear-gradient(to bottom, #000 80%, transparent)',
+                      maskImage: 'linear-gradient(to right, #000 82%, rgba(0,0,0,.45)), linear-gradient(to bottom, #000 90%, rgba(0,0,0,.75))',
                       maskComposite: 'intersect' }}>
           {hasPhoto && (
             <img src={mediaUrl(detail.top_species_photo_url)} alt=""
