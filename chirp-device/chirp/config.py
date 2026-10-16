@@ -20,6 +20,7 @@ DEFAULTS: Dict[str, Any] = {
         "channels_per_device": 1,
         "chunk_size": 4800,
         "bit_depth": 16,
+        "hum_filter": "auto",   # hum_filter.py: auto | 60 | 50 | off
         "device_name_hints": ["USB", "Microphone"],
         "device_name_excludes": [],
         "max_devices": 2,

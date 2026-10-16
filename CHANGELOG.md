@@ -1,5 +1,5 @@
-## 0.5.14.d — 2026-10-16 — BUGFIX — Request form choices; Getting Started Back to top
+## 1.4.2 (chirp-device) — 2026-10-16 — FEATURE — Mains hum filter
 
-- About page: the Request access choices show the dot beside the text.
-- Getting Started: Back to top works on phones (the cards no longer shift when tapped).
+- Notches mains hum (60 or 50 Hz and harmonics to 1 kHz, 3 Hz wide) on each mic before detection, recordings and night audio.
+- audio.hum_filter: auto (default; on only when hum stands 10 dB out, rechecked every 5 minutes), 60, 50 or off.
 

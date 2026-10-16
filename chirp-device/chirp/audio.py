@@ -646,6 +646,10 @@ class AudioCapture:
         self._detect_accumulator: np.ndarray = np.array([], dtype=np.float32)
         self._detect_lock = threading.Lock()
 
+        # Mains hum notch per mic (hum_filter.py; audio.hum_filter, default auto)
+        self._hum_mode: str = str(config["audio"].get("hum_filter", "auto")).lower()
+        self._hum_filters: Dict[int, "HumFilter"] = {}
+
         self._merger_thread: Optional[threading.Thread] = None
         self.night_sink = None        # set by BirdWatcher: gets every recording-mix chunk
         self._running = threading.Event()
@@ -1197,6 +1201,13 @@ class AudioCapture:
                     if i == 0:
                         break
                     continue
+                if getattr(self, "_hum_mode", "off") != "off":
+                    hf = self._hum_filters.get(i)
+                    if hf is None:
+                        from .hum_filter import HumFilter
+                        hf = self._hum_filters[i] = HumFilter(
+                            self.sample_rate, self._hum_mode, getattr(stream.device, "name", f"mic {i}"))
+                    got = [hf.process(c) for c in got]
                 chunks_this_round[i] = got[-1]
                 dev_key = stream.device.index if isinstance(stream.device.index, int) else 0
                 with self._raw_lock:

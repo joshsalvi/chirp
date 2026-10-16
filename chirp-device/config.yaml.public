@@ -13,6 +13,10 @@ audio:
                                 # 4800=100ms (may overflow on slow USB); 8192 is safer for USB PnP devices
                                 # Increase to 16384 if you still see 'input overflow' warnings
   bit_depth: 16                 # bits per sample for WAV output
+  # Mains hum filter: notches the mains frequency and its harmonics up to
+  # 1 kHz (60, 120, 180… Hz). "auto" turns on only when hum is found
+  # (checked every 5 minutes); "60" or "50" forces it; "off" disables.
+  hum_filter: "auto"
 
   # Substring matches to identify USB microphones. Every matched device gets
   # opened as its own stream (resampled to sample_rate above if its native
