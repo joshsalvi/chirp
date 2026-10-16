@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<link rel="icon" href="favicon.ico?v=0.5.14.c" sizes="16x16 32x32 48x48">
-<link rel="icon" href="favicon.svg?v=0.5.14.c" type="image/svg+xml">
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=0.5.14.c">
+<link rel="icon" href="favicon.ico?v=0.5.14.d" sizes="16x16 32x32 48x48">
+<link rel="icon" href="favicon.svg?v=0.5.14.d" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=0.5.14.d">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Chirp — Know every bird in your yard</title>
 <meta name="description" content="Chirp listens to your yard around the clock, identifies every bird call with BirdNET, and keeps a playable record of who visits — on your own server.">
@@ -145,11 +145,18 @@
   form.req input, form.req textarea { width: 100%; box-sizing: border-box; margin-top: 5px; padding: 11px 13px; border-radius: 12px;
           border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: 16px var(--sans); }
   form.req textarea { min-height: 76px; resize: vertical; }
-  .kind { display: flex; gap: 10px; flex-wrap: wrap; }
-  .kind label { margin: 0; display: flex; gap: 8px; align-items: center; border: 1px solid var(--line); border-radius: 999px;
-          padding: 9px 15px; color: var(--ink); font-size: 15px; cursor: pointer; }
-  .kind input { width: auto; margin: 0; accent-color: var(--amber); }
-  .kind label:has(input:checked) { border-color: var(--amber); background: rgba(251,191,36,.08); }
+  /* form.req label/input rules would otherwise stack the dot over the text. */
+  form.req .kind { display: flex; gap: 10px; flex-wrap: wrap; }
+  form.req .kind label { margin: 0; display: inline-flex; gap: 10px; align-items: center; border: 1px solid var(--line);
+          border-radius: 999px; padding: 10px 18px 10px 14px; color: var(--ink2); font-size: 15px; line-height: 1.2; cursor: pointer; }
+  form.req .kind input { appearance: none; -webkit-appearance: none; flex: none; width: 18px; height: 18px; margin: 0; padding: 0;
+          border-radius: 50%; border: 2px solid var(--ink3); background: transparent; display: grid; place-content: center; cursor: pointer; }
+  form.req .kind input::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--amber); transform: scale(0); transition: transform .12s; }
+  form.req .kind input:checked { border-color: var(--amber); }
+  form.req .kind input:checked::before { transform: scale(1); }
+  form.req .kind input:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+  form.req .kind label:has(input:checked) { border-color: var(--amber); background: rgba(251,191,36,.08); color: var(--ink); }
+  @media (prefers-reduced-motion: reduce) { form.req .kind input::before { transition: none; } }
   [hidden] { display: none !important; }
   .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
   .linkbtn { background: none; border: 0; color: var(--orange); font: inherit; font-size: 13.5px; padding: 0; cursor: pointer; }

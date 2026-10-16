@@ -1327,7 +1327,9 @@ export default function Tutorial() {
           const isActive = section.id === activeSection
           return (
             <Reveal key={section.id} threshold={0.08}>
-              <div id={section.id} className="card-hover p-6 transition-all duration-300"
+              {/* card, not card-hover: these aren't links, and card-hover's tap
+                  scale moved the Back to top button out from under the finger. */}
+              <div id={section.id} className="card p-6 transition-[border-color,box-shadow] duration-300"
                    style={{
                      borderColor: isActive ? (legendMono ? 'var(--border-focus)' : section.color + '55') : undefined,
                      boxShadow: isActive ? `0 4px 24px ${(legendMono ? 'var(--accent-400)' : section.color)}1a` : undefined,
