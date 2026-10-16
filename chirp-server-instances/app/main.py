@@ -1008,6 +1008,31 @@ async def _cache_hashed_assets(request, call_next):
     return response
 
 
+
+# Retired hostnames (CHIRP_REDIRECT_HOSTS, comma list) send people to
+# CHIRP_REDIRECT_TO, same path and query. Pages and media get a 301; API
+# calls get 410 with the new address, so a station still pointed here
+# never re-posts its uploads to a server it has a different key for.
+# Other hostnames (e.g. the LAN address) are untouched. Off when unset.
+_REDIRECT_HOSTS = {h.strip().lower() for h in os.environ.get("CHIRP_REDIRECT_HOSTS", "").split(",") if h.strip()}
+_REDIRECT_TO = os.environ.get("CHIRP_REDIRECT_TO", "").rstrip("/")
+
+
+@app.middleware("http")
+async def _retired_host_redirect(request, call_next):
+    if _REDIRECT_HOSTS and _REDIRECT_TO:
+        host = (request.headers.get("host") or "").split(":")[0].lower()
+        if host in _REDIRECT_HOSTS:
+            path = request.url.path
+            target = _REDIRECT_TO + path + (f"?{request.url.query}" if request.url.query else "")
+            if path.startswith("/api/") and path not in ("/api/v1/health",):
+                return JSONResponse(status_code=410, content={
+                    "detail": f"This server has moved to {_REDIRECT_TO}.", "moved_to": _REDIRECT_TO})
+            from fastapi.responses import RedirectResponse
+            return RedirectResponse(target, status_code=301 if request.method in ("GET", "HEAD") else 308)
+    return await call_next(request)
+
+
 _REVALIDATE_PATHS = {"/manifest.json", "/favicon.ico", "/favicon.svg", "/icon-192.png",
                      "/icon-512.png", "/apple-touch-icon.png", "/logo.svg"}
 

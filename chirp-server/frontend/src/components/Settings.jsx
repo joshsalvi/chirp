@@ -2454,7 +2454,7 @@ const CARD_KEYWORDS = {
   'settings-appearance-dashboard': 'dashboard style, simplified, detailed',
   'settings-appearance-dashboard-sections': 'dashboard sections, cards shown',
   'settings-appearance-layout': 'cards expanded by default, collapsed cards, layout',
-  'settings-detection': 'min. detection confidence, window overlap, detection sensitivity, BirdNET',
+  'settings-detection': 'BirdNET 2.4, minimum confidence, min. detection confidence, window overlap, detection sensitivity, station threshold',
   'settings-detection-night-thresholds': 'owls, night callers, thresholds',
   'settings-detection-near-misses': 'near misses, owls, night callers',
   'settings-detection-server': 're-analyze every upload, auto-delete device identifications, allow manual re-analyze, rumble removal, enhance, playback, noise reduction, detection colors',
@@ -3707,31 +3707,39 @@ Off (default): detections from deleted recordings are left out of dashboard tota
       <Section icon={Brain} title="Detection Model" id="settings-detection-model">
         <DetectionModel form={form} setForm={setForm}/>
       </Section>
-      <Section icon={Brain} title="BirdNET Analysis" id="settings-detection">
+      {/* Only with BirdNET 2.4 as the model. With v3, these still seed new
+          stations' config (devices.py) and the 2.4 fallback, at their saved values. */}
+      {form.detection_model === 'birdnet24' && (
+      <Section icon={Brain} title="BirdNET 2.4 Settings" id="settings-detection">
         <div className="space-y-5">
-          <Slider label="Min. Detection Confidence"
-                  hint="New recordings only. Lower finds more but with more false alarms. Default 10%."
+          <p className="text-xs text-gray-500">
+            The server identifies birds with these. New stations also start with them (each station's own
+            are on the Devices page).
+          </p>
+          <Slider label="Minimum confidence"
+                  hint="New recordings only. Lower finds more, with more false alarms. Default 5%."
                   min={0.01} max={0.5} step={0.01}
                   value={form.birdnet_min_confidence}
                   onChange={set('birdnet_min_confidence')}
                   format={v => `${(v*100).toFixed(0)}%`}/>
           <Slider label="Window Overlap"
-                  hint="Overlap between consecutive 3s analysis windows. Higher catches more calls at boundaries. Default: 1.5."
+                  hint="Overlap between consecutive 3 s analysis windows. Higher catches more calls at boundaries. Default 2.5."
                   min={0} max={2.9} step={0.1}
                   value={form.birdnet_overlap}
                   onChange={set('birdnet_overlap')}
                   format={v => v.toFixed(1)}/>
           <div className="flex justify-between text-xs text-gray-600 -mt-3 px-0.5">
-            <span>No overlap</span><span>← 1.5 default →</span><span>Max overlap</span>
+            <span>No overlap</span><span>Max overlap</span>
           </div>
           <Slider label="Detection Sensitivity"
-                  hint="Higher = more sensitive to faint or distant calls. Default: 1.0."
+                  hint="Higher picks up fainter, more distant calls. Default 1.5."
                   min={0.5} max={1.5} step={0.05}
                   value={form.birdnet_sensitivity}
                   onChange={set('birdnet_sensitivity')}
                   format={v => v.toFixed(2)}/>
         </div>
       </Section>
+      )}
       <Section icon={Moon} title="Night-Caller Thresholds" id="settings-detection-night-thresholds">
         <Suspense fallback={null}><NightThresholds/></Suspense>
       </Section>

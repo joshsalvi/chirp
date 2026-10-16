@@ -59,6 +59,11 @@ services:
       - CHIRP_HOST=0.0.0.0
       - CHIRP_PORT=8765
       - CHIRP_SERVER_URL=${CHIRP_SERVER_URL:-}
+      # Retire a public hostname: requests for these hosts (comma list) get a
+      # 301 to CHIRP_REDIRECT_TO; API calls get 410. The LAN address keeps
+      # working. Set both in .env, e.g. CHIRP_REDIRECT_HOSTS=chirp.example.com
+      - CHIRP_REDIRECT_HOSTS=${CHIRP_REDIRECT_HOSTS:-}
+      - CHIRP_REDIRECT_TO=${CHIRP_REDIRECT_TO:-}
       - TZ=${TZ:-America/New_York}
       # Reach this server itself over Tailscale/Headscale, not just its
       # local network — set CHIRP_TAILSCALE_ENABLED=true and a real

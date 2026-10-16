@@ -62,23 +62,21 @@ export default function DetectionModel({ form, setForm }) {
         Finds about twice as many species as 2.4 at the same accuracy, with far fewer false alarms from noise.
         Owls need a hoot at the owl's pitch, and in daylight a score of 80% or more.
       </Choice>
-      <Choice checked={model === 'birdnet24'} onSelect={() => set('detection_model')('birdnet24')}
-              title="BirdNET 2.4">
-        The earlier model, with the night-caller thresholds and owl checks below tuned to it.
-      </Choice>
 
       {model === 'birdnet3' && (
-        <div className="space-y-2 pt-1">
+        <div className="ml-6 pl-3 space-y-2" style={{ borderLeft: '2px solid var(--accent-500)' }}>
           <label className="block">
             <span className="flex justify-between text-xs" style={{ color: 'var(--text-secondary)' }}>
-              <span>Minimum confidence</span>
+              <span>BirdNET v3 minimum confidence</span>
               <span className="font-mono">{Math.round((form.exp_birdnet3_min_conf ?? 0.5) * 100)}%</span>
             </span>
             <input type="range" min={0.2} max={0.9} step={0.05} value={form.exp_birdnet3_min_conf ?? 0.5}
                    onChange={e => set('exp_birdnet3_min_conf')(Number(e.target.value))} className="w-full accent-chirp-500"/>
           </label>
           <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-            50% kept about 9 in 10 reports correct in testing. Live Detect uses this too.
+            The server keeps a bird only if v3 scores it at least this high, on recordings and in Live Detect.
+            Default 50%, which kept about 9 in 10 reports correct in testing. v3 scores run higher than 2.4’s,
+            so this isn’t comparable to BirdNET 2.4’s minimum.
           </p>
           {st && <p className="text-xs" style={{ color: st.state === 'error' ? '#f87171' : 'var(--text-tertiary)' }}>{modelStatus(st)}</p>}
           {st && (st.state === 'error' || st.state === 'missing' || st.state === 'idle') && (
@@ -90,8 +88,13 @@ export default function DetectionModel({ form, setForm }) {
         </div>
       )}
 
+      <Choice checked={model === 'birdnet24'} onSelect={() => set('detection_model')('birdnet24')}
+              title="BirdNET 2.4">
+        The earlier model. Shows its own settings below when chosen.
+      </Choice>
+
       {model === 'birdnet24' && (
-        <label className="flex items-start justify-between gap-4 pt-1">
+        <label className="ml-6 pl-3 flex items-start justify-between gap-4" style={{ borderLeft: '2px solid var(--accent-500)' }}>
           <span>
             <span className="block text-sm" style={{ color: 'var(--text-primary)' }}>Compare with BirdNET v3</span>
             <span className="block text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
@@ -104,7 +107,6 @@ export default function DetectionModel({ form, setForm }) {
       )}
 
       <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-        Stations still use BirdNET 2.4 to decide what to record; the server then identifies the birds.
         BirdNET v3 is a developer preview (CC BY-SA 4.0); its terms prohibit poaching and military use.
       </p>
     </div>
