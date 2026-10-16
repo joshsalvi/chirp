@@ -144,9 +144,10 @@ def display_name(level: str, category: str, common: Optional[str] = None,
     return describe(level, category, common, family, order, category if level == "group" else None)["name"]
 
 
-def render_spectrogram(src: str, dest: str) -> None:
-    """Small spectrogram for a call clip. Flight calls sit at 2-10 kHz, so a
-    linear axis to 11 kHz. Uses Figure directly (pyplot isn't thread-safe)."""
+def render_spectrogram(src: str, dest: str, large: bool = False) -> None:
+    """Spectrogram for a call clip. Flight calls sit at 2-10 kHz, so a linear
+    axis to 11 kHz. Small: a bare thumbnail; large: with time and kHz axes.
+    Uses Figure directly (pyplot isn't thread-safe)."""
     import numpy as np
     import soundfile as sf
     from matplotlib.figure import Figure
@@ -157,16 +158,30 @@ def render_spectrogram(src: str, dest: str) -> None:
     _, _, Z = stft(y, fs=sr, nperseg=512, noverlap=448)
     S = 20 * np.log10(np.abs(Z) + 1e-10)
     S -= S.max()
-    fig = Figure(figsize=(4, 2), dpi=110)
-    ax = fig.add_axes([0, 0, 1, 1])
-    ax.imshow(S, origin="lower", aspect="auto", cmap="magma", vmin=-80, vmax=0,
-              extent=[0, len(y) / sr, 0, sr / 2])
-    ax.set_ylim(0, min(11000, sr / 2)); ax.axis("off")
-    fig.savefig(dest)
+    if large:
+        fig = Figure(figsize=(10, 3.6), dpi=110, facecolor="#0b130e")
+        ax = fig.add_axes([0.06, 0.15, 0.93, 0.8])
+        ax.set_facecolor("#0b130e")
+        ax.imshow(S, origin="lower", aspect="auto", cmap="magma", vmin=-80, vmax=0,
+                  extent=[0, len(y) / sr, 0, sr / 2 / 1000])
+        ax.set_ylim(0, min(11, sr / 2000))
+        ax.set_xlabel("seconds", color="#9aa79e", fontsize=9)
+        ax.set_ylabel("kHz", color="#9aa79e", fontsize=9)
+        ax.tick_params(colors="#9aa79e", labelsize=8)
+        for sp in ax.spines.values():
+            sp.set_color("#2a3a2f")
+    else:
+        fig = Figure(figsize=(4, 2), dpi=110)
+        ax = fig.add_axes([0, 0, 1, 1])
+        ax.imshow(S, origin="lower", aspect="auto", cmap="magma", vmin=-80, vmax=0,
+                  extent=[0, len(y) / sr, 0, sr / 2])
+        ax.set_ylim(0, min(11000, sr / 2)); ax.axis("off")
+    fig.savefig(dest, facecolor=fig.get_facecolor())
 
 
-def spectrogram_path(clip_path: str) -> str:
-    return str(Path(clip_path).with_suffix(".png"))
+def spectrogram_path(clip_path: str, large: bool = False) -> str:
+    p = Path(clip_path)
+    return str(p.with_name(p.stem + "_large.png")) if large else str(p.with_suffix(".png"))
 
 
 def _get_model():

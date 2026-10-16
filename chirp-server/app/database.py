@@ -336,6 +336,7 @@ def _migrate_columns():
             ("device_id",        "VARCHAR"),
             ("processing_error", "TEXT"),
             ("is_live_session",  "BOOLEAN DEFAULT 0"),
+            ("is_saved",         "BOOLEAN DEFAULT 0"),
             ("is_live_detect_clip", "BOOLEAN DEFAULT 0"),
             ("shadow_checked_at", "DATETIME"),
             # Added for device GPS tagging (chirp_fixed6+)
@@ -580,6 +581,7 @@ def _migrate_columns():
             ("ai_enhance_enabled",       "BOOLEAN"),
             ("ai_enhance_auto_apply",    "BOOLEAN"),
             ("ai_enhance_dry",           "REAL"),
+            ("detection_model",          "VARCHAR DEFAULT 'birdnet3'"),
             ("exp_birdnet3_shadow",      "BOOLEAN DEFAULT 0"),
             ("exp_birdnet3_main",        "BOOLEAN DEFAULT 0"),
             ("exp_birdnet3_min_conf",    "REAL DEFAULT 0.5"),

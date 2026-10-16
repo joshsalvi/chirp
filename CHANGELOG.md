@@ -1,3 +1,21 @@
+## 0.5.14.a — 2026-10-16 — FEATURE — BirdNET v3 by default, saved recordings, one Enhance control
+
+- BirdNET v3 is the default model, with owl checks (a hoot at the owl's pitch; 80% in daylight); BirdNET 2.4 selectable in Settings → Detection.
+- AI Features and Bats have their own Settings tabs; Experimental keeps Nighthawk, range maps and the heatmap.
+- Settings search finds every card, tab and setting.
+- Recordings filter by time of day (site time zone) and by Saved; saved recordings skip automatic archive and delete.
+- One Enhance control on recordings and calls: Original, Enhanced (low cut and noise reduction) or AI.
+- Night Calls by night, week or month, grouped by family; each call has its own page with a large spectrogram.
+- Confidence badges match the Recordings list (green for high).
+- Phone ⋯ menu in three groups; Dashboard photo fades into the card.
+- Guide pages' header matches the About page; Getting Started and User Guide updated.
+- Docker Hub workflow, .dockerignore and Unraid Community Applications templates.
+
+## 1.4.1 (chirp-device) — 2026-10-16 — BUGFIX — No gaps in the detection audio
+
+- The mic mixer waits for each primary chunk instead of filling 0.15 s timeouts with silence (about half of every second was silent).
+- Fixes choppy night audio, "-inf dBFS" levels and missed calls on the detection path; recordings were unaffected.
+
 ## 0.5.13.e — 2026-10-16 — BUGFIX — Night Calls playback and labels
 
 - Play works: a page of thumbnails no longer uses up the database connections; clips play as WAV.

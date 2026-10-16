@@ -7,12 +7,12 @@ import {
   Play, Pause, Download, ArrowLeft,
   AlertCircle, RefreshCw, Pencil, Trash2, Save, X,
   Share2, Copy, Check, CheckCircle, MapPin, ChevronDown, ChevronUp, Activity, Sparkles, Wand2,
-  Archive, ArchiveRestore, Server, Cpu, MessageSquare
+  Archive, ArchiveRestore, Server, Cpu, MessageSquare, Bookmark, BookmarkCheck
 } from 'lucide-react'
 import { BirdIcon, BatIcon } from './BirdBatIcons'
-import { api, mediaUrl } from '../lib/api'
+import { api, mediaUrl, clearApiCache } from '../lib/api'
 import { saveUrl } from '../lib/download'
-import { pickSpeciesColors, DEFAULT_PALETTE } from '../lib/detectionColors'
+import { pickSpeciesColors, DEFAULT_PALETTE, confBadgeClass, confLabel } from '../lib/detectionColors'
 import { useTz, toLocalInput, fromLocalInput } from '../lib/time'
 import Comments from './Comments'
 import InatSubmitButton from './InatSubmitButton'
@@ -74,12 +74,44 @@ function fmt(s) {
   return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 }
 
+
+// Birds: one Enhance control. "Enhanced" cuts low rumble (traffic, wind,
+// HVAC) and reduces steady background noise together; "AI" is neural
+// denoising (Settings → AI Features → AI Enhance), which works at 16 kHz.
+function EnhanceControl({ mode, onChange, aiAvailable, aiLoading, aiError, compact = false }) {
+  const opts = [['original', 'Original'], ['enhanced', 'Enhanced'], ...(aiAvailable ? [['ai', 'AI']] : [])]
+  const tips = {
+    original: 'The recording as made',
+    enhanced: 'Cuts low rumble and reduces background noise',
+    ai: aiError || 'Neural denoising: isolates the call (sound above 8 kHz is lost)',
+  }
+  return (
+    <div role="radiogroup" aria-label="Enhance" className={`inline-flex rounded-full p-0.5 ${compact ? 'text-[11px]' : 'text-xs'}`}
+         style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)' }}>
+      {opts.map(([k, label]) => {
+        const on = mode === k
+        return (
+          <button key={k} role="radio" aria-checked={on} title={tips[k]} onClick={() => onChange(k)}
+                  className={`flex items-center gap-1 rounded-full transition-colors ${compact ? 'px-2 py-0.5' : 'px-2.5 py-1'}`}
+                  style={on
+                    ? { background: k === 'ai' && aiError ? 'rgba(248,113,113,.18)' : 'var(--nav-active-bg)', color: k === 'ai' && aiError ? '#f87171' : 'var(--accent-400)' }
+                    : { color: 'var(--text-tertiary)' }}>
+            {k === 'enhanced' && <Sparkles size={compact ? 10 : 12}/>}
+            {k === 'ai' && (on && aiLoading ? <RefreshCw size={compact ? 10 : 12} className="animate-spin"/> : <Wand2 size={compact ? 10 : 12}/>)}
+            {label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 // ── Audio player with amplitude waveform ─────────────────────────────────────
 const WAVEFORM_BARS = 200   // number of amplitude bars to display
 const WAVEFORM_H = 56       // total canvas height in px (28px each half)
 const BAR_H_MAX = 26        // max bar half-height in px
 
-function AudioPlayer({ src, detections, duration: recDuration, recordingId, seekRef, enhanced, onToggleEnhanced, isBat, colorPalette, rumbleRemovalMode = 'auto', rumbleRemoved = false, onToggleRumbleRemoved, aiEnhanceEnabled = false, aiEnhanced = false, onToggleAiEnhanced }) {
+function AudioPlayer({ src, detections, duration: recDuration, recordingId, seekRef, enhanced, onToggleEnhanced, isBat, colorPalette, rumbleRemovalMode = 'auto', rumbleRemoved = false, onToggleRumbleRemoved, aiEnhanceEnabled = false, aiEnhanced = false, onToggleAiEnhanced, onSetEnhanceMode }) {
   const [playing, setPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(recDuration || 0)
@@ -417,7 +449,8 @@ function AudioPlayer({ src, detections, duration: recDuration, recordingId, seek
       {/* Toggle row — wraps naturally (flex-wrap) if it still doesn't fit
           one line on a narrow screen, rather than clipping off the edge. */}
       <div className="flex items-center gap-2 px-4 pb-3 flex-wrap">
-        <button onClick={toggleEnhanced}
+        {isBat ? (<>
+          <button onClick={toggleEnhanced}
                 className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors ${
                   enhanced
                     ? 'bg-chirp-900/40 border-chirp-600 text-chirp-300'
@@ -436,37 +469,16 @@ function AudioPlayer({ src, detections, duration: recDuration, recordingId, seek
             <Sparkles size={12}/> De-wobbled
           </button>
         )}
-        {!isBat && rumbleRemovalMode !== 'disabled' && (
-          <button onClick={toggleRumbleRemoved}
-                  title="Species-aware high-pass filter to cut low-frequency rumble (traffic, wind, HVAC) — independent of Enhanced, combinable with it"
-                  className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors ${
-                    rumbleRemoved
-                      ? 'bg-chirp-900/40 border-chirp-600 text-chirp-300'
-                      : 'bg-surface-800 border-surface-600 text-gray-400 hover:text-gray-200'
-                  }`}>
-            <Sparkles size={12}/> {rumbleRemoved ? 'Rumble removed' : 'Rumble'}
-          </button>
-        )}
-        {aiEnhanceEnabled && !isBat && (
-          <button onClick={toggleAiEnhanced}
-                  title={aiError || "Experimental: neural-network denoising (separate from Enhanced/Rumble removed) — isolates the call and boosts its level relative to the background"}
-                  className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors ${
-                    aiError
-                      ? 'bg-red-900/30 border-red-700/50 text-red-300'
-                      : aiEnhanced
-                        ? 'bg-chirp-900/40 border-chirp-600 text-chirp-300'
-                        : 'bg-surface-800 border-surface-600 text-gray-400 hover:text-gray-200'
-                  }`}>
-            {aiEnhanced && aiLoading
-              ? <RefreshCw size={12} className="animate-spin"/>
-              : <Wand2 size={12}/>}
-            {aiError ? 'AI Enhance failed' : aiEnhanced && aiLoading ? 'Generating…' : 'AI Enhance'}
-          </button>
+        </>) : (
+          <EnhanceControl
+            mode={aiEnhanced ? 'ai' : (enhanced || rumbleRemoved) ? 'enhanced' : 'original'}
+            onChange={m => { captureResumeState(); setAiError(null); onSetEnhanceMode && onSetEnhanceMode(m) }}
+            aiAvailable={aiEnhanceEnabled} aiLoading={aiLoading} aiError={aiError}/>
         )}
       </div>
-      {rumbleRemoved && rumbleRemovalMode !== 'disabled' && (
+      {rumbleRemoved && !aiEnhanced && rumbleRemovalMode !== 'disabled' && (
         <div className="flex items-center gap-2 px-4 pb-3">
-          <label className="text-xs flex-shrink-0" style={{ color: 'var(--text-tertiary)' }}>Rumble cutoff</label>
+          <label className="text-xs flex-shrink-0" style={{ color: 'var(--text-tertiary)' }} title="Sound below this pitch is cut. Auto picks it from the birds detected.">Low cut</label>
           <input type="range" min="0" max="2000" step="50"
                  title="Manual cutoff — starts at the automatic species-aware value; drag to override it directly, matching Live Detect's own rumble slider"
                  value={rumbleHzDraft ?? rumbleHz ?? 800}
@@ -505,7 +517,7 @@ function DetectionCard({ det, recordingId, detections, onPlayAt, colorPalette, a
   // isn't a real option, just a broken-looking dead end.
   const isBatDetection = det.common_name === 'Bat'
   const [clipPlaying, setClipPlaying] = useState(false)
-  const [clipEnhanced, setClipEnhanced] = useState(true)
+  const [clipEnhanced, setClipEnhanced] = useState(true)   // birds open in Enhanced, like the player
   // AI Enhance for a single clip — independent of clipEnhanced (the
   // classical noise-reduction toggle), same reasoning as the full-
   // recording player: a full alternative processing path, not meant to
@@ -535,9 +547,6 @@ function DetectionCard({ det, recordingId, detections, onPlayAt, colorPalette, a
   const clipRef = useRef(null)
   const color = speciesColor(detections, det.common_name, colorPalette)
   const conf = det.confidence || 0
-  const confClass = conf >= 0.7 ? 'text-chirp-400 border-chirp-700/50 bg-chirp-900/30'
-    : conf >= 0.4 ? 'text-cyan-400 border-cyan-700/50 bg-cyan-900/30'
-    : 'text-yellow-400 border-yellow-700/50 bg-yellow-900/30'
 
   return (
     <div className="px-3 py-2 flex items-center gap-3" style={{ borderLeft: `3px solid ${color}` }}>
@@ -553,7 +562,7 @@ function DetectionCard({ det, recordingId, detections, onPlayAt, colorPalette, a
         <div className="flex-1 rounded-full overflow-hidden" style={{ height: 4, background: '#1f2937' }}>
           <div className="h-full rounded-full" style={{ width: `${conf * 100}%`, background: color }}/>
         </div>
-        <span className={`badge border text-xs flex-shrink-0 ${confClass}`}>
+        <span className={`badge text-xs flex-shrink-0 ${confBadgeClass(conf)}`}>
           {(conf * 100).toFixed(0)}%
         </span>
       </div>
@@ -587,54 +596,22 @@ function DetectionCard({ det, recordingId, detections, onPlayAt, colorPalette, a
           : clipPlaying ? <Pause size={10}/> : <Play size={10}/>} Clip
       </button>
       {!isBatDetection && (
-        <button onClick={() => {
-          setClipEnhanced(e => !e)
-          setClipPlaying(false)
-        }}
-           className={`text-xs flex items-center gap-0.5 transition-colors flex-shrink-0 ${
-             clipEnhanced ? 'text-chirp-400 hover:text-chirp-300' : 'text-gray-500 hover:text-gray-300'
-           }`}
-           title={clipEnhanced ? 'Using enhanced (noise-reduced) audio' : 'Using original audio'}>
-          {/* Label on desktop, icon-only on mobile */}
-          <Sparkles size={10}/>
-          <span className="hidden sm:inline">{clipEnhanced ? 'Enhanced' : 'Enhance'}</span>
-        </button>
-      )}
-      {!isBatDetection && rumbleRemovalMode !== 'disabled' && (
-        <button onClick={() => {
-          clipRumbleTouched.current = true
-          setClipRumbleRemoved(r => !r)
-          setClipPlaying(false)
-        }}
-           className={`text-xs flex items-center gap-0.5 transition-colors flex-shrink-0 ${
-             clipRumbleRemoved ? 'text-chirp-400 hover:text-chirp-300' : 'text-gray-500 hover:text-gray-300'
-           }`}
-           title="Species-aware high-pass filter to cut low-frequency rumble — takes priority over Enhanced at the clip level, not combinable here">
-          <Sparkles size={10}/>
-          <span className="hidden sm:inline">{clipRumbleRemoved ? 'Rumble removed' : 'Rumble'}</span>
-        </button>
-      )}
-      {!isBatDetection && aiEnhanceEnabled && (
-        <button onClick={() => {
-          setAiClipError(null)
-          setAiClipEnhanced(a => !a)
-          setClipPlaying(false)
-        }}
-           className={`text-xs flex items-center gap-0.5 transition-colors flex-shrink-0 ${
-             aiClipError ? 'text-red-400 hover:text-red-300'
-               : aiClipEnhanced ? 'text-chirp-400 hover:text-chirp-300' : 'text-gray-500 hover:text-gray-300'
-           }`}
-           title={aiClipError || "Experimental: neural-network denoising, separate from Enhanced"}>
-          {aiClipEnhanced && aiClipLoading
-            ? <RefreshCw size={10} className="animate-spin"/>
-            : <Wand2 size={10}/>}
-          <span className="hidden sm:inline">{aiClipError ? 'AI failed' : 'AI'}</span>
-        </button>
+        <EnhanceControl compact
+          mode={aiClipEnhanced ? 'ai' : clipEnhanced ? 'enhanced' : 'original'}
+          onChange={m => {
+            clipRumbleTouched.current = true
+            setAiClipError(null)
+            setAiClipEnhanced(m === 'ai')
+            setClipEnhanced(m === 'enhanced')
+            setClipRumbleRemoved(m === 'enhanced' && rumbleRemovalMode !== 'disabled')
+            setClipPlaying(false)
+          }}
+          aiAvailable={aiEnhanceEnabled} aiLoading={aiClipLoading} aiError={aiClipError}/>
       )}
       <audio ref={clipRef}
              src={
                (aiClipEnhanced && !isBatDetection) ? api.recordings.clipAiEnhancedUrl(recordingId, det.id)
-               : (clipRumbleRemoved && !isBatDetection) ? api.recordings.clipRumbleRemovedUrl(recordingId, det.id)
+               : (clipEnhanced && clipRumbleRemoved && !isBatDetection) ? api.recordings.clipCleanUrl(recordingId, det.id)
                : (clipEnhanced || isBatDetection) ? api.recordings.clipEnhancedUrl(recordingId, det.id)
                : api.recordings.clipUrl(recordingId, det.id)
              }
@@ -1332,8 +1309,6 @@ function SpeciesGroups({ detections, recordingId, seekRef, duration, batMetadata
         const color = speciesColor(detections, name, colorPalette)
         const maxConf = Math.max(...dets.map(d => d.confidence || 0))
         const isOpen = expanded.has(name)
-        const confLabel = maxConf >= 0.7 ? 'High' : maxConf >= 0.4 ? 'Med' : 'Low'
-        const confClass = maxConf >= 0.7 ? 'text-chirp-400' : maxConf >= 0.4 ? 'text-cyan-400' : 'text-yellow-400'
         const bird = dets[0]
         const photoUrl = bird.bird_photo_url || bird.photo_url || null
         const profileId = bird.bird_profile_id || null
@@ -1368,8 +1343,8 @@ function SpeciesGroups({ detections, recordingId, seekRef, duration, batMetadata
                 ))}
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                <span className={`text-xs font-medium ${confClass}`}>
-                  {Math.round(maxConf * 100)}% {confLabel}
+                <span className={`badge text-xs ${confBadgeClass(maxConf)}`}>
+                  {Math.round(maxConf * 100)}% {confLabel(maxConf)}
                 </span>
                 {/* Profile link — stopPropagation so it doesn't toggle the accordion.
                     Bat detections don't reliably carry a bird_profile_id (no real
@@ -1460,7 +1435,7 @@ export default function RecordingDetail({ shared = false }) {
       if (d && d.allow_manual_reanalyze === false) setAllowManualReanalyze(false)
       if (d && d.detection_color_palette) setColorPalette(d.detection_color_palette)
       if (d) setAiEnhanceEnabled(!!d.ai_enhance_enabled)
-      if (d) setShadowOn(!!d.exp_birdnet3_shadow && !d.exp_birdnet3_main)
+      if (d) setShadowOn(!!d.exp_birdnet3_shadow && d.detection_model === 'birdnet24')
       if (d) { setAiEnhanceAutoApply(!!d.ai_enhance_auto_apply); aiEnhanceAutoApplyRef.current = !!d.ai_enhance_auto_apply }
       const mode = (d && d.rumble_removal_mode) || 'auto'
       setRumbleRemovalMode(mode); rumbleRemovalModeRef.current = mode
@@ -1486,6 +1461,13 @@ export default function RecordingDetail({ shared = false }) {
   // set in the settings-fetch effect below.
   const [aiEnhanced, setAiEnhanced] = useState(false)
   const [rumbleRemoved, setRumbleRemoved] = useState(false)
+  // One Enhance control for birds (EnhanceControl): Original, Enhanced
+  // (low cut + noise reduction) or AI.
+  const setEnhanceMode = m => {
+    setAiEnhanced(m === 'ai')
+    setEnhanced(m === 'enhanced')
+    setRumbleRemoved(m === 'enhanced' && rumbleRemovalModeRef.current !== 'disabled')
+  }
   // Bumped after every reanalyze completes — see SpectrogramImage's
   // refreshKey prop below for why.
   const [reanalyzeVersion, setReanalyzeVersion] = useState(0)
@@ -1533,8 +1515,9 @@ export default function RecordingDetail({ shared = false }) {
   useEffect(() => {
     if (!recording || !settingsLoaded || defaultsAppliedFor.current === recording.id) return
     defaultsAppliedFor.current = recording.id
-    if (!recording.is_bat && aiEnhanceAutoApplyRef.current) setAiEnhanced(true)
-    if (!recording.is_bat && rumbleRemovalModeRef.current === 'auto') setRumbleRemoved(true)
+    if (recording.is_bat) return
+    if (aiEnhanceAutoApplyRef.current) setEnhanceMode('ai')
+    else if (rumbleRemovalModeRef.current === 'auto') setEnhanceMode('enhanced')
   }, [recording, settingsLoaded])
 
   const [archiving, setArchiving] = useState(false)
@@ -1844,6 +1827,16 @@ export default function RecordingDetail({ shared = false }) {
           <button onClick={() => setShowShare(true)} className="btn-secondary flex items-center gap-1.5">
             <Share2 size={13}/> Share
           </button>
+          {canChange && (
+            <button
+              onClick={() => api.recordings.patch(id, { is_saved: !recording?.is_saved })
+                .then(r => { setRecording(r); clearApiCache?.() }).catch(e => alert(e.message))}
+              title={recording?.is_saved ? 'Saved: kept out of automatic cleanup. Tap to unsave.' : 'Keep this recording out of automatic cleanup'}
+              className="btn-secondary flex items-center gap-1.5"
+              style={recording?.is_saved ? { color: '#facc15', borderColor: 'rgba(250,204,21,.4)' } : undefined}>
+              {recording?.is_saved ? <BookmarkCheck size={13}/> : <Bookmark size={13}/>} {recording?.is_saved ? 'Saved' : 'Save'}
+            </button>
+          )}
           {/* View-only accounts: the server refuses these (main.py), so don't offer them. */}
           {canChange && (
           <button onClick={() => setShowEdit(true)} className="btn-secondary flex items-center gap-1.5">
@@ -2002,6 +1995,7 @@ export default function RecordingDetail({ shared = false }) {
               aiEnhanceEnabled={aiEnhanceEnabled}
               aiEnhanced={aiEnhanced}
               onToggleAiEnhanced={() => setAiEnhanced(a => !a)}
+              onSetEnhanceMode={setEnhanceMode}
             />
           </div>
         )}

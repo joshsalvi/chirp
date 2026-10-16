@@ -14,33 +14,30 @@
 // WHATS_NEW.version must match the VERSION file (stamp-sw-version.mjs
 // checks it). Set `popup` to the new version when `latest` changes.
 export const WHATS_NEW = {
-  version: '0.5.13.e',
+  version: '0.5.14.a',
   // The release whose `latest` text this is. The popup shows once per value,
   // so small fixes that don't change `latest` don't bring it back.
-  popup: '0.5.13.a',
+  popup: '0.5.14.a',
   title: "What's new in Chirp",
   latest: {
-    intro: 'Newer bird-ID models to try, night flight calls, and safer deletes.',
+    intro: 'BirdNET v3 is now the main model, and recordings are easier to keep and clean up.',
     sections: [
       {
-        heading: '🧪 BirdNET v3',
-        body: 'Admins can turn it on in Settings → Experimental → Detection Models, to compare on each recording or as the main model. In testing it found about twice as many species at the same accuracy.',
+        heading: '🐦 BirdNET v3 by default',
+        body: 'It finds more species at the same accuracy, and owls must hoot at their pitch to count. Admins can switch back to 2.4 in Settings → Detection.',
       },
       {
-        heading: '🌙 Night flight calls',
-        body: 'With Nighthawk on, stations send their night audio and the new Night Calls page lists the calls of migrating birds overhead.',
+        heading: '🔖 Save and filter',
+        body: 'Save a recording to keep it out of automatic cleanup. Recordings also filter by time of day and by Saved.',
       },
       {
-        heading: '🗑️ Confirm before deleting',
-        body: 'Clearing all notifications asks first, and deleting your account needs the word delete typed.',
+        heading: '✨ One Enhance button',
+        body: 'Original, Enhanced (rumble cut and noise reduced) or AI, in one control on every recording.',
       },
     ],
   },
   recent: [
-    { version: '0.5.13.e', summary: 'Night Calls: playback fixed and plainer names for each call.' },
-    { version: '0.5.13.d', summary: 'Clearer Settings descriptions, including Empty Recordings.' },
-    { version: '0.5.13.b', summary: 'Station offline alerts wait 15 minutes by default; the delay is in Settings.' },
-    { version: '0.5.13.a', summary: 'BirdNET v3 and night flight calls in Settings → Experimental; delete confirmations.' },
+    { version: '0.5.14.a', summary: 'BirdNET v3 by default, saved recordings, time-of-day filter, one Enhance control, Night Calls by week and month.' },
   ],
 }
 
@@ -54,7 +51,8 @@ export const ERA_SUMMARIES = {
 }
 
 export const GROUP_SUMMARIES = {
-  '0.5.13': 'BirdNET v3 and Nighthawk night flight calls (experimental).',
+  '0.5.14': 'BirdNET v3 by default with owl checks, AI Features and Bats tabs, saved recordings, time-of-day filter, one Enhance control.',
+  '0.5.13': 'BirdNET v3 and Nighthawk night flight calls, station offline alerts, clearer Settings text.',
   '0.5.12': 'Notifications tools, same-day digest, reorganized Settings, fewer false owls, hosted sites, invite codes and station-offline alerts.',
   '0.5.11': 'Notifications tab, iPhone push alerts, read-only viewers, privacy page, first TestFlight builds.',
   '0.5.10': 'Faster deletes, smaller spectrograms, night-caller thresholds, new daily email, iOS 26–27 fixes.',

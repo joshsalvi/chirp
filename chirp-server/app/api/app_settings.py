@@ -130,6 +130,7 @@ class SettingsIn(BaseModel):
     allow_manual_reanalyze: Optional[bool] = None
     detection_color_palette: Optional[str] = None
     ai_enhance_enabled: Optional[bool] = None
+    detection_model: Optional[str] = None
     exp_birdnet3_shadow: Optional[bool] = None
     exp_birdnet3_main: Optional[bool] = None
     exp_birdnet3_min_conf: Optional[float] = None
@@ -269,6 +270,7 @@ class SettingsOut(BaseModel):
     allow_manual_reanalyze: Optional[bool] = True
     detection_color_palette: Optional[str] = "vivid"
     ai_enhance_enabled: Optional[bool] = False
+    detection_model: Optional[str] = "birdnet3"
     exp_birdnet3_shadow: Optional[bool] = False
     exp_birdnet3_main: Optional[bool] = False
     exp_birdnet3_min_conf: Optional[float] = 0.5
@@ -429,6 +431,7 @@ _MIGRATION_DEFAULTS = [
     ("activity_log_track_ip", True),
     ("activity_log_retention_days", 90),
     ("ai_enhance_enabled", False),
+    ("detection_model", "birdnet3"),
     ("exp_birdnet3_shadow", False),
     ("exp_birdnet3_main", False),
     ("exp_birdnet3_min_conf", 0.5),
@@ -538,6 +541,8 @@ def update_settings(body: SettingsIn, background_tasks: BackgroundTasks, db: Ses
     for k in ("exp_nighthawk_start", "exp_nighthawk_end"):
         if k in data and (not isinstance(data[k], str) or not _re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", data[k] or "")):
             raise HTTPException(status_code=422, detail="Night audio times must be HH:MM (24-hour)")
+    if "detection_model" in data and data["detection_model"] not in ("birdnet3", "birdnet24"):
+        raise HTTPException(status_code=422, detail="detection_model must be birdnet3 or birdnet24")
     if data.get("exp_birdnet3_min_conf") is not None:
         data["exp_birdnet3_min_conf"] = min(0.99, max(0.05, float(data["exp_birdnet3_min_conf"])))
     if data.get("exp_nighthawk_threshold") is not None:
@@ -549,7 +554,7 @@ def update_settings(body: SettingsIn, background_tasks: BackgroundTasks, db: Ses
             data["device_offline_minutes"] = 15
     _night_changed = any(k in data and data[k] != getattr(s, k, None)
                          for k in ("night_threshold_mode", "night_threshold_species", "birdnet_min_confidence"))
-    if data.get("exp_birdnet3_shadow") or data.get("exp_birdnet3_main"):
+    if data.get("exp_birdnet3_shadow") or data.get("detection_model") == "birdnet3":
         try:
             from ..services import birdnet3
             birdnet3.ensure_downloaded()
@@ -891,6 +896,7 @@ def _empty_recording_query(db, mode: str):
     q = db.query(Recording).filter(
         Recording.deleted_at.is_(None),
         Recording.haikubox_detection_id.is_(None),
+        Recording.is_saved.isnot(True),
         ~Recording.id.in_(shown),
     )
     if server_only:

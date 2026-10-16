@@ -1,15 +1,16 @@
 """
-BirdNET v3 (developer preview 3.1) on the server: Settings → Experimental.
+BirdNET v3 (developer preview 3.1) on the server: Settings → Detection.
 
-Two switches (AppSettings):
-  exp_birdnet3_shadow  after the normal BirdNET 2.4 pass, BirdNET v3 also
-                       scores the recording. Results go to shadow_detections
-                       and show on the recording page for comparison; nothing
-                       else (detections, alerts, life list, owl rules) changes.
-  exp_birdnet3_main    BirdNET v3 replaces BirdNET 2.4 in the server pass
-                       (uploads, Re-analyze, Live Detect). BirdNET 2.4's owl
-                       rules (birdnet_pass.py) are tuned to its own scores and
-                       don't apply; exp_birdnet3_min_conf is the threshold.
+AppSettings:
+  detection_model      "birdnet3" (default): BirdNET v3 makes the server's
+                       detections (uploads, Re-analyze, Live Detect), with
+                       owl_check below in place of BirdNET 2.4's owl rules;
+                       exp_birdnet3_min_conf is the threshold. "birdnet24":
+                       BirdNET 2.4 with its owl rules (birdnet_pass.py).
+  exp_birdnet3_shadow  with 2.4 only: BirdNET v3 also scores each recording
+                       for comparison (shadow_detections, shown on the
+                       recording page); nothing else changes.
+  exp_birdnet3_main    from 0.5.13; no longer read.
 
 Model: ONNX, 5 s of 32 kHz mono in, 11,560 scores out (birds, frogs,
 insects, mammals). Downloaded on first use to ai_models_dir/birdnet3 and
@@ -198,9 +199,12 @@ def scores(y: np.ndarray) -> tuple:
 
 
 def analyze(wav_path: str, *, lat: Optional[float] = None, lon: Optional[float] = None,
-            when=None, min_conf: float = DEFAULT_MIN_CONF) -> list:
+            when=None, min_conf: float = DEFAULT_MIN_CONF, start_utc=None,
+            owls: bool = True, diag: Optional[dict] = None) -> list:
     """BirdNET-2.4-style detection dicts (label, common_name, scientific_name,
-    confidence, start_time, end_time), Chirp names, location-filtered."""
+    confidence, start_time, end_time), Chirp names, location-filtered.
+    owls: apply owl_check (start_utc, the recording's start, enables the
+    daylight rule)."""
     if not installed():
         raise RuntimeError("BirdNET v3 model isn't downloaded yet")
     t0 = time.time()
@@ -225,7 +229,60 @@ def analyze(wav_path: str, *, lat: Optional[float] = None, lon: Optional[float] 
                         "confidence": float(col[i]), "start_time": float(starts[i]),
                         "end_time": float(min(dur, starts[i] + WINDOW))})
     out.sort(key=lambda d: (d["start_time"], -d["confidence"]))
+    if owls:
+        out = owl_check(out, wav_path, lat=lat, lon=lon, start_utc=start_utc, diag=diag)
     logger.info("BirdNET v3: %d detection(s) in %.1f s of audio (%.1f s)", len(out), dur, time.time() - t0)
+    return out
+
+
+# Owl checks for BirdNET v3 (birdnet_pass's rules are tuned to 2.4's scores).
+# An owl window needs a hoot at that owl's pitch (birdnet_pass.tonal_events),
+# and in daylight a score of at least DAY_OWL_MIN; then one owl species per
+# recording unless a second is about as strong (consolidate_owl_species).
+# Natick, 15 Oct 2026: a Great Horned Owl hooting at 328 Hz from 7:13 to
+# 7:19 pm kept 33 of 35 windows; a 0.61 "Great Horned Owl" at 4:59 pm
+# (daylight, coo-like notes) was dropped.
+DAY_OWL_MIN = 0.80
+
+
+def owl_check(dets: list, wav_path: str, *, lat=None, lon=None, start_utc=None,
+              diag: Optional[dict] = None) -> list:
+    from . import birdnet_pass as bp
+    owls = [d for d in dets if bp.is_low_owl(d["common_name"])]
+    if not owls:
+        return dets
+    y48 = bp._read_mono_48k(wav_path)
+    events = bp.tonal_events(y48, bp.SAMPLE_RATE)
+    daylight = False
+    if start_utc is not None and lat is not None and lon is not None:
+        try:
+            daylight = bp.sun_altitude(lat, lon, start_utc) > 0
+        except Exception:
+            daylight = False
+    dropped = {}
+    kept = []
+    for d in owls:
+        lo, hi = bp.OWL_PITCH_HZ.get(d["common_name"], bp.GENERIC_OWL_PITCH)
+        hooted = any(lo <= p <= hi for p in bp._hoot_pitches(events, d["start_time"], d["end_time"]))
+        if not hooted:
+            dropped[d["common_name"]] = "no hoot at its pitch"
+        elif daylight and d["confidence"] < DAY_OWL_MIN:
+            dropped[d["common_name"]] = "daylight"
+        else:
+            kept.append(d)
+    best = {}
+    for d in kept:
+        best[d["common_name"]] = max(best.get(d["common_name"], 0.0), d["confidence"])
+    keep_names = set(bp.consolidate_owl_species(best))
+    for n in set(best) - keep_names:
+        dropped[n] = "outscored by another owl"
+    out = [d for d in dets if not bp.is_low_owl(d["common_name"])] + \
+          [d for d in kept if d["common_name"] in keep_names]
+    out.sort(key=lambda d: (d["start_time"], -d["confidence"]))
+    if diag is not None:
+        diag["owls_dropped"] = dropped
+    if dropped:
+        logger.info("BirdNET v3 owl check dropped %s", ", ".join(f"{k} ({v})" for k, v in dropped.items()))
     return out
 
 

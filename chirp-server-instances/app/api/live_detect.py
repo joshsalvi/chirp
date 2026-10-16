@@ -211,7 +211,9 @@ def _analyze_clip(background_tasks, audio_bytes, hint_ext, source, device_id,
     # Fast, synchronous BirdNET pass — cheap on a clip this short, and
     # the whole point of Live Detect is an answer back before the next
     # poll cycle, not a "check back later" background job for this part.
-    det_count = _run_server_birdnet(rec_id, db, replace_device_detections=True, min_confidence_override=min_confidence)
+    # The phone's slider is on BirdNET 2.4's scale; v3 uses its own threshold.
+    det_count = _run_server_birdnet(rec_id, db, replace_device_detections=True, min_confidence_override=min_confidence,
+                                    override_applies_to_v3=False)
 
     if det_count == 0:
         try:

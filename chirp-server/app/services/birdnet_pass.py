@@ -519,6 +519,24 @@ def band_limited(y: np.ndarray, sr: int) -> np.ndarray:
     return (np.clip(np.floor(out * 32768.0), -32768, 32767) / 32768.0).astype(np.float32)
 
 
+def sun_altitude(lat: float, lon: float, when_utc) -> float:
+    """Sun's altitude in degrees (NOAA approximation, within ~1 degree).
+    when_utc: naive UTC datetime."""
+    import math
+    doy = when_utc.timetuple().tm_yday
+    hour = when_utc.hour + when_utc.minute / 60 + when_utc.second / 3600
+    g = 2 * math.pi / 365 * (doy - 1 + (hour - 12) / 24)
+    decl = (0.006918 - 0.399912 * math.cos(g) + 0.070257 * math.sin(g) - 0.006758 * math.cos(2 * g)
+            + 0.000907 * math.sin(2 * g) - 0.002697 * math.cos(3 * g) + 0.00148 * math.sin(3 * g))
+    eqt = 229.18 * (0.000075 + 0.001868 * math.cos(g) - 0.032077 * math.sin(g)
+                    - 0.014615 * math.cos(2 * g) - 0.040849 * math.sin(2 * g))
+    tst = hour * 60 + eqt + 4 * lon
+    ha = math.radians(tst / 4 - 180)
+    la = math.radians(lat)
+    cz = math.sin(la) * math.sin(decl) + math.cos(la) * math.cos(decl) * math.cos(ha)
+    return 90 - math.degrees(math.acos(max(-1.0, min(1.0, cz))))
+
+
 def _split_label(lbl: str) -> tuple:
     sci, _, common = lbl.partition("_")
     return sci, common

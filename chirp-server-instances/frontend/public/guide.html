@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<link rel="icon" href="favicon.ico?v=0.5.13.e" sizes="16x16 32x32 48x48">
-<link rel="icon" href="favicon.svg?v=0.5.13.e" type="image/svg+xml">
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=0.5.13.e">
+<link rel="icon" href="favicon.ico?v=0.5.14.a" sizes="16x16 32x32 48x48">
+<link rel="icon" href="favicon.svg?v=0.5.14.a" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=0.5.14.a">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Chirp user guide</title>
 <meta name="description" content="How to find your way around Chirp and set it up the way you like.">
@@ -33,7 +33,7 @@
     <a href="#profiles">Bird profiles</a>
     <a href="#fieldguide">Field Guide</a>
     <a href="#notifications">Notifications</a>
-    <a href="#more">Notes, Statistics, Digest</a>
+    <a href="#more">Notes, Statistics, Night Calls</a>
     <p>Settings</p>
     <a href="#settings-you">Your settings</a>
     <a href="#settings-site">Site settings (admins)</a>
@@ -51,7 +51,7 @@
 
     <h2 id="around">Getting around</h2>
     <ul>
-      <li><b>iPhone and phones:</b> the bar at the bottom has Dashboard, Recordings, Live Detect, Life List and Notifications. <b>⋯</b> holds everything else: Field Guide, Notes, Statistics, Settings, What's New and My Profile (plus admin pages).</li>
+      <li><b>iPhone and phones:</b> the bar at the bottom has Dashboard, Recordings, Live Detect, Life List and Notifications. <b>⋯</b> holds everything else: Field Guide, Statistics, Night Calls and Notes; admin pages; then My Profile, Settings and What's New.</li>
       <li><b>Computer:</b> the same pages are in the sidebar on the left.</li>
       <li><b>Several sites?</b> Switch between them from the site name at the top of the page.</li>
       <li>Most sections fold up with the arrow in their corner. Chirp remembers how you left them.</li>
@@ -68,9 +68,10 @@
     <h2 id="recordings">Recordings</h2>
     <p>Every clip your station captured, newest first, with its spectrogram (a picture of the sound: pitch up the side, time along the bottom).</p>
     <ul>
-      <li><b>Filter</b> (top right): species, confidence and station. The calendar narrows to 24 hours, 7, 30 or 90 days, or a custom range.</li>
+      <li><b>Filter</b> (top right): species, confidence, station, <b>time of day</b> (dawn, morning, afternoon, evening, night or your own hours) and <b>Saved</b>. The calendar narrows to 24 hours, 7, 30 or 90 days, or a custom range.</li>
       <li>Tap a recording for the player, spectrogram and every bird found in it. Tap a species row to play just that call.</li>
-      <li><b>Enhanced</b> cleans up background noise; <b>Rumble removed</b> cuts traffic and wind. They only change what you hear.</li>
+      <li><b>Enhance</b>: <b>Original</b>, <b>Enhanced</b> (cuts traffic and wind rumble and reduces background noise; the <b>Low cut</b> slider sets the cutoff) or <b>AI</b> (neural denoising, if your site turned on AI Enhance). They only change what you hear.</li>
+      <li><b>Save</b> keeps a recording out of automatic cleanup: it's never archived or deleted on a schedule.</li>
       <li><b>AI Second Opinion</b> (if your site turned it on) checks a tricky call against the spectrogram.</li>
       <li><b>Archive</b> deletes just the audio to save space and keeps the detections; <b>Delete</b> removes everything.</li>
       <li><b>Upload</b> adds an audio file you recorded elsewhere.</li>
@@ -110,8 +111,9 @@
       <li>No alerts on iPhone? iPhone Settings → Chirp → Notifications must be on.</li>
     </ul>
 
-    <h2 id="more">Notes, Statistics and the digest</h2>
+    <h2 id="more">Notes, Statistics, Night Calls and the digest</h2>
     <ul>
+      <li><b>Night Calls</b> (if your site turned on night flight calls): short calls migrating birds give overhead at night, found by Nighthawk. Pick <b>Night</b>, <b>Week</b> or <b>Month</b>; calls are grouped by family (all warblers together) and each group opens to its calls. Tap a spectrogram for the call's own page with a larger spectrogram and the audio.</li>
       <li><b>Notes:</b> every note on any bird or recording, in one list. Use <b>⋯</b> on someone's note to report it or block them.</li>
       <li><b>Statistics:</b> patterns by month, hour and season, top species and diversity over time.</li>
       <li><b>Daily digest:</b> a summary of the day's birds, by push and email at the times your site sets. Each bird's play button opens its recordings.</li>
@@ -129,12 +131,14 @@
     <table>
       <tr><th>Tab</th><th>What to set</th></tr>
       <tr><td>General</td><td><b>Location</b> and <b>time zone</b> first: they decide which species are expected and when the digest goes out. Also the site's web address and what everyone sees.</td></tr>
-      <tr><td>Detection</td><td>BirdNET confidence and sensitivity, <b>Min. confidence display</b> (hides weak detections without deleting them), night-caller thresholds for owls, server re-analysis and recording limits.</td></tr>
+      <tr><td>Detection</td><td><b>Detection model</b>: BirdNET v3 (default; owls must hoot at their pitch, and need a higher score in daylight) or BirdNET 2.4. Then confidence and sensitivity, <b>Min. confidence display</b> (hides weak detections without deleting them), night-caller thresholds for owls, server re-analysis, recording limits and what recordings open in (<b>Playback: Enhance</b>).</td></tr>
+      <tr><td>Bats</td><td>Bat echolocation detection on an ultrasonic mic, species ID and wobble removal.</td></tr>
       <tr><td>Alerts &amp; Email</td><td>Daily digest push and email times, the email (SMTP) server with test buttons, and <b>iPhone Push</b> (shows how pushes are sent; paste a relay token on your own server).</td></tr>
       <tr><td>Integrations</td><td><b>eBird</b> key (free, for the Field Guide), Haikubox, Bird Buddy and iNaturalist.</td></tr>
-      <tr><td>Storage &amp; Backup</td><td>Disk use, automatic archive and delete after N days, backups and restore, refreshing bird data.</td></tr>
+      <tr><td>AI Features</td><td>Daily and Weekly Journal, profile summaries, AI Second Opinion and AI Enhance. Off until you add a provider (Anthropic, OpenAI, Gemini or a home Ollama server).</td></tr>
+      <tr><td>Storage &amp; Backup</td><td>Disk use, automatic archive and delete after N days (saved recordings are skipped), backups and restore, refreshing bird data.</td></tr>
       <tr><td>Access &amp; Security</td><td>Sign-in options, device keys, the activity log and network (Tailscale).</td></tr>
-      <tr><td>Experimental</td><td>Detection models (BirdNET v3 to compare or as the main model; Nighthawk night flight calls, listed on the Night Calls page, needing station software 1.4.0), range maps, heatmap, bat detection and AI features: Daily Journal, profile summaries, AI Second Opinion and AI Enhance. AI is off until you add a provider (Anthropic, OpenAI, Gemini or a home Ollama server).</td></tr>
+      <tr><td>Experimental</td><td>Nighthawk night flight calls (listed on the Night Calls page; stations need software 1.4.1), range maps and the sightings heatmap.</td></tr>
       <tr><td>Diagnostics</td><td>Server health, station checks, microphone tests and logs.</td></tr>
     </table>
 

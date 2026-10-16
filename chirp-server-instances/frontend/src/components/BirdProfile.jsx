@@ -1702,7 +1702,7 @@ function PresenceSummaryCard({ profile }) {
       ) : errorMsg ? (
         <div>
           <p className="text-sm" style={{ color: '#f87171' }}>Last attempt failed: {errorMsg}</p>
-          <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>Check the provider key in Settings → Experimental Features → AI Features, then use the regenerate button below to try again.</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>Check the provider key in Settings → AI Features, then use the regenerate button below to try again.</p>
         </div>
       ) : (
         <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
@@ -1711,7 +1711,7 @@ function PresenceSummaryCard({ profile }) {
       )}
       <div className="flex items-center justify-between mt-2">
         <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
-          AI-generated · Experimental
+          AI-generated
           {/* Real gap: this timestamp was tracked server-side (used for
               the scheduled staleness refresh) but never actually sent to
               the frontend or shown anywhere — no way to tell whether a
@@ -2284,7 +2284,7 @@ export default function BirdProfile() {
             ) : (
               <div className="card p-4 text-center text-xs text-gray-600 flex items-center justify-center gap-2">
                 <span>Range maps are disabled.</span>
-                <a href="/settings" className="text-chirp-500 hover:underline">Enable in Settings → Experimental Features</a>
+                <a href="/settings?tab=experimental" className="text-chirp-500 hover:underline">Turn on in Settings → Experimental</a>
               </div>
             )
           }

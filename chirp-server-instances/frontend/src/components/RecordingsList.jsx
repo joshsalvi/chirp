@@ -1,12 +1,46 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { useTz } from '../lib/time'
-import { Search, Mic, Activity, Upload, Trash2, SlidersHorizontal, X, LayoutGrid, List as ListIcon, ChevronDown, ChevronUp, Play, Pause, Sparkles, Archive, CheckSquare, Square, MoreHorizontal, RefreshCw, AudioLines } from 'lucide-react'
+import { Search, Mic, Activity, Upload, Trash2, SlidersHorizontal, X, LayoutGrid, List as ListIcon, ChevronDown, ChevronUp, Play, Pause, Sparkles, Archive, CheckSquare, Square, MoreHorizontal, RefreshCw, AudioLines, Bookmark } from 'lucide-react'
 import ManualUpload from './ManualUpload'
+import { confBadgeClass } from '../lib/detectionColors'
 import { api, mediaUrl, clearApiCache } from '../lib/api'
 import { savePageState, loadPageState } from '../lib/pageState'
 import { useDateRangeFilter, DateRangeFilter } from './DateRangeFilter'
 import { BirdIcon, BatIcon } from './BirdBatIcons'
+
+// Time of day (site time zone): presets plus custom from/to.
+const TIME_PRESETS = [
+  ['', 'Any time'], ['04:00-08:00', 'Dawn (4–8 am)'], ['06:00-12:00', 'Morning (6 am–noon)'],
+  ['12:00-17:00', 'Afternoon (noon–5 pm)'], ['17:00-21:00', 'Evening (5–9 pm)'], ['21:00-04:00', 'Night (9 pm–4 am)'],
+]
+function TimeOfDayFilter({ from, to, onChange }) {
+  const key = from || to ? `${from || '00:00'}-${to || '24:00'}` : ''
+  const preset = TIME_PRESETS.some(([k]) => k === key) ? key : '__custom__'
+  const [custom, setCustom] = useState(preset === '__custom__')
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <select className="input w-44 text-sm" aria-label="Time of day" value={custom ? '__custom__' : key}
+              onChange={e => {
+                const v = e.target.value
+                if (v === '__custom__') { setCustom(true); onChange(from || '06:00', to || '09:00'); return }
+                setCustom(false)
+                const [a, b] = v ? v.split('-') : [null, null]
+                onChange(a, b)
+              }}>
+        {TIME_PRESETS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+        <option value="__custom__">Custom times…</option>
+      </select>
+      {custom && (
+        <span className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+          <input type="time" className="input text-sm py-1 w-28" aria-label="From" value={from || ''} onChange={e => onChange(e.target.value, to)}/>
+          to
+          <input type="time" className="input text-sm py-1 w-28" aria-label="To" value={to || ''} onChange={e => onChange(from, e.target.value)}/>
+        </span>
+      )}
+    </div>
+  )
+}
 
 const STATE_KEY = 'recordings_list'
 
@@ -51,8 +85,7 @@ function SpectrogramThumb({ recordingId }) {
 
 function ConfBadge({ conf }) {
   if (!conf) return null
-  const cls = conf >= 0.7 ? 'badge-green' : conf >= 0.4 ? 'badge-blue' : 'badge-yellow'
-  return <span className={`badge ${cls}`}>{(conf * 100).toFixed(0)}%</span>
+  return <span className={`badge ${confBadgeClass(conf)}`}>{(conf * 100).toFixed(0)}%</span>
 }
 
 // One row inside a recording's expanded detections panel: species name,
@@ -138,6 +171,18 @@ export default function RecordingsList() {
   const filterInterference = searchParams.has('flag_interference') ? searchParams.get('flag_interference') === 'true' : null
   const filterLiveSession = searchParams.get('is_live_session') === 'true'
   const filterMultiSpecies = searchParams.get('multi_species') === 'true'
+  const filterSaved = searchParams.get('saved') === 'true'
+  const filterTimeFrom = searchParams.get('time_from') || null
+  const filterTimeTo = searchParams.get('time_to') || null
+  const setTimeOfDay = (a, b) => {
+    setPage(0)
+    setSearchParams(prev => {
+      const n = new URLSearchParams(prev)
+      if (a) n.set('time_from', a); else n.delete('time_from')
+      if (b) n.set('time_to', b); else n.delete('time_to')
+      return n
+    }, { replace: true })
+  }
 
   // Only show the "Bats only" filter toggle when bat detection is actually
   // enabled — surfacing a filter for a feature that's off would be
@@ -344,6 +389,9 @@ export default function RecordingsList() {
       if (filterInterference !== null) p.flag_interference = filterInterference
       if (filterLiveSession) p.is_live_session = true
       if (filterMultiSpecies) p.multi_species = true
+      if (filterSaved) p.saved = true
+      if (filterTimeFrom) p.time_from = filterTimeFrom
+      if (filterTimeTo) p.time_to = filterTimeTo
       const { start, end } = resolveRange()
       if (start) p.start = start
       if (end) p.end = end
@@ -370,7 +418,7 @@ export default function RecordingsList() {
         .finally(() => { if (requestId === fetchIdRef.current) setLoading(false) })
     }, 250)
     return () => clearTimeout(timer)
-  }, [search, minConf, customConf, page, effectiveLimit, filterDeviceId, filterIsBat, filterNoDetections, filterInterference, filterLiveSession, filterMultiSpecies, resolveRange, retryTick])
+  }, [search, minConf, customConf, page, effectiveLimit, filterDeviceId, filterIsBat, filterNoDetections, filterInterference, filterLiveSession, filterMultiSpecies, filterSaved, filterTimeFrom, filterTimeTo, resolveRange, retryTick])
 
   const handleDelete = async (e, rec) => {
     e.preventDefault(); e.stopPropagation()
@@ -529,10 +577,11 @@ export default function RecordingsList() {
                 <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>%</span>
               </div>
             )}
-            {(search || minConf || customConf || filterDeviceId || filterNoDetections) && (
+            <TimeOfDayFilter from={filterTimeFrom} to={filterTimeTo} onChange={setTimeOfDay}/>
+            {(search || minConf || customConf || filterDeviceId || filterNoDetections || filterTimeFrom || filterTimeTo || filterSaved) && (
               <button className="btn-ghost text-sm" onClick={() => {
                 setSearch(''); setMinConf(''); setCustomConf(''); setShowCustomConf(false); setFilterDeviceId(null); setPage(0)
-                setSearchParams(prev => { const next = new URLSearchParams(prev); next.delete('no_detections'); return next })
+                setSearchParams(prev => { const next = new URLSearchParams(prev); ['no_detections', 'time_from', 'time_to', 'saved'].forEach(k => next.delete(k)); return next })
               }}>
                 <X size={12}/> Clear
               </button>
@@ -616,6 +665,23 @@ export default function RecordingsList() {
                 ? { background: 'rgba(249,115,22,.15)', color: '#f97316', border: '1px solid rgba(249,115,22,.4)' }
                 : { background: 'var(--bg-raised)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
               <AudioLines size={13}/> Live Detect
+            </button>
+            {/* Saved: kept out of automatic cleanup (Recording.is_saved). */}
+            <button
+              onClick={() => {
+                setPage(0)
+                setSearchParams(prev => {
+                  const next = new URLSearchParams(prev)
+                  if (filterSaved) next.delete('saved')
+                  else next.set('saved', 'true')
+                  return next
+                })
+              }}
+              className="px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 whitespace-nowrap"
+              style={filterSaved
+                ? { background: 'rgba(250,204,21,.15)', color: '#facc15', border: '1px solid rgba(250,204,21,.4)' }
+                : { background: 'var(--bg-raised)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
+              <Bookmark size={13}/> Saved
             </button>
             {/* Multiple species — more than one DISTINCT species detected
                 in the same recording, not just more than one detection
@@ -812,7 +878,7 @@ export default function RecordingsList() {
                   {rec.detections?.length ?? 0} det.
                 </button>
                 <p className="text-xs truncate flex-1" style={{ color: 'var(--text-tertiary)' }}>
-                  {rec.is_live_session && <span style={{ color: 'var(--accent-500)' }}>Live Detect · </span>}
+                  {rec.is_saved && <Bookmark size={11} className="inline -mt-0.5 mr-1" style={{ color: '#facc15' }} aria-label="Saved"/>}{rec.is_live_session && <span style={{ color: 'var(--accent-500)' }}>Live Detect · </span>}
                   {fmtAgo(rec.trigger_timestamp)}
                 </p>
                 <button onClick={(e) => handleDelete(e, rec)} disabled={deleting === rec.id}
@@ -884,7 +950,7 @@ export default function RecordingsList() {
                         ? <BatIcon size={10} style={{ color: 'var(--text-tertiary)' }}/>
                         : <BirdIcon size={10} style={{ color: 'var(--text-tertiary)' }}/>}
                       <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                        {rec.is_live_session && <span style={{ color: 'var(--accent-500)' }}>Live Detect · </span>}
+                        {rec.is_saved && <Bookmark size={11} className="inline -mt-0.5 mr-1" style={{ color: '#facc15' }} aria-label="Saved"/>}{rec.is_live_session && <span style={{ color: 'var(--accent-500)' }}>Live Detect · </span>}
                         {fmtAgo(rec.trigger_timestamp)}
                       </p>
                     </div>

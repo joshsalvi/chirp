@@ -142,14 +142,20 @@ def list_nights(limit: int = Query(60, ge=1, le=366), db: Session = Depends(get_
 
 
 @router.get("")
-def list_calls(night: Optional[str] = None, include_unnarrowed: bool = False,
-               limit: int = Query(500, ge=1, le=2000), offset: int = Query(0, ge=0),
+def list_calls(night: Optional[str] = None, start: Optional[str] = None, end: Optional[str] = None,
+               include_unnarrowed: bool = False,
+               limit: int = Query(500, ge=1, le=5000), offset: int = Query(0, ge=0),
                db: Session = Depends(get_db)):
-    """Calls for a night, newest first. Order-level calls ("Songbird") are
-    left out unless include_unnarrowed; "unnarrowed" says how many there are."""
+    """Calls for a night (or nights start..end, YYYY-MM-DD, inclusive), newest
+    first. Order-level calls ("Songbird") are left out unless
+    include_unnarrowed; "unnarrowed" says how many there are."""
     q = db.query(FlightCall)
     if night:
         q = q.filter(FlightCall.night == night)
+    if start:
+        q = q.filter(FlightCall.night >= start)
+    if end:
+        q = q.filter(FlightCall.night <= end)
     unnarrowed = q.filter(FlightCall.level == "order").count()
     if not include_unnarrowed:
         q = q.filter(FlightCall.level != "order")
@@ -214,16 +220,29 @@ def call_audio(call_id: str, db: Session = Depends(get_db)):
                              "Content-Disposition": f'inline; filename="flight_call_{call_id[:8]}.wav"'})
 
 
+@router.get("/{call_id}")
+def get_call(call_id: str, db: Session = Depends(get_db)):
+    """One call, for its own page."""
+    c = db.query(FlightCall).filter(FlightCall.id == call_id).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Not found")
+    out = _call_out(c)
+    dev = db.query(Device).filter(Device.id == c.device_id).first() if c.device_id else None
+    out["device_name"] = dev.name if dev else None
+    out["prob_species"] = round(c.prob_species, 3) if c.prob_species is not None else None
+    return out
+
+
 @router.get("/{call_id}/spectrogram")
-def call_spectrogram(call_id: str, db: Session = Depends(get_db)):
-    """Small spectrogram of the clip (made when the call was found; older
-    calls get one on first request)."""
+def call_spectrogram(call_id: str, large: bool = False, db: Session = Depends(get_db)):
+    """Spectrogram of the clip: small (made when the call was found; older
+    calls get one on first request) or large, with axes, for the call page."""
     path = _clip_for(db, call_id)
-    png = nh.spectrogram_path(path)
+    png = nh.spectrogram_path(path, large)
     if not os.path.exists(png):
         with _render_lock:
             if not os.path.exists(png):
-                nh.render_spectrogram(path, png)
+                nh.render_spectrogram(path, png, large)
     return FileResponse(png, media_type="image/png",
                         headers={"Cache-Control": "public, max-age=2592000, immutable"})
 
@@ -233,7 +252,8 @@ def delete_call(call_id: str, db: Session = Depends(get_db)):
     c = db.query(FlightCall).filter(FlightCall.id == call_id).first()
     if not c:
         raise HTTPException(status_code=404, detail="Not found")
-    for p in (c.clip_path, str(Path(c.clip_path).with_suffix(".png")) if c.clip_path else None):
+    for p in ((c.clip_path, nh.spectrogram_path(c.clip_path), nh.spectrogram_path(c.clip_path, True))
+              if c.clip_path else ()):
         if p and os.path.exists(p):
             os.remove(p)
     db.delete(c); db.commit()

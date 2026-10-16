@@ -848,15 +848,15 @@ function JournalCard({ showDaily = true, showWeekly = true }) {
             {dailyData?.enabled && (
               <JournalEntryCard icon={Sparkles} title="Daily Journal" subheading={dailySubheading}
                                  data={dailyData} onRegenerate={regenerateDaily} regenerating={regeneratingDaily}
-                                 errorHint="Check the provider key in Settings → Experimental Features → AI Features, then use the regenerate button above to try again."/>
+                                 errorHint="Check the provider key in Settings → AI Features, then use the regenerate button above to try again."/>
             )}
             {weeklyData?.enabled && (
               <JournalEntryCard icon={BookOpen} title="Weekly Journal" subheading={weeklySubheading}
                                  data={weeklyData} onRegenerate={regenerateWeekly} regenerating={regeneratingWeekly}
-                                 errorHint="Check the provider key in Settings → Experimental Features → AI Features, then use the regenerate button above to try again."/>
+                                 errorHint="Check the provider key in Settings → AI Features, then use the regenerate button above to try again."/>
             )}
           </div>
-          <p className="text-[10px] uppercase tracking-wide mt-3" style={{ color: 'var(--text-tertiary)' }}>AI-generated · Experimental</p>
+          <p className="text-[10px] uppercase tracking-wide mt-3" style={{ color: 'var(--text-tertiary)' }}>AI-generated</p>
         </>
       )}
     </div>
@@ -960,8 +960,17 @@ function LiveDetectionCard({ recordingId }) {
           was pushed out of frame regardless of crop bias. A square panel
           gives every photo, regardless of its own orientation, a sane,
           predictable crop target. */}
-      <div className="relative flex-shrink-0" style={{ width: 'clamp(110px, 28vw, 180px)', height: 'clamp(110px, 28vw, 180px)' }}>
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, var(--bg-raised), var(--bg-card))' }}>
+      {/* The panel runs the card's full height (at least square) and the
+          photo fades into the card on its right and bottom edges, so a
+          taller card never shows a hard-edged block above empty space. */}
+      <div className="relative flex-shrink-0 self-stretch"
+           style={{ width: 'clamp(120px, 30vw, 200px)', minHeight: 'clamp(120px, 30vw, 180px)' }}>
+        <div className="absolute inset-0"
+             style={{ background: 'linear-gradient(135deg, var(--bg-raised), var(--bg-card))',
+                      WebkitMaskImage: 'linear-gradient(to right, #000 62%, transparent), linear-gradient(to bottom, #000 80%, transparent)',
+                      WebkitMaskComposite: 'source-in',
+                      maskImage: 'linear-gradient(to right, #000 62%, transparent), linear-gradient(to bottom, #000 80%, transparent)',
+                      maskComposite: 'intersect' }}>
           {hasPhoto && (
             <img src={detail.top_species_photo_url} alt=""
                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"

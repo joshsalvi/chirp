@@ -46,7 +46,7 @@ export default function Journal() {
       {daily && weekly && !daily.enabled && !weekly.enabled && (
         <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>The journal is turned off for this site.</p>
       )}
-      <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>AI-generated · Experimental</p>
+      <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>AI-generated</p>
     </div>
   )
 }

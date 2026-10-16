@@ -178,6 +178,9 @@ class Recording(Base):
     # action. The two are independent: a recording could in principle be
     # both, though normal usage is one or the other.
     archived_at = Column(DateTime, nullable=True, index=True)
+    # Saved by someone: kept out of every automatic cleanup (archive, age and
+    # size removal, empty-recording purges).
+    is_saved = Column(Boolean, default=False, index=True)
 
     # Relationships
     detections = relationship("Detection", back_populates="recording",
@@ -925,6 +928,7 @@ class AppSettings(Base):
     # services/birdnet3.py and services/nighthawk_service.py).
     # BirdNET v3: shadow = also score each recording and show the result for
     # comparison; main = use it instead of BirdNET 2.4 in the server pass.
+    detection_model = Column(String, default="birdnet3")   # "birdnet3" | "birdnet24" (Settings → Detection)
     exp_birdnet3_shadow = Column(Boolean, default=False)
     exp_birdnet3_main = Column(Boolean, default=False)
     exp_birdnet3_min_conf = Column(Float, default=0.5)

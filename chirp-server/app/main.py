@@ -296,6 +296,14 @@ async def lifespan(app: FastAPI):
 
     _threading.Thread(target=_night_calls_loop, daemon=True, name="night-calls").start()
 
+    # BirdNET v3 is the default detection model: fetch it (557 MB, once, to
+    # ai_models_dir) in the background. Until it's there, recordings use 2.4.
+    try:
+        from .services import birdnet3 as _bn3
+        _bn3.ensure_downloaded()
+    except Exception as _e:
+        logger.warning("BirdNET v3 download not started: %s", _e)
+
     # Scheduled pushes: Daily Journal 6 pm, Weekly Journal Sunday noon,
     # watched-bird summaries 7 pm (local time). See services/scheduled_push.py.
     _stop_sched_push = _threading.Event()

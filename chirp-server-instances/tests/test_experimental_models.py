@@ -195,7 +195,7 @@ def test_experimental_settings_validation():
     from app.api.app_settings import SettingsIn, _MIGRATION_DEFAULTS
     names = dict(_MIGRATION_DEFAULTS)
     assert names["exp_birdnet3_min_conf"] == 0.5 and names["exp_nighthawk_start"] == "21:00"
-    assert "exp_birdnet3_main" in SettingsIn.model_fields
+    assert "detection_model" in SettingsIn.model_fields
 
 
 @pytest.mark.skipif(not (os.environ.get("CHIRP_TEST_BN3_DIR") and os.environ.get("CHIRP_TEST_BIRD_WAV")),
@@ -219,7 +219,7 @@ def test_server_pass_shadow_then_main(monkeypatch, tmp_path):
                      duration_seconds=60, sample_rate=32000, channels=1, pre_roll_seconds=0, device_count=1,
                      processing_status="done"))
     s = db.query(AppSettings).filter(AppSettings.id == 1).first() or AppSettings(id=1)
-    s.exp_birdnet3_shadow, s.exp_birdnet3_main, s.exp_birdnet3_min_conf = True, False, 0.5
+    s.exp_birdnet3_shadow, s.detection_model, s.exp_birdnet3_min_conf = True, "birdnet24", 0.5
     db.merge(s); db.commit()
     n24 = _run_server_birdnet(rid, db)
     db.expire_all()
@@ -229,7 +229,7 @@ def test_server_pass_shadow_then_main(monkeypatch, tmp_path):
     main_names = {d.common_name for d in rec.detections}
     assert n24 == len(rec.detections)
     # main mode: the detections now come from BirdNET v3, in Chirp's names
-    s = db.query(AppSettings).filter(AppSettings.id == 1).first(); s.exp_birdnet3_main = True; db.commit()
+    s = db.query(AppSettings).filter(AppSettings.id == 1).first(); s.detection_model = "birdnet3"; db.commit()
     n3 = _run_server_birdnet(rid, db)
     db.expire_all()
     rec = db.query(Recording).filter(Recording.id == rid).first()
@@ -237,7 +237,7 @@ def test_server_pass_shadow_then_main(monkeypatch, tmp_path):
     assert {d.common_name for d in rec.detections} == {x.common_name for x in shadow}
     assert all(d.confidence >= 0.5 and d.source == "server" for d in rec.detections)
     print("BirdNET 2.4:", sorted(main_names), "| BirdNET v3:", sorted({d.common_name for d in rec.detections}))
-    s = db.query(AppSettings).filter(AppSettings.id == 1).first(); s.exp_birdnet3_main = s.exp_birdnet3_shadow = False
+    s = db.query(AppSettings).filter(AppSettings.id == 1).first(); s.detection_model, s.exp_birdnet3_shadow = "birdnet3", False
     db.delete(db.query(Recording).filter(Recording.id == rid).first())   # other tests count old recordings
     db.commit(); db.close()
 
@@ -266,7 +266,7 @@ def test_reanalyze_uses_birdnet3(monkeypatch, tmp_path):
                      duration_seconds=60, sample_rate=32000, channels=1, pre_roll_seconds=0, device_count=1,
                      processing_status="pending"))
     s = db.query(AppSettings).filter(AppSettings.id == 1).first() or AppSettings(id=1)
-    s.exp_birdnet3_shadow, s.exp_birdnet3_main, s.exp_birdnet3_min_conf = True, False, 0.5
+    s.exp_birdnet3_shadow, s.detection_model, s.exp_birdnet3_min_conf = True, "birdnet24", 0.5
     db.merge(s); db.commit()
 
     _process_manual_upload(rid)                                     # compare mode
@@ -276,7 +276,7 @@ def test_reanalyze_uses_birdnet3(monkeypatch, tmp_path):
     assert rec.shadow_checked_at is not None and shadow
     n24 = len(rec.detections)
 
-    s = db.query(AppSettings).filter(AppSettings.id == 1).first(); s.exp_birdnet3_main = True; db.commit()
+    s = db.query(AppSettings).filter(AppSettings.id == 1).first(); s.detection_model = "birdnet3"; db.commit()
     run = ReanalysisRun(recording_id=rid, before=[]); db.add(run); db.commit()
     db.query(Detection).filter(Detection.recording_id == rid, Detection.source == "server").delete(); db.commit()
     _process_manual_upload(rid, run_id=run.id)                      # main mode
@@ -287,7 +287,7 @@ def test_reanalyze_uses_birdnet3(monkeypatch, tmp_path):
     assert all(d.confidence >= 0.5 for d in rec.detections if d.source == "server")
     assert "BirdNET v3" in (db.query(ReanalysisRun).filter(ReanalysisRun.id == run.id).first().summary or "")
     print("reanalyze BirdNET 2.4:", n24, "| BirdNET v3:", sorted(names))
-    s = db.query(AppSettings).filter(AppSettings.id == 1).first(); s.exp_birdnet3_main = s.exp_birdnet3_shadow = False
+    s = db.query(AppSettings).filter(AppSettings.id == 1).first(); s.detection_model, s.exp_birdnet3_shadow = "birdnet3", False
     db.delete(db.query(Recording).filter(Recording.id == rid).first())
     db.commit(); db.close()
 

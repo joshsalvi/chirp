@@ -115,3 +115,8 @@ export function pickSpeciesColors(uniqueSpeciesNames, paletteKey = DEFAULT_PALET
   })
   return result
 }
+
+// Confidence colours, the same everywhere (recordings list, recording page):
+// green ≥ 70 %, blue ≥ 40 %, yellow below. Theme-aware via the badge-* classes.
+export const confBadgeClass = conf => (conf >= 0.7 ? 'badge-green' : conf >= 0.4 ? 'badge-blue' : 'badge-yellow')
+export const confLabel = conf => (conf >= 0.7 ? 'High' : conf >= 0.4 ? 'Med' : 'Low')

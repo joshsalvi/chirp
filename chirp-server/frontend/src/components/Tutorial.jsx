@@ -505,7 +505,7 @@ const ALL_SECTIONS = [
           <ul className="space-y-1 text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
             <li>• Scroll to the bottom of the <strong style={{ color: 'var(--accent-400)' }}>Dashboard</strong> — there's a "Getting Started guide" link</li>
             <li>• Or navigate directly to <code style={{ fontFamily: 'monospace', color: 'var(--accent-400)' }}>/tutorial</code></li>
-            <li>• Or toggle it back on in <strong style={{ color: 'var(--accent-400)' }}>Settings → My Notification Preferences</strong></li>
+            <li>• Or toggle it back on in <strong style={{ color: 'var(--accent-400)' }}>Settings → My Notifications</strong></li>
           </ul>
         </div>
       </div>
@@ -554,7 +554,7 @@ const ALL_SECTIONS = [
         <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>📓 Journal</p>
         <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
           Two independent AI-written entries, each with its own schedule and its own regenerate
-          button (Settings → Experimental Features → AI Features): <strong style={{ color: 'var(--accent-400)' }}>Daily Journal</strong>{' '}
+          button (Settings → AI Features): <strong style={{ color: 'var(--accent-400)' }}>Daily Journal</strong>{' '}
           covers today so far, and <strong style={{ color: 'var(--accent-400)' }}>Weekly Journal</strong> covers
           the trailing 7 days — including any real arrivals or departures (a species newly present,
           or one that had been regular but has gone quiet), plus a bit more educational depth than a
@@ -602,11 +602,11 @@ const ALL_SECTIONS = [
             <li>• Use the time period buttons (6h / 24h / 7d…) further down to zoom the detection-activity chart.</li>
             <li>• Recent notes at the bottom show the latest comments from all users across every bird.</li>
             <li>• First time here, you'll be asked to pick a <strong style={{ color: 'var(--accent-400)' }}>Simplified</strong> or <strong style={{ color: 'var(--accent-400)' }}>Detailed</strong> Dashboard — change it anytime via the link at the bottom of this page, or in Settings → Appearance. This is tied to your account, not your browser.</li>
-            <li>• <strong style={{ color: 'var(--accent-400)' }}>Today's Journal</strong> (experimental) is an AI-written daily recap in a birder's-journal tone. It's off by default — turn it on in Settings → Experimental Features → AI Features, where every AI feature and provider key lives together. It only appears once a summary has actually generated successfully; nothing shows if it's off or if generation fails.</li>
-            <li>• A Bird Profile's own AI presence note (also experimental, same on/off setup) appears near the top of the page once enabled — a short note about when and how often you've actually detected that species in your own yard, generated the first time you view a profile after turning it on.</li>
+            <li>• <strong style={{ color: 'var(--accent-400)' }}>Today's Journal</strong> is an AI-written daily recap in a birder's-journal tone. It's off by default — turn it on in Settings → AI Features, where every AI feature and provider key lives together. It only appears once a summary has actually generated successfully; nothing shows if it's off or if generation fails.</li>
+            <li>• A Bird Profile's own AI presence note (same on/off setup) appears near the top of the page once enabled — a short note about when and how often you've actually detected that species in your own yard, generated the first time you view a profile after turning it on.</li>
             <li>• <strong style={{ color: 'var(--accent-400)' }}>Device Notifications</strong> in My Profile turns on real notifications for this specific device, including while Chirp is closed — separate from Email Notifications above, though it follows the same "new species" preference. Requires the app be installed/added to your home screen for full reliability on mobile.</li>
             <li>• A <strong style={{ color: 'var(--accent-400)' }}>Re-check this call</strong> button appears on a Recording's detail page once Bird Call Re-analysis is enabled — asks the AI for a second opinion on the spectrogram, shown as a plain-language note below. A sanity check, not a replacement for the actual detection.</li>
-            <li>• AI provider keys (Anthropic, OpenAI, Gemini, and Ollama — self-hosted, no API key, just a server address and a model name you've pulled locally), each with its own Test button, plus assigning each AI feature to one of them (or disabling it) and usage stats per provider, all live together in Settings → Experimental Features → AI Features.</li>
+            <li>• AI provider keys (Anthropic, OpenAI, Gemini, and Ollama — self-hosted, no API key, just a server address and a model name you've pulled locally), each with its own Test button, plus assigning each AI feature to one of them (or disabling it) and usage stats per provider, all live together in Settings → AI Features.</li>
           </ul>
         </div>
       </div>
@@ -654,17 +654,17 @@ const ALL_SECTIONS = [
           <ul className="space-y-1 text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
             <li>• Tap any card to open the full recording detail page with the audio player, spectrogram, and all detections.</li>
             <li>• Tap the <strong style={{ color: 'var(--accent-400)' }}>detections count</strong> on a card to expand it in place — play any individual bird call's clip without leaving the list.</li>
-            <li>• Every audio player has an <strong style={{ color: 'var(--accent-400)' }}>✨ Enhanced</strong> toggle — switches to a cleaned-up version that isolates the bird call from background noise, with a matching enhanced spectrogram.</li>
-            <li>• A <strong style={{ color: 'var(--accent-400)' }}>Rumble removed</strong> toggle sits next to Enhanced — a species-aware high-pass filter that cuts low-frequency rumble (traffic, wind, HVAC) specifically, independent of Enhanced and combinable with it. Drag the cutoff slider to override the automatic frequency directly, the same way Live Detect's own rumble filter works.</li>
-            <li>• <strong style={{ color: 'var(--accent-400)' }}>AI Enhance</strong> (a third toggle, when enabled in Settings → AI Features) is a genuinely different approach from Enhanced/Rumble removed — neural-network denoising instead of a classical filter, often isolating a call more aggressively. Takes a few seconds to generate the first time; needs an AI Feature provider assigned in Settings.</li>
+            <li>• Every bird audio player has one <strong style={{ color: 'var(--accent-400)' }}>Enhance</strong> control: <strong style={{ color: 'var(--accent-400)' }}>Original</strong>, <strong style={{ color: 'var(--accent-400)' }}>Enhanced</strong> (cuts low rumble from traffic, wind and HVAC and reduces steady background noise, with a matching spectrogram) or <strong style={{ color: 'var(--accent-400)' }}>AI</strong> (neural denoising, when AI Enhance is on in Settings → AI Features; it isolates a call harder but loses sound above 8 kHz). In Enhanced, a <strong style={{ color: 'var(--accent-400)' }}>Low cut</strong> slider sets the rumble cutoff; Auto picks it from the birds detected. Settings → Detection → Playback: Enhance picks what recordings open in.</li>
+            <li>• Bat recordings keep their own <strong style={{ color: 'var(--accent-400)' }}>Enhanced</strong> (slowed-down) and <strong style={{ color: 'var(--accent-400)' }}>De-wobbled</strong> toggles.</li>
             <li>• <strong style={{ color: 'var(--accent-400)' }}>AI Second Opinion</strong> asks a vision-capable AI model to look at the spectrogram directly and give its own read on each flagged call — agreeing, disagreeing, or uncertain, with the visual reasoning behind it. It also does a second pass over the whole image for anything BirdNET didn't flag at all: another bird call it can identify, or a non-bird sound like a chorus of insects. Needs a vision-capable AI Feature provider assigned in Settings.</li>
-            <li>• Use the filter icon (top-right) to search by species name or filter by confidence, filter by <strong style={{ color: 'var(--accent-400)' }}>device</strong> (if you have more than one), and the <strong style={{ color: 'var(--accent-400)' }}>calendar icon</strong> to narrow the list to the last 24 hours, 7/30/90 days, or a custom date range.</li>
+            <li>• Use the filter icon (top-right) to search by species name or filter by confidence, filter by <strong style={{ color: 'var(--accent-400)' }}>device</strong> (if you have more than one), and the <strong style={{ color: 'var(--accent-400)' }}>calendar icon</strong> to narrow the list to the last 24 hours, 7/30/90 days, or a custom date range. <strong style={{ color: 'var(--accent-400)' }}>Time of day</strong> (dawn, morning, afternoon, evening, night or your own hours, in the site's time zone) narrows it further, and <strong style={{ color: 'var(--accent-400)' }}>Saved</strong> shows only recordings you've saved.</li>
+            <li>• Tap <strong style={{ color: 'var(--accent-400)' }}>Save</strong> on a recording to keep it: saved recordings are never archived or deleted by automatic storage cleanup.</li>
             <li>• If bat detection is set up (a separate ultrasonic USB mic, in addition to your regular bird mic), a <strong style={{ color: 'var(--accent-400)' }}>Birds only / Bats only</strong> toggle appears next to the filters — bat recordings show a pulse-train spectrogram instead of a bird call's, and get their own species classification pass where possible.</li>
             <li>• The <strong style={{ color: 'var(--accent-400)' }}>No detections</strong> toggle shows only recordings the pipeline captured but never identified anything in — useful for spotting false triggers or recordings worth pruning.</li>
             <li>• The <strong style={{ color: 'var(--accent-400)' }}>Upload</strong> button (top-right) lets you manually add an existing audio file — mark it as a bird or bat recording so it's analyzed by the correct pipeline. Bat uploads need a genuine ultrasonic-mic recording (192kHz+); a normal phone/bird-mic recording can't physically contain echolocation calls and will be rejected.</li>
             <li>• The spectrogram shows frequency on the Y-axis and time on the X-axis. Bright spots = loud sounds.</li>
             <li>• You can add notes to any recording — notes are shared with all users.</li>
-            <li>• <strong style={{ color: 'var(--accent-400)' }}>Archive</strong> a recording from its detail page to delete just the audio and free up space — the spectrogram, detections, and notes stay intact, and it keeps counting in every statistic. <strong style={{ color: 'var(--accent-400)' }}>Delete</strong> removes everything. Admins can also set either to happen automatically after N days in Settings → Storage &amp; Data.</li>
+            <li>• <strong style={{ color: 'var(--accent-400)' }}>Archive</strong> a recording from its detail page to delete just the audio and free up space — the spectrogram, detections, and notes stay intact, and it keeps counting in every statistic. <strong style={{ color: 'var(--accent-400)' }}>Delete</strong> removes everything. Admins can also set either to happen automatically after N days in Settings → Storage &amp; Backup; saved recordings are skipped.</li>
           </ul>
         </div>
       </div>
@@ -935,9 +935,10 @@ const ALL_SECTIONS = [
     content: (
       <div className="space-y-4">
         <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-          Settings is organized into seven groups — Appearance, Detection, Third-Party
-          Integrations, Notifications, Storage &amp; Data, Account &amp; Advanced, and
-          Experimental Features. Cards start collapsed; tap any title to expand it. Admins can
+          Settings is organized into tabs — My Notifications, Appearance, General, Detection, Bats,
+          Alerts &amp; Email, Integrations, AI Features, Storage &amp; Backup, Access &amp; Security,
+          Experimental and Diagnostics — with a search box at the top that finds any setting by name
+          or by what it does. Cards start collapsed; tap any title to expand it. Admins can
           configure location, BirdNET parameters, storage limits, and more. All users can
           change their color theme from Settings.
         </p>
@@ -947,15 +948,16 @@ const ALL_SECTIONS = [
             { icon: '🗂️', title: 'Card Defaults', sub: 'Choose whether collapsible cards start expanded or collapsed, app-wide' },
             { icon: '📍', title: 'Location', sub: 'Now under Detection — feeds species-list prediction and Field Guide data' },
             { icon: '🔑', title: 'eBird API Key', sub: 'Enables regional bird data' },
-            { icon: '🧠', title: 'BirdNET', sub: 'Confidence & sensitivity tuning' },
+            { icon: '🧠', title: 'Detection Model', sub: 'BirdNET v3 (default; with owl checks) or BirdNET 2.4, plus confidence & sensitivity tuning' },
             { icon: '📦', title: 'Archive & Auto-Delete', sub: 'Two independent age-based timers — see Tips below' },
             { icon: '📡', title: 'Haikubox', sub: 'Third-Party Integrations — sync detections from a Haikubox into Chirp' },
             { icon: '🐦', title: 'Bird Buddy', sub: 'Third-Party Integrations — sync postcards from your smart feeder' },
             { icon: '🔬', title: 'iNaturalist', sub: 'Third-Party Integrations — personal or shared token, with auto-refresh' },
             { icon: '📧', title: 'Email', sub: 'SMTP + notification preferences' },
             { icon: '🔐', title: 'Auth', sub: 'Enable login for shared servers' },
-            { icon: '🤖', title: 'AI Features', sub: 'Experimental Features — Daily Journal, Bird Profile Summaries, Call Re-analysis (powers the AI Second Opinion button on a recording), and AI Enhance (a local neural-network audio cleanup, separate from the cloud-provider features); each of the cloud-based ones independently assignable to Anthropic, OpenAI, Gemini, or a self-hosted Ollama server, off by default. Daily Journal and Profile Summaries also have tone sliders (Friendliness / Informational / Irreverence), default = unchanged.' },
-            { icon: '🦇', title: 'Bat Echolocation Detection', sub: 'Experimental Features — ultrasonic pulse-train detection, optional species ID, and an experimental wobble-removal audio cleanup' },
+            { icon: '🤖', title: 'AI Features', sub: 'Daily and Weekly Journal, Bird Profile summaries, AI Second Opinion and AI Enhance; each cloud feature assignable to Anthropic, OpenAI, Gemini or a self-hosted Ollama server, off by default.' },
+            { icon: '🦇', title: 'Bats', sub: 'Ultrasonic echolocation detection, optional species ID and wobble removal' },
+            { icon: '🌙', title: 'Experimental', sub: 'Night flight calls (Nighthawk), range maps and the sightings heatmap' },
           ].map(({ icon, title, sub }) => (
             <div key={title} className="card p-3">
               <div className="flex items-center gap-2 mb-1">
@@ -969,15 +971,15 @@ const ALL_SECTIONS = [
         <div className="card p-3 space-y-2" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)' }}>
           <p className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>💡 Tips</p>
           <ul className="space-y-1 text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-            <li>• On mobile, use the <strong style={{ color: 'var(--accent-400)' }}>⋮ menu</strong> (bottom-right) to access Settings, Statistics, My Profile, and admin pages.</li>
+            <li>• On mobile, use the <strong style={{ color: 'var(--accent-400)' }}>⋮ menu</strong> (bottom-right) for the Field Guide, Statistics, Night Calls and Notes, then admin pages, then My Profile, Settings and What's New.</li>
             <li>• <strong style={{ color: 'var(--accent-400)' }}>Card Defaults</strong> controls every collapsible card across Bird Profile, Settings, Statistics, and My Profile at once — but if you've ever individually expanded or collapsed a specific card yourself, that choice is remembered and always wins over the global setting for that one card. A "Reset all cards to default" action clears every individual override at once.</li>
             <li>• The <strong style={{ color: 'var(--accent-400)' }}>Statistics</strong> page shows charts of detection patterns by month, hour, season, and species. Related charts are grouped in pairs under one shared header — collapsing one collapses both at once, so a row never ends up half-collapsed and lopsided.</li>
             <li>• The Devices page lets you view live logs from your Pi, push config changes, and sync location.</li>
-            <li>• Have a <strong style={{ color: 'var(--accent-400)' }}>Haikubox</strong> too? Turn it on in Settings → Third-Party Integrations — Chirp polls it every 15 minutes and shows its detections on a dedicated <strong style={{ color: 'var(--accent-400)' }}>Haikubox Detections</strong> page (linked from Recordings and the Devices page once you have any), separate from your Pi's own recordings since Haikubox detections have no audio attached.</li>
-            <li>• Have a <strong style={{ color: 'var(--accent-400)' }}>Bird Buddy</strong> smart feeder? Also in Settings → Third-Party Integrations — Chirp pulls each new postcard's video, extracts its real audio, and runs it through the same BirdNET pipeline as your Pi's own recordings (Bird Buddy's own species guess isn't used, for consistent confidence scoring).</li>
+            <li>• Have a <strong style={{ color: 'var(--accent-400)' }}>Haikubox</strong> too? Turn it on in Settings → Integrations — Chirp polls it every 15 minutes and shows its detections on a dedicated <strong style={{ color: 'var(--accent-400)' }}>Haikubox Detections</strong> page (linked from Recordings and the Devices page once you have any), separate from your Pi's own recordings since Haikubox detections have no audio attached.</li>
+            <li>• Have a <strong style={{ color: 'var(--accent-400)' }}>Bird Buddy</strong> smart feeder? Also in Settings → Integrations — Chirp pulls each new postcard's video, extracts its real audio, and runs it through the same BirdNET pipeline as your Pi's own recordings (Bird Buddy's own species guess isn't used, for consistent confidence scoring).</li>
             <li>• <strong style={{ color: 'var(--accent-400)' }}>Archive</strong> a recording (or set an automatic age threshold in Storage &amp; Data) to delete just its audio file and free up space — the spectrogram, detections, and notes stay, and it still counts in every statistic. This is different from <strong style={{ color: 'var(--accent-400)' }}>Delete</strong>, which removes the recording entirely. Archiving can't be undone once the audio is gone.</li>
             <li>• Set <strong style={{ color: 'var(--accent-400)' }}>Min. Confidence Display</strong> to hide low-confidence detections without deleting them.</li>
-            <li>• Admins can <strong style={{ color: 'var(--accent-400)' }}>backup and restore</strong> the database from Settings → Storage &amp; Data.</li>
+            <li>• Admins can <strong style={{ color: 'var(--accent-400)' }}>backup and restore</strong> the database from Settings → Storage &amp; Backup.</li>
             <li>• The <strong style={{ color: 'var(--accent-400)' }}>Life List</strong> can be sorted by detections, name, or first-seen date — its "Download" button exports an eBird-compatible CSV; make sure to pick <strong style={{ color: 'var(--accent-400)' }}>eBird Record Format</strong>, not Checklist Format, when importing it at eBird's Submit page.</li>
             <li>• <strong style={{ color: 'var(--accent-400)' }}>AI Features</strong> are entirely optional and off until you assign a provider — Daily Journal and Bird Profile Summaries can each auto-generate on a schedule; Bird Profile Summaries specifically can also auto-refresh a stale summary periodically rather than only ever generating once on first view.</li>
           </ul>

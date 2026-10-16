@@ -1174,22 +1174,45 @@ class AudioCapture:
         while self._running.is_set():
             chunks_this_round: Dict[int, np.ndarray] = {}
 
+            # Paced by the first (primary) stream: wait for its next chunk,
+            # then take whatever the other mics have ready. A mic with
+            # nothing ready is left out of this round. Until 1.4.1 every
+            # stream waited 0.15 s and a miss became a chunk of zeros, but
+            # a 8192-sample chunk at 48 kHz takes 0.17 s to arrive, so about
+            # half of what fed detection, the pre-roll level meter and night
+            # audio was inserted silence (night clips came out "staccato":
+            # 0.17 s and 0.34 s gaps every second). Recordings were fine:
+            # they're cut from the raw per-mic buffers.
             for i, stream in enumerate(self._streams):
+                got = []
                 try:
-                    _idx, chunk = stream.queue.get(timeout=0.15)
-                    chunks_this_round[i] = chunk
-                    dev_key = stream.device.index if isinstance(stream.device.index, int) else 0
-                    with self._raw_lock:
-                        if dev_key in self._raw_buffers:
-                            self._raw_buffers[dev_key].append(chunk)
+                    if i == 0:
+                        got.append(stream.queue.get(timeout=1.0)[1])
+                    else:
+                        while True:     # everything ready; the newest joins the mix
+                            got.append(stream.queue.get_nowait()[1])
                 except queue.Empty:
-                    chunks_this_round[i] = np.zeros(self.chunk_size, dtype=np.float32)
+                    pass
+                if not got:
+                    if i == 0:
+                        break
+                    continue
+                chunks_this_round[i] = got[-1]
+                dev_key = stream.device.index if isinstance(stream.device.index, int) else 0
+                with self._raw_lock:
+                    if dev_key in self._raw_buffers:
+                        self._raw_buffers[dev_key].extend(got)
 
-            if not chunks_this_round:
+            if 0 not in chunks_this_round:
+                # Primary stream had nothing within a second (stalled or
+                # stopped): keep the other mics' raw buffers fresh, nothing more.
                 time.sleep(0.01)
                 continue
 
             channel_arrays = list(chunks_this_round.values())
+            n0 = len(channel_arrays[0])        # the primary sets the length
+            channel_arrays = [channel_arrays[0]] + [
+                c[:n0] if len(c) >= n0 else np.pad(c, (0, n0 - len(c))) for c in channel_arrays[1:]]
 
             # ── Recording mix: SNR-weighted so the best mic dominates the WAV ──
             if len(channel_arrays) == 1:

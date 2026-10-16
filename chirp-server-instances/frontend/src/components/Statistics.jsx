@@ -679,7 +679,7 @@ export default function Statistics() {
                   </div>
                 ) : (
                   <p className="text-sm py-8 text-center" style={{ color: 'var(--text-tertiary)' }}>
-                    No species confidently identified yet — enable species classification in Settings → Experimental Features → Bat Echolocation Detection.
+                    No species confidently identified yet — enable species classification in Settings → Bats.
                   </p>
                 )}
               </PairedChart>

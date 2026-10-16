@@ -1,0 +1,21 @@
+# Keep the build context small and free of local secrets.
+**/node_modules
+frontend/dist
+frontend/dist-picker
+frontend/ios
+frontend/android
+frontend/capacitor.config.json.release
+app/static
+data
+**/__pycache__
+**/*.pyc
+.pytest_cache
+tests
+**/*.log
+**/*.p8
+**/.env
+**/.env.*
+!.env.example
+!.env.simple.example
+**/*.db
+**/.DS_Store

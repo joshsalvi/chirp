@@ -376,6 +376,7 @@ export const api = {
     clipUrl: (rId, dId) => mediaUrl(`${BASE}/recordings/${rId}/clip/${dId}`),
     clipEnhancedUrl: (rId, dId) => mediaUrl(`${BASE}/recordings/${rId}/clip/${dId}/enhanced`),
     clipRumbleRemovedUrl: (rId, dId) => mediaUrl(`${BASE}/recordings/${rId}/clip/${dId}/rumble-removed`),
+    clipCleanUrl: (rId, dId) => mediaUrl(`${BASE}/recordings/${rId}/clip/${dId}/rumble-removed?nr=true`),
     waveform: (id, points = 200) => request(`/recordings/${id}/waveform?points=${points}`),
     upload: async (fileOrFormData, onProgress) => {
       // Accept either a File object or a pre-built FormData
@@ -813,8 +814,12 @@ export const api = {
   nightCalls: {
     status: () => request('/night-calls/status'),
     downloadBirdnet3: () => request('/night-calls/birdnet3/download', { method: 'POST' }),
-    nights: () => request('/night-calls/nights'),
+    nights: (limit = 60) => request(`/night-calls/nights?limit=${limit}`),
     list: (night, includeUnnarrowed = false) => request(`/night-calls?night=${encodeURIComponent(night)}${includeUnnarrowed ? '&include_unnarrowed=true' : ''}`),
+    range: (start, end, includeUnnarrowed = false, limit = 500) => request(`/night-calls?start=${start}&end=${end}&limit=${limit}${includeUnnarrowed ? '&include_unnarrowed=true' : ''}`),
+    get: (id) => request(`/night-calls/${id}`),
+    spectrogramUrl: (id, large = false) => mediaUrl(`${BASE}/night-calls/${id}/spectrogram${large ? '?large=true' : ''}`),
+    audioUrl: (id) => mediaUrl(`${BASE}/night-calls/${id}/audio`),
     remove: (id) => request(`/night-calls/${id}`, { method: 'DELETE' }),
   },
   batActivity: {

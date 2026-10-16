@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>Chirp-Caddy</Name>
+  <Repository>joshsalvi/chirp-caddy:latest</Repository>
+  <Registry>https://hub.docker.com/r/joshsalvi/chirp-caddy</Registry>
+  <Network>bridge</Network>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://ourchirp.com/support.html</Support>
+  <Project>https://github.com/joshsalvi/chirp</Project>
+  <Overview>Optional companion to Chirp-Headscale: Caddy with the Cloudflare DNS plugin, giving Headscale a public HTTPS address with automatic certificates (Headscale can't run behind Cloudflare's proxy or tunnel).</Overview>
+  <Description>Copy chirp-server-instances/caddy/Caddyfile from github.com/joshsalvi/chirp to the Caddyfile path below and replace headscale.ourchirp.com with your own hostname. That DNS record must be "DNS only" (grey cloud) in Cloudflare. Forward your router's port 443 to this container's HTTPS port. The Cloudflare token needs only Zone:DNS:Edit for that one zone.</Description>
+  <Category>Network:Web Tools:Utilities</Category>
+  <TemplateURL>https://raw.githubusercontent.com/joshsalvi/unraid-templates/main/templates/chirp-caddy.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/joshsalvi/unraid-templates/main/icon.png</Icon>
+  <ExtraParams>-p 127.0.0.1:2019:2019</ExtraParams>
+  <Requires>Chirp-Headscale</Requires>
+  <Config Name="HTTPS port" Target="443" Default="8443" Mode="tcp" Description="Forward your router's 443 here (Unraid's own UI usually has 443)." Type="Port" Display="always" Required="true" Mask="false">8443</Config>
+  <Config Name="Caddyfile" Target="/etc/caddy/Caddyfile" Default="/mnt/user/appdata/chirp-caddy/Caddyfile" Mode="ro" Description="Your edited Caddyfile." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/chirp-caddy/Caddyfile</Config>
+  <Config Name="Data" Target="/data" Default="/mnt/user/appdata/chirp-caddy/data" Mode="rw" Description="Certificates." Type="Path" Display="advanced" Required="true" Mask="false">/mnt/user/appdata/chirp-caddy/data</Config>
+  <Config Name="Config" Target="/config" Default="/mnt/user/appdata/chirp-caddy/config" Mode="rw" Description="Caddy's saved config (changes made from Chirp's Global Admin)." Type="Path" Display="advanced" Required="true" Mask="false">/mnt/user/appdata/chirp-caddy/config</Config>
+  <Config Name="Cloudflare API token" Target="CF_API_TOKEN" Default="" Mode="" Description="Zone:DNS:Edit for your zone only, for certificates." Type="Variable" Display="always" Required="true" Mask="true"></Config>
+  <Config Name="Admin API" Target="CADDY_ADMIN" Default="0.0.0.0:2019" Mode="" Description="Published to the host's loopback only (see Extra Parameters)." Type="Variable" Display="advanced-hide" Required="true" Mask="false">0.0.0.0:2019</Config>
+</Container>

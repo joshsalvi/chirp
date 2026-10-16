@@ -41,6 +41,10 @@ export const tokenStore = {
   clear: () => localStorage.removeItem(TOKEN_KEY),
 }
 
+// Media URLs (<img>/<audio> src). This server authenticates media like any
+// other request, so the path is used as is (the instances fork adds a token).
+export function mediaUrl(path) { return path }
+
 // ── GET cache ────────────────────────────────────────────────────────────────
 // Makes going back to a page you just left instant (the iOS tab bar mostly).
 // - Identical GETs in flight at once share one network request.
@@ -258,6 +262,7 @@ export const api = {
     clipUrl: (rId, dId) => `${BASE}/recordings/${rId}/clip/${dId}`,
     clipEnhancedUrl: (rId, dId) => `${BASE}/recordings/${rId}/clip/${dId}/enhanced`,
     clipRumbleRemovedUrl: (rId, dId) => `${BASE}/recordings/${rId}/clip/${dId}/rumble-removed`,
+    clipCleanUrl: (rId, dId) => `${BASE}/recordings/${rId}/clip/${dId}/rumble-removed?nr=true`,
     waveform: (id, points = 200) => request(`/recordings/${id}/waveform?points=${points}`),
     upload: async (fileOrFormData, onProgress) => {
       // Accept either a File object or a pre-built FormData
@@ -699,8 +704,12 @@ export const api = {
   nightCalls: {
     status: () => request('/night-calls/status'),
     downloadBirdnet3: () => request('/night-calls/birdnet3/download', { method: 'POST' }),
-    nights: () => request('/night-calls/nights'),
+    nights: (limit = 60) => request(`/night-calls/nights?limit=${limit}`),
     list: (night, includeUnnarrowed = false) => request(`/night-calls?night=${encodeURIComponent(night)}${includeUnnarrowed ? '&include_unnarrowed=true' : ''}`),
+    range: (start, end, includeUnnarrowed = false, limit = 500) => request(`/night-calls?start=${start}&end=${end}&limit=${limit}${includeUnnarrowed ? '&include_unnarrowed=true' : ''}`),
+    get: (id) => request(`/night-calls/${id}`),
+    spectrogramUrl: (id, large = false) => mediaUrl(`${BASE}/night-calls/${id}/spectrogram${large ? '?large=true' : ''}`),
+    audioUrl: (id) => mediaUrl(`${BASE}/night-calls/${id}/audio`),
     remove: (id) => request(`/night-calls/${id}`, { method: 'DELETE' }),
   },
   batActivity: {

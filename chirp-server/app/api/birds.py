@@ -1881,7 +1881,7 @@ def reset_range_map_to_wikipedia(
     if not _range_maps_enabled(db):
         raise HTTPException(
             status_code=403,
-            detail="Range maps are disabled. Enable them in Settings → Experimental Features.",
+            detail="Range maps are disabled. Turn them on in Settings → Experimental.",
         )
     profile = db.query(BirdProfile).filter(BirdProfile.id == profile_id).first()
     if not profile:
@@ -1933,7 +1933,7 @@ def fetch_range_map_from_source(
     if not _range_maps_enabled(db):
         raise HTTPException(
             status_code=403,
-            detail="Range maps are disabled. Enable them in Settings → Range Maps (experimental)."
+            detail="Range maps are disabled. Turn them on in Settings → Experimental → Range Maps."
         )
     if source not in ("ebird_st", "gbif"):
         raise HTTPException(status_code=400, detail=f"Unknown source: {source}")

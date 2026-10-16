@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>Chirp-Headscale</Name>
+  <Repository>joshsalvi/chirp-headscale:latest</Repository>
+  <Registry>https://hub.docker.com/r/joshsalvi/chirp-headscale</Registry>
+  <Network>bridge</Network>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://ourchirp.com/support.html</Support>
+  <Project>https://github.com/joshsalvi/chirp</Project>
+  <Overview>Optional companion to Chirp: a self-hosted Headscale (Tailscale control server) so Chirp stations outside your home network can reach your Chirp server privately. Creates its own reusable key on first start and hands it to the Chirp container.</Overview>
+  <Description>Install only if you have stations away from home. Before the first start, copy config.yaml from github.com/joshsalvi/chirp (chirp-server-instances/headscale/config.yaml) to the Config path below and set server_url to the public HTTPS address that reaches this container (see Chirp-Caddy). Map the same Shared folder into the Chirp container at /shared.</Description>
+  <Category>Network:VPN Tools:Utilities</Category>
+  <TemplateURL>https://raw.githubusercontent.com/joshsalvi/unraid-templates/main/templates/chirp-headscale.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/joshsalvi/unraid-templates/main/icon.png</Icon>
+  <ExtraParams>-p 127.0.0.1:50444:50444</ExtraParams>
+  <Requires>Chirp</Requires>
+  <Config Name="Control port" Target="9877" Default="9877" Mode="tcp" Description="Headscale's port (Chirp-Caddy forwards HTTPS here)." Type="Port" Display="always" Required="true" Mask="false">9877</Config>
+  <Config Name="Config file" Target="/etc/headscale/config.yaml" Default="/mnt/user/appdata/chirp-headscale/config.yaml" Mode="ro" Description="Headscale config; set server_url before first start." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/chirp-headscale/config.yaml</Config>
+  <Config Name="State" Target="/var/lib/headscale" Default="/mnt/user/appdata/chirp-headscale/data" Mode="rw" Description="Keys and the node database. Keep on the cache or appdata share." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/chirp-headscale/data</Config>
+  <Config Name="Socket" Target="/var/run/headscale" Default="/mnt/user/appdata/chirp-headscale/run" Mode="rw" Description="Unix socket. Must be on a share the Unraid mover never touches (appdata on cache, set to Prefer/Only)." Type="Path" Display="advanced" Required="true" Mask="false">/mnt/user/appdata/chirp-headscale/run</Config>
+  <Config Name="Shared" Target="/shared" Default="/mnt/user/appdata/chirp-headscale/shared" Mode="rw" Description="Where the auth key is written for Chirp." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/chirp-headscale/shared</Config>
+</Container>

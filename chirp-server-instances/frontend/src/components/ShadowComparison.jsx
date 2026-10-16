@@ -1,6 +1,6 @@
 /**
  * BirdNET v3 next to the main detections for one recording (Settings →
- * Experimental → Compare with BirdNET v3). GET /recordings/{id}/shadow.
+ * Detection → BirdNET 2.4 → Compare with BirdNET v3). GET /recordings/{id}/shadow.
  */
 import { useEffect, useState } from 'react'
 import { FlaskConical } from 'lucide-react'
@@ -25,7 +25,7 @@ export default function ShadowComparison({ recordingId, refreshKey }) {
         <FlaskConical size={14} style={{ color: 'var(--accent-400)' }}/>
         <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>BirdNET v3 comparison</span>
         <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded"
-              style={{ background: 'var(--bg-raised)', color: 'var(--text-tertiary)' }}>Experimental</span>
+              style={{ background: 'var(--bg-raised)', color: 'var(--text-tertiary)' }}>2.4 vs v3</span>
       </div>
       {!data.ran ? (
         <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>

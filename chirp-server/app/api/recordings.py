@@ -388,6 +388,7 @@ class RecordingOut(BaseModel):
     inat_observation_id:  Optional[str] = None   # iNaturalist observation integer ID
     inat_observation_url: Optional[str] = None   # full iNat observation URL
     has_audio: bool = True  # False for Haikubox detections (no WAV available)
+    is_saved: bool = False  # kept out of automatic cleanup
     # Detection rows under min_confidence_display (detail view only), so the
     # page can say what's stored but hidden instead of showing nothing.
     hidden_detections: List[dict] = []
@@ -543,6 +544,7 @@ def recording_to_out(rec: Recording, db=None, _app_settings=None, _profile_map: 
         inat_observation_id=getattr(rec, 'inat_observation_id', None),
         inat_observation_url=getattr(rec, 'inat_observation_url', None),
         has_audio=bool(rec.wav_path),
+        is_saved=bool(getattr(rec, "is_saved", False)),
         hidden_detections=sorted(hidden_out, key=lambda x: -x["confidence"])[:30],
         display_min_confidence=display_min_conf,
     )
@@ -796,15 +798,17 @@ def _get_file_size(wav_path: Optional[str]) -> Optional[int]:
 
 
 def _bn3_main(app_s) -> bool:
-    return bool(app_s and getattr(app_s, "exp_birdnet3_main", False))
+    """BirdNET v3 is the detection model unless Settings → Detection says 2.4."""
+    return (getattr(app_s, "detection_model", None) or "birdnet3") == "birdnet3"
 
 
 def _bn3_shadow(app_s) -> bool:
-    return bool(app_s and getattr(app_s, "exp_birdnet3_shadow", False))
+    """With BirdNET 2.4 as the model, optionally also score with v3 to compare."""
+    return bool(app_s and getattr(app_s, "exp_birdnet3_shadow", False)) and not _bn3_main(app_s)
 
 
-def _store_shadow(db, rec_id: str, wav_path: str, lat, lon, when, app_s) -> int:
-    """BirdNET v3 shadow pass (Settings → Experimental): stored apart from
+def _store_shadow(db, rec_id: str, wav_path: str, lat, lon, when, app_s, start_utc=None) -> int:
+    """BirdNET v3 comparison pass (Settings → Detection, with 2.4): stored apart from
     the detections, for comparison only. Never raises."""
     try:
         from ..services import birdnet3
@@ -813,7 +817,7 @@ def _store_shadow(db, rec_id: str, wav_path: str, lat, lon, when, app_s) -> int:
             birdnet3.ensure_downloaded()
             return 0
         conf = float(getattr(app_s, "exp_birdnet3_min_conf", None) or birdnet3.DEFAULT_MIN_CONF)
-        dets = birdnet3.analyze(wav_path, lat=lat, lon=lon, when=when, min_conf=conf)
+        dets = birdnet3.analyze(wav_path, lat=lat, lon=lon, when=when, min_conf=conf, start_utc=start_utc)
         db.query(ShadowDetection).filter(ShadowDetection.recording_id == rec_id,
                                          ShadowDetection.model == "birdnet3").delete(synchronize_session=False)
         for d in dets:
@@ -832,7 +836,8 @@ def _store_shadow(db, rec_id: str, wav_path: str, lat, lon, when, app_s) -> int:
         return 0
 
 
-def _run_server_birdnet(rec_id: str, db, replace_device_detections: bool = True, min_confidence_override: float = None) -> int:
+def _run_server_birdnet(rec_id: str, db, replace_device_detections: bool = True, min_confidence_override: float = None,
+                        override_applies_to_v3: bool = True) -> int:
     """
     Run BirdNET analysis on the server using full settings (lat/lon + week-of-year filter,
     sensitivity, overlap). Optionally replaces device-sourced detections.
@@ -906,13 +911,15 @@ def _run_server_birdnet(rec_id: str, db, replace_device_detections: bool = True,
     try:
         raw = None
         if _bn3_main(app_s):
-            # Settings → Experimental: BirdNET v3 as the main model. BirdNET
+            # BirdNET v3, the default model (Settings → Detection). BirdNET
             # 2.4's owl rules and near-miss log don't apply to its scores.
             try:
                 from ..services import birdnet3
-                bn3_conf = float(min_confidence_override) if min_confidence_override is not None \
+                bn3_conf = float(min_confidence_override) \
+                    if (min_confidence_override is not None and override_applies_to_v3) \
                     else float(getattr(app_s, "exp_birdnet3_min_conf", None) or birdnet3.DEFAULT_MIN_CONF)
-                raw = birdnet3.analyze(wav_path, lat=lat, lon=lon, when=rec_date, min_conf=bn3_conf)
+                raw = birdnet3.analyze(wav_path, lat=lat, lon=lon, when=rec_date, min_conf=bn3_conf,
+                                       start_utc=rec.trigger_timestamp)
                 logger.info("Server BirdNET v3 (main): %d detection(s) for %s", len(raw), rec_id)
             except Exception as e:
                 logger.warning("BirdNET v3 unavailable for %s (%s) — using BirdNET 2.4", rec_id, e)
@@ -927,7 +934,7 @@ def _run_server_birdnet(rec_id: str, db, replace_device_detections: bool = True,
             logger.info("Server BirdNET: %d detection(s) for %s", len(raw), rec_id)
             _store_near_misses(db, rec_id, _diag, raw)
             if _bn3_shadow(app_s) and not rec.is_live_detect_clip:
-                _store_shadow(db, rec_id, wav_path, lat, lon, rec_date, app_s)
+                _store_shadow(db, rec_id, wav_path, lat, lon, rec_date, app_s, rec.trigger_timestamp)
 
         # Remove stale server detections from any previous re-analysis
         db.query(Detection).filter(
@@ -1501,6 +1508,9 @@ def list_recordings(
     multi_species: Optional[bool] = Query(None, description="Filter to recordings with more than one distinct species detected (true) or at most one (false)"),
     start: Optional[datetime] = Query(None, description="ISO 8601 — only recordings at or after this time"),
     end: Optional[datetime] = Query(None, description="ISO 8601 — only recordings at or before this time"),
+    time_from: Optional[str] = Query(None, description="HH:MM, site time: only recordings made at or after this time of day"),
+    time_to: Optional[str] = Query(None, description="HH:MM, site time: only recordings made before this time of day (wraps midnight when earlier than time_from)"),
+    saved: Optional[bool] = Query(None, description="Only saved recordings (true) or only unsaved (false)"),
     db: Session = Depends(get_db),
 ):
     """List recordings, most recent first."""
@@ -1624,6 +1634,10 @@ def list_recordings(
         else:
             q = q.filter(~Recording.id.in_(db.query(multi_species_recording_ids.c.recording_id)))
 
+    if saved is not None:
+        q = q.filter(Recording.is_saved.is_(True) if saved else Recording.is_saved.isnot(True))
+    if time_from or time_to:
+        q = _filter_time_of_day(q, db, time_from or "00:00", time_to or "24:00")
     if start:
         # Incoming datetimes may be tz-aware (a browser's toISOString()
         # always includes one) while trigger_timestamp is stored
@@ -3079,7 +3093,7 @@ def get_clip_enhanced(recording_id: str, detection_id: str, db: Session = Depend
 
 
 @router.get("/{recording_id}/clip/{detection_id}/rumble-removed")
-def get_clip_rumble_removed(recording_id: str, detection_id: str, db: Session = Depends(get_db)):
+def get_clip_rumble_removed(recording_id: str, detection_id: str, nr: bool = False, db: Session = Depends(get_db)):
     """
     Rumble-removed version of a single detection's clip — mirrors
     /audio/rumble-removed above (plain species-aware high-pass, no
@@ -3124,7 +3138,9 @@ def get_clip_rumble_removed(recording_id: str, detection_id: str, db: Session = 
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Clip extraction failed: {e}")
 
-    cache_path = os.path.join(settings.enhanced_dir, f"{det.id}_rumbleremoved_{DSP_VERSION}_enhanced.wav")
+    # nr=true: noise reduction too (the app's single "Enhanced" setting).
+    tag = "rumbleremoved_nr" if nr else "rumbleremoved"
+    cache_path = os.path.join(settings.enhanced_dir, f"{det.id}_{tag}_{DSP_VERSION}_enhanced.wav")
     if os.path.exists(cache_path):
         return FileResponse(
             cache_path, media_type="audio/wav",
@@ -3151,8 +3167,8 @@ def get_clip_rumble_removed(recording_id: str, detection_id: str, db: Session = 
         try:
             low_hz = recommended_high_pass_hz([det.common_name])
             generated = processor.enhance_audio(
-                clip_for_enhance, settings.enhanced_dir, f"{det.id}_rumbleremoved_{DSP_VERSION}",
-                low_hz=low_hz, apply_noise_reduction=False,
+                clip_for_enhance, settings.enhanced_dir, f"{det.id}_{tag}_{DSP_VERSION}",
+                low_hz=low_hz, apply_noise_reduction=nr,
             )
         finally:
             if tmp_decoded_wav and os.path.exists(tmp_decoded_wav):
@@ -3356,6 +3372,68 @@ class RecordingPatch(BaseModel):
     longitude: Optional[float] = None
     # When it was recorded (ISO 8601; without an offset, server timezone).
     recorded_at: Optional[str] = None
+    is_saved: Optional[bool] = None    # keep out of automatic cleanup
+
+
+def _parse_hhmm(v: str) -> int:
+    try:
+        h, m = (int(x) for x in v.split(":"))
+        if 0 <= h <= 24 and 0 <= m < 60 and h * 60 + m <= 1440:
+            return h * 60 + m
+    except (ValueError, AttributeError):
+        pass
+    raise HTTPException(status_code=422, detail="Times of day must be HH:MM")
+
+
+def _filter_time_of_day(q, db: Session, time_from: str, time_to: str):
+    """Recordings made between two local times of day (site time zone, DST
+    included). trigger_timestamp is naive UTC; the local minute of the day is
+    UTC minutes plus the zone's offset, which changes at each DST switch, so
+    the offset comes from a CASE over the switch instants in the years the
+    recordings span."""
+    from datetime import datetime as _dt, timedelta as _td
+    from zoneinfo import ZoneInfo
+    from sqlalchemy import case, cast, func, Integer
+    a, b = _parse_hhmm(time_from), _parse_hhmm(time_to)
+    if a == b or (a == 0 and b == 1440):
+        return q
+    try:
+        tz = ZoneInfo(_server_tz(db))
+    except Exception:
+        tz = ZoneInfo("UTC")
+    lo, hi = db.query(func.min(Recording.trigger_timestamp), func.max(Recording.trigger_timestamp)).one()
+    lo = (lo or _dt.utcnow()) - _td(days=1)
+    hi = (hi or _dt.utcnow()) + _td(days=1)
+
+    def off(t):   # minutes east of UTC at naive-UTC instant t
+        return int(t.replace(tzinfo=ZoneInfo("UTC")).astimezone(tz).utcoffset().total_seconds() // 60)
+
+    segments = []           # (start, offset) in time order
+    t, cur = lo, off(lo)
+    segments.append((lo, cur))
+    while t < hi:
+        nxt = t + _td(days=1)
+        if off(nxt) != cur:
+            a_, b_ = t, nxt
+            while (b_ - a_) > _td(minutes=1):     # bisect to the switch minute
+                mid = a_ + (b_ - a_) / 2
+                if off(mid) == cur:
+                    a_ = mid
+                else:
+                    b_ = mid
+            cur = off(b_)
+            segments.append((b_, cur))
+        t = nxt
+    ts = Recording.trigger_timestamp
+    if len(segments) == 1:
+        offset = segments[0][1]
+    else:
+        offset = case(*[(ts >= s0, o) for s0, o in reversed(segments[1:])], else_=segments[0][1])
+    utc_min = cast(func.strftime("%H", ts), Integer) * 60 + cast(func.strftime("%M", ts), Integer)
+    local = (utc_min + offset + 1440) % 1440
+    if a < b:
+        return q.filter(local >= a, local < b)
+    return q.filter((local >= a) | (local < b))      # wraps midnight, e.g. 21:00-04:00
 
 
 def _server_tz(db: Session) -> str:
@@ -3376,6 +3454,8 @@ def edit_recording(
         raise HTTPException(status_code=404, detail="Recording not found")
     fields = body.model_dump(exclude_none=True)
     recorded_at = fields.pop("recorded_at", None)
+    if "is_saved" in fields:
+        logger.info("Recording %s %s", recording_id, "saved" if fields["is_saved"] else "unsaved")
     if recorded_at is not None:
         try:
             ts = parse_recorded_at(recorded_at, _server_tz(db))
@@ -3954,7 +4034,7 @@ def _process_manual_upload(rec_id: str, label: Optional[str] = None, use_ai_enha
             rec_when = rec.trigger_timestamp.date() if rec.trigger_timestamp else dt_date.today()
             raw = None
             if _bn3_main(app_s_bn):
-                # Settings → Experimental: BirdNET v3 as the main model, as in
+                # BirdNET v3, the default model (Settings → Detection), as in
                 # _run_server_birdnet. With AI Enhance, the original is scored
                 # too and each species/window keeps its higher score.
                 try:
@@ -3963,7 +4043,8 @@ def _process_manual_upload(rec_id: str, label: Optional[str] = None, use_ai_enha
                         else float(getattr(app_s_bn, "exp_birdnet3_min_conf", None) or birdnet3.DEFAULT_MIN_CONF)
                     best = {}
                     for src in dict.fromkeys([analysis_source, rec.wav_path]):
-                        for d in birdnet3.analyze(src, lat=rec_lat, lon=rec_lon, when=rec_when, min_conf=bn3_conf):
+                        for d in birdnet3.analyze(src, lat=rec_lat, lon=rec_lon, when=rec_when, min_conf=bn3_conf,
+                                                  start_utc=rec.trigger_timestamp):
                             k = (d["label"], round(float(d["start_time"]), 1))
                             if k not in best or d["confidence"] > best[k]["confidence"]:
                                 best[k] = d
@@ -3993,7 +4074,7 @@ def _process_manual_upload(rec_id: str, label: Optional[str] = None, use_ai_enha
                 logger.info("BirdNET returned %d detections for %s", len(raw), rec_id)
                 _store_near_misses(db, rec_id, _diag, raw)
                 if _bn3_shadow(app_s_bn) and not rec.is_live_detect_clip:
-                    _store_shadow(db, rec_id, rec.wav_path, rec_lat, rec_lon, rec_when, app_s_bn)
+                    _store_shadow(db, rec_id, rec.wav_path, rec_lat, rec_lon, rec_when, app_s_bn, rec.trigger_timestamp)
             _drop_superseded_device_detections(db, rec_id, raw)
 
             for det in raw:
@@ -4601,7 +4682,7 @@ def _run_out(run, latest_id: Optional[str]) -> dict:
 @router.get("/{recording_id}/shadow")
 def shadow_results(recording_id: str, db: Session = Depends(get_db)):
     """BirdNET v3 shadow results for one recording next to the main
-    detections (Settings → Experimental). `ran` is false until the shadow
+    detections (Settings → Detection, with BirdNET 2.4). `ran` is false until the shadow
     pass has scored this recording."""
     from ..models import ShadowDetection
     rec = db.query(Recording).filter(Recording.id == recording_id).first()

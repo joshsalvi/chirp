@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>Chirp</Name>
+  <Repository>joshsalvi/chirp:latest</Repository>
+  <Registry>https://hub.docker.com/r/joshsalvi/chirp</Registry>
+  <Network>host</Network>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://ourchirp.com/support.html</Support>
+  <Project>https://github.com/joshsalvi/chirp</Project>
+  <Overview>Chirp: bird and bat call detection for your yard. Raspberry Pi stations listen and identify birds with BirdNET; this server keeps the recordings, spectrograms, life list, alerts and the web app (also the Chirp iPhone app's server). Runs one site or many, each with its own users and database.</Overview>
+  <Description>Chirp server. Pair Raspberry Pi stations running chirp-device, then open the web app. Night flight calls (Nighthawk), BirdNET v3, AI features and bat detection are optional, under Settings. Host network so stations can find it on the LAN and Tailscale works. For a single home site this one container is all you need; Chirp Headscale and Chirp Caddy are only for hosting remote stations or a public multi-user hub. BirdNET models: CC BY-NC-SA 4.0; Nighthawk: CC BY-NC 4.0 (non-commercial).</Description>
+  <Category>HomeAutomation: MediaServer:Other Tools:Utilities</Category>
+  <WebUI>http://[IP]:[PORT:8768]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/joshsalvi/unraid-templates/main/templates/chirp.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/joshsalvi/unraid-templates/main/icon.png</Icon>
+  <ExtraParams>--cap-add=NET_ADMIN --device=/dev/net/tun</ExtraParams>
+  <Config Name="Data" Target="/app/data" Default="/mnt/user/appdata/chirp" Mode="rw" Description="Databases, recordings, spectrograms and bird media. Put it on a share with space: recordings grow over time." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/chirp</Config>
+  <Config Name="Headscale key (optional)" Target="/shared" Default="/mnt/user/appdata/chirp-headscale/shared" Mode="ro" Description="Only with the Chirp Headscale container: the folder it writes its auth key to." Type="Path" Display="advanced" Required="false" Mask="false">/mnt/user/appdata/chirp-headscale/shared</Config>
+  <Config Name="Secret key" Target="CHIRP_SECRET_KEY" Default="" Mode="" Description="Signs sign-in tokens. Any long random string, e.g. the output of: openssl rand -hex 32. Keep it the same across updates." Type="Variable" Display="always" Required="true" Mask="true"></Config>
+  <Config Name="Admin username" Target="CHIRP_GLOBAL_ADMIN_USERNAME" Default="" Mode="" Description="Register with this username in the web app and it becomes the server-wide admin on the next restart." Type="Variable" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="Public address" Target="CHIRP_SERVER_URL" Default="" Mode="" Description="How people and stations reach this server, e.g. https://chirp.example.com. Used in emails and links. Leave blank on a LAN-only setup." Type="Variable" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="Port" Target="CHIRP_PORT" Default="8768" Mode="" Description="Web app port (host network)." Type="Variable" Display="advanced" Required="true" Mask="false">8768</Config>
+  <Config Name="eBird API key" Target="CHIRP_EBIRD_API_KEY" Default="" Mode="" Description="Optional default for the Field Guide (free at ebird.org/api/keygen). Can also be set per site in Settings." Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="Time zone" Target="TZ" Default="America/New_York" Mode="" Description="Server time zone (each site also has its own in Settings)." Type="Variable" Display="always" Required="true" Mask="false">America/New_York</Config>
+  <Config Name="Tailscale" Target="CHIRP_TAILSCALE_ENABLED" Default="false|true" Mode="" Description="true to join a tailnet so remote stations can reach this server. Needs an auth key below or the Chirp Headscale container." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
+  <Config Name="Tailscale auth key" Target="CHIRP_TAILSCALE_AUTH_KEY" Default="" Mode="" Description="A reusable key from Tailscale.com or your Headscale. Blank with Chirp Headscale: read from /shared automatically." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="Tailscale login server" Target="CHIRP_TAILSCALE_LOGIN_SERVER" Default="" Mode="" Description="Your Headscale address (e.g. https://headscale.example.com). Blank for Tailscale.com." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Station API key" Target="CHIRP_DEVICE_API_KEY" Default="" Mode="" Description="Legacy shared key for older stations. New stations get their own key when paired; leave blank." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="Sign-in required" Target="CHIRP_AUTH_ENABLED" Default="true" Mode="" Description="Keep true." Type="Variable" Display="advanced-hide" Required="true" Mask="false">true</Config>
+  <Config Name="Data dir" Target="CHIRP_DATA_DIR" Default="/app/data" Mode="" Description="" Type="Variable" Display="advanced-hide" Required="true" Mask="false">/app/data</Config>
+  <Config Name="Recordings dir" Target="CHIRP_RECORDINGS_DIR" Default="/app/data/recordings" Mode="" Description="" Type="Variable" Display="advanced-hide" Required="true" Mask="false">/app/data/recordings</Config>
+  <Config Name="Media dir" Target="CHIRP_MEDIA_DIR" Default="/app/data/media/birds" Mode="" Description="" Type="Variable" Display="advanced-hide" Required="true" Mask="false">/app/data/media/birds</Config>
+  <Config Name="Legacy DB" Target="CHIRP_DB_URL" Default="sqlite:////app/data/_legacy_unused.db" Mode="" Description="" Type="Variable" Display="advanced-hide" Required="true" Mask="false">sqlite:////app/data/_legacy_unused.db</Config>
+  <Config Name="Host" Target="CHIRP_HOST" Default="0.0.0.0" Mode="" Description="" Type="Variable" Display="advanced-hide" Required="true" Mask="false">0.0.0.0</Config>
+</Container>

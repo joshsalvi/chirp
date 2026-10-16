@@ -13,6 +13,7 @@ import { api, clearApiCache } from '../lib/api'
 import { saveUrl } from '../lib/download'
 import MicFrequencyResponse, { PhoneMicTest } from './MicFrequencyResponse'
 import ExperimentalModels from './ExperimentalModels'
+import DetectionModel from './DetectionModel'
 import { PALETTES, DEFAULT_PALETTE } from '../lib/detectionColors'
 import { BirdIcon, BatIcon } from './BirdBatIcons'
 import GeomodelDownloadPanel from './GeomodelDownloadPanel'
@@ -525,9 +526,10 @@ function ExpCard({ id, title, subtitle, collapsed, setCollapsed, children }) {
   // (collapsed[id] === false, set the first time someone opens it).
   const isOpen = collapsed[id] === false
   return (
-    <div className="rounded-lg border border-surface-700 bg-surface-800 overflow-hidden">
+    <div id={`settings-exp-${id}`} className="rounded-lg border border-surface-700 bg-surface-800 overflow-hidden" style={{ scrollMarginTop: '56px' }}>
       <button className="flex items-start gap-3 p-4 w-full text-left"
               onClick={() => setCollapsed(c => ({ ...c, [id]: isOpen }))}>
+        <h2 className="sr-only">{title}</h2>
         <div className="flex-1">
           <p className="text-sm font-medium text-gray-200">{title}</p>
           {isOpen && subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
@@ -2425,18 +2427,29 @@ const SETTINGS_TABS = [
   { id: 'mine',         label: 'My Notifications',  icon: Bell,         anchor: 'settings-my-notifications',   blurb: 'Your push and email alerts, journals and watched birds', adminOnly: false },
   { id: 'appearance',   label: 'Appearance',        icon: Palette,      anchor: 'settings-appearance',         blurb: 'Theme, dashboard style, card layout and installing the app', adminOnly: false },
   { id: 'site',         label: 'General',           icon: MapPin,       anchor: 'settings-site-group',         blurb: 'Location, time zone, web address and what everyone sees', adminOnly: true },
-  { id: 'detection',    label: 'Detection',         icon: Brain,        anchor: 'settings-detection-group',    blurb: 'BirdNET thresholds, night callers, server analysis and recording limits', adminOnly: true },
+  { id: 'detection',    label: 'Detection',         icon: Brain,        anchor: 'settings-detection-group',    blurb: 'BirdNET model and thresholds, night callers, server analysis and recording limits', adminOnly: true },
+  { id: 'bats',         label: 'Bats',              icon: Moon,         anchor: 'settings-bats-group',         blurb: 'Bat echolocation detection, its microphone and filters', adminOnly: true },
   { id: 'notif',        label: 'Alerts & Email',    icon: Mail,         anchor: 'settings-notif-group',        blurb: 'Daily digest times, station offline alerts, the email server and iPhone push keys', adminOnly: true },
   { id: 'integrations', label: 'Integrations',      icon: Plug,         anchor: 'settings-integrations-group', blurb: 'eBird, Haikubox, Bird Buddy and iNaturalist', adminOnly: true },
+  { id: 'ai',           label: 'AI Features',       icon: Sparkles,     anchor: 'settings-ai-group',           blurb: 'Journals, profile summaries, AI Second Opinion and AI Enhance', adminOnly: true },
   { id: 'storage',      label: 'Storage & Backup',  icon: HardDrive,    anchor: 'settings-storage-group',      blurb: 'Disk use, cleanup, backups and bird data refresh', adminOnly: true },
   { id: 'account',      label: 'Access & Security', icon: Lock,         anchor: 'settings-account-group',      blurb: 'Sign-in, device keys, activity log and network', adminOnly: true },
-  { id: 'experimental', label: 'Experimental',      icon: FlaskConical, anchor: 'settings-experimental',       blurb: 'Detection models, range maps, heatmap, bat detection and AI features', adminOnly: true },
+  { id: 'experimental', label: 'Experimental',      icon: FlaskConical, anchor: 'settings-experimental',       blurb: 'Night flight calls, range maps and the sightings heatmap', adminOnly: true },
   { id: 'diagnostics',  label: 'Diagnostics',       icon: Stethoscope,  anchor: 'settings-diagnostics-group',  blurb: 'Server health, device checks, microphones and logs', adminOnly: true },
 ]
 
 // What each card holds, so search finds settings inside collapsed cards
 // (a collapsed card doesn't render its contents). Keyed by the card's DOM id.
 const CARD_KEYWORDS = {
+  'settings-exp-range_maps': 'range maps, All About Birds, Macaulay, BirdLife, Geomodel, eBird Status and Trends, GBIF',
+  'settings-exp-heatmap': 'heatmap, observation map, iNaturalist sightings',
+  'settings-exp-nighthawk': 'Nighthawk, night flight calls, migration, night audio, flight calls',
+  'settings-pwa': 'install app, home screen, PWA, progressive web app',
+  'settings-my-notifications': 'my notifications, push alerts, email alerts, watched birds, daily digest, journal notifications, station offline',
+  'settings-detection-model': 'detection model, BirdNET v3, BirdNET 2.4, model version, minimum confidence, compare, owls',
+  'settings-bats': 'bats, bat detection, echolocation, ultrasonic microphone, AudioMoth, species classification, pulse rate, active hours, FM sweep, wobble',
+  'settings-ai': 'AI, Anthropic, Claude, OpenAI, Gemini, Ollama, API key, daily journal, weekly journal, profile summaries, AI Second Opinion, photo ID, AI Enhance, tone, token usage, web search',
+  'settings-experimental': 'experimental, Nighthawk, night flight calls, range maps, heatmap',
   'settings-appearance-theme': 'theme, colors, dark mode, light mode, custom theme',
   'settings-appearance-dashboard': 'dashboard style, simplified, detailed',
   'settings-appearance-dashboard-sections': 'dashboard sections, cards shown',
@@ -2444,7 +2457,7 @@ const CARD_KEYWORDS = {
   'settings-detection': 'min. detection confidence, window overlap, detection sensitivity, BirdNET',
   'settings-detection-night-thresholds': 'owls, night callers, thresholds',
   'settings-detection-near-misses': 'near misses, owls, night callers',
-  'settings-detection-server': 're-analyze every upload, auto-delete device identifications, allow manual re-analyze, rumble removal, detection colors',
+  'settings-detection-server': 're-analyze every upload, auto-delete device identifications, allow manual re-analyze, rumble removal, enhance, playback, noise reduction, detection colors',
   'settings-detection-devices': 'min. gap between recordings, max recording length, max recordings per hour',
   'settings-site-display': 'min. confidence to display, show low-confidence detections, show deleted recording identifications, what everyone sees',
   'settings-site-address': 'server public URL, web address, links in emails, domain',
@@ -2535,29 +2548,38 @@ function SettingsSearch({ containerRef, tabs, tabForElement, onPick }) {
     const query = q.trim().toLowerCase()
     if (query.length < 2 || !containerRef.current) { setResults([]); return }
     const t = setTimeout(() => {
+      // Cards first (their titles and keywords: a collapsed card's settings
+      // aren't in the page until it's opened), then tabs, then any text
+      // showing in open cards. Every word typed has to match.
+      const words = query.split(/\s+/)
+      const hits = hay => words.every(w => hay.includes(w))
       const seen = new Set()
       const out = []
-      for (const el of containerRef.current.querySelectorAll('[data-settings-content] label, [data-settings-content] h2, [data-settings-content] h3, [data-settings-content] p')) {
-        const text = (el.textContent || '').trim().replace(/\s+/g, ' ')
-        if (!text || text.length > 90 || !text.toLowerCase().includes(query) || seen.has(text)) continue
-        const tab = tabForElement(el)
-        if (!tab) continue
-        seen.add(text)
-        out.push({ el, text, tab })
-        if (out.length >= 8) break
+      const add = (el, text, tab) => {
+        if (!el || !tab || seen.has(text) || out.length >= 10) return
+        seen.add(text); out.push({ el, text, tab })
       }
-      for (const [id, words] of Object.entries(CARD_KEYWORDS)) {
-        if (out.length >= 8) break
+      for (const [id, kw] of Object.entries(CARD_KEYWORDS)) {
         const card = document.getElementById(id)
-        const title = card?.querySelector('h2')?.textContent?.trim()
-        if (!card || !title) continue
-        const hit = words.split(',').map(w => w.trim()).find(w => w.toLowerCase().includes(query))
-        if (!hit) continue
-        const tab = tabForElement(card)
-        const text = hit.toLowerCase() === title.toLowerCase() ? title : `${title} › ${hit}`
-        if (!tab || seen.has(text) || out.some(r => r.el === card || card.contains(r.el))) continue
-        seen.add(text)
-        out.push({ el: card, text, tab })
+        if (!card) continue
+        const tab = tabs.find(x => x.anchor === id)?.id || tabForElement(card)
+        const title = card.querySelector('h2')?.textContent?.trim() || tabs.find(x => x.id === tab)?.label || ''
+        const list = kw.split(',').map(w => w.trim())
+        if (hits(title.toLowerCase())) { add(card, title, tab); continue }
+        const hit = list.find(w => hits(w.toLowerCase())) || (hits(`${title} ${kw}`.toLowerCase()) ? list[0] : null)
+        if (hit) add(card, `${title} › ${hit}`, tab)
+      }
+      for (const el of containerRef.current.querySelectorAll('[data-settings-content] h2')) {
+        const title = (el.textContent || '').trim()
+        if (title && hits(title.toLowerCase())) add(el.closest('[id]') || el, title, tabForElement(el))
+      }
+      for (const tb of tabs) {
+        if (hits(`${tb.label} ${tb.blurb}`.toLowerCase())) add(document.getElementById(tb.anchor), `${tb.label} (tab)`, tb.id)
+      }
+      for (const el of containerRef.current.querySelectorAll('[data-settings-content] label, [data-settings-content] h3, [data-settings-content] p')) {
+        const text = (el.textContent || '').trim().replace(/\s+/g, ' ')
+        if (!text || text.length > 140 || !hits(text.toLowerCase())) continue
+        add(el, text.length > 80 ? text.slice(0, 78) + '…' : text, tabForElement(el))
       }
       setResults(out)
     }, 120)
@@ -3008,7 +3030,7 @@ export default function SettingsPage({ currentUser } = {}) {
   const openSearchResult = ({ el, tab }) => {
     const highlightAndScroll = () => {
       // A collapsed card renders only its header button: open it.
-      const cardEl = el.closest('.card')
+      const cardEl = el.closest('.card') || (el.id?.startsWith('settings-exp-') ? el : null)
       if (cardEl && cardEl.children.length === 1) cardEl.querySelector('button')?.click()
       el.scrollIntoView({ behavior: 'smooth', block: 'center' })
       const prevTransition = el.style.transition
@@ -3144,8 +3166,8 @@ export default function SettingsPage({ currentUser } = {}) {
           ai_enhance_enabled: s.ai_enhance_enabled ?? false,
           ai_enhance_auto_apply: s.ai_enhance_auto_apply ?? false,
           ai_enhance_dry: s.ai_enhance_dry ?? 0.1,
+          detection_model: s.detection_model || 'birdnet3',
           exp_birdnet3_shadow: s.exp_birdnet3_shadow ?? false,
-          exp_birdnet3_main: s.exp_birdnet3_main ?? false,
           exp_birdnet3_min_conf: s.exp_birdnet3_min_conf ?? 0.5,
           exp_nighthawk_enabled: s.exp_nighthawk_enabled ?? false,
           exp_nighthawk_start: s.exp_nighthawk_start || '21:00',
@@ -3682,6 +3704,9 @@ Off (default): detections from deleted recordings are left out of dashboard tota
       <DashboardSectionsSettings/>
 
       <GroupHeader id="settings-detection-group"/>
+      <Section icon={Brain} title="Detection Model" id="settings-detection-model">
+        <DetectionModel form={form} setForm={setForm}/>
+      </Section>
       <Section icon={Brain} title="BirdNET Analysis" id="settings-detection">
         <div className="space-y-5">
           <Slider label="Min. Detection Confidence"
@@ -3766,15 +3791,15 @@ Shows a Re-analyze button on each recording so anyone can run BirdNET (or bat an
           {/* Rumble Removal mode */}
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm font-medium text-gray-200">Rumble Removal</p>
+              <p className="text-sm font-medium text-gray-200">Playback: Enhance</p>
               <p className="text-xs text-gray-500 mt-1">
-Cuts low rumble (traffic, wind, HVAC) from playback with the same filter as Live Detect's "Cut low rumble"; nothing above the cutoff changes. <strong>Enabled (on)</strong>: a toggle on each recording, on by default. <strong>Enabled (off)</strong>: the toggle shows but starts off. <strong>Disabled</strong>: no toggle, never applied.
+Recordings play through one Enhance control: Original, Enhanced (cuts low rumble from traffic, wind and HVAC, and reduces steady background noise) or AI (Settings → AI Features). This sets where bird recordings start. <strong>Enhanced</strong>: open in Enhanced. <strong>Original</strong>: open in Original. <strong>No low cut</strong>: Enhanced only reduces noise, without cutting low sound.
 </p>
               <div className="flex gap-2 mt-2">
                 {[
-                  { key: 'auto', label: 'Enabled (on)' },
-                  { key: 'auto_off', label: 'Enabled (off)' },
-                  { key: 'disabled', label: 'Disabled' },
+                  { key: 'auto', label: 'Enhanced' },
+                  { key: 'auto_off', label: 'Original' },
+                  { key: 'disabled', label: 'No low cut' },
                 ].map(opt => (
                   <button key={opt.key} type="button"
                     onClick={() => setForm(f => ({ ...f, rumble_removal_mode: opt.key }))}
@@ -3879,6 +3904,177 @@ Colors for each species in a recording's detection list, waveform and spectrogra
               <span className="text-xs text-gray-500">recordings / hour (0 = unlimited)</span>
             </div>
           </Field>
+        </div>
+      </Section>
+
+      <GroupHeader id="settings-bats-group"/>
+      <Section icon={Moon} title="Bat Echolocation Detection" id="settings-bats">
+        <div className="space-y-3">
+        <p className="text-xs text-gray-500">
+          Finds the ultrasonic pulse trains of bat echolocation on a station's ultrasonic mic, saves a
+          slowed-down clip you can hear, and can try to name the species (off by default).
+        </p>
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-sm text-gray-300">Enable bat echolocation detection</p>
+          <input
+                type="checkbox"
+                checked={form.bat_detection_enabled ?? false}
+                onChange={e => setForm(f => ({ ...f, bat_detection_enabled: e.target.checked }))}
+                className="w-4 h-4 accent-chirp-500 flex-shrink-0"
+              />
+            </div>
+            <BatMicInfoBox/>
+            {form.bat_detection_enabled && (
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-widest text-gray-500 mb-1.5">
+                  Ultrasonic Mic Device Name (optional)
+                </label>
+                <input
+                  className="input text-sm w-full"
+                  placeholder="e.g. UltraMic, M500 — leave blank to auto-pick the highest-rate input device"
+                  value={form.bat_detection_device_name || ''}
+                  onChange={e => setForm(f => ({ ...f, bat_detection_device_name: e.target.value }))}
+                />
+                <p className="text-xs text-gray-500 mt-1.5">
+Matches part of the mic name the Pi reports. Leave blank to use the input with the highest sample rate.
+</p>
+              </div>
+            )}
+            {form.bat_detection_enabled && (
+              <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border-default)' }}>
+                <div className="px-4 py-3" style={{ background: 'var(--bg-raised)', borderBottom: '1px solid var(--border-subtle)' }}>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Noise rejection &amp; scheduling</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+Keeps machine noise (lawnmowers, motors) from counting as bats. Sent to the station automatically.
+</p>
+                </div>
+                <div className="p-4 space-y-4">
+                  {/* Time-of-day gate */}
+                  <div>
+                    <p className="text-xs font-semibold mb-2" style={{ color: '#fbbf24' }}>
+                      Active hours (local time)
+                    </p>
+                    <p className="text-xs mb-3" style={{ color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
+Only record bats between these times. Bats fly from about sunset to sunrise, and skipping daytime cuts most false alarms from equipment. 00:00–23:59 records all day.
+</p>
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs font-medium" style={{ color: 'var(--text-tertiary)' }}>Start</label>
+                        <input type="time" className="input text-sm w-32"
+                          value={form.bat_active_hours_start ?? '20:00'}
+                          onChange={e => setForm(f => ({ ...f, bat_active_hours_start: e.target.value }))}/>
+                      </div>
+                      <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>→</span>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs font-medium" style={{ color: 'var(--text-tertiary)' }}>End</label>
+                        <input type="time" className="input text-sm w-32"
+                          value={form.bat_active_hours_end ?? '06:00'}
+                          onChange={e => setForm(f => ({ ...f, bat_active_hours_end: e.target.value }))}/>
+                      </div>
+                      <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                        {(form.bat_active_hours_start && form.bat_active_hours_end)
+                          ? `Active ${form.bat_active_hours_start} – ${form.bat_active_hours_end} (wraps midnight)`
+                          : 'No gating'}
+                      </p>
+                    </div>
+                  </div>
+                  {/* FM sweep filter */}
+                  <div>
+                    <p className="text-xs font-semibold mb-1" style={{ color: '#4ade80' }}>
+                      FM sweep filter — min swept fraction
+                    </p>
+                    <p className="text-xs mb-2" style={{ color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
+Bat calls sweep in pitch during each pulse; machine noise doesn't. This is the share of pulses that must sweep for an event to count. 0 turns it off; 0.3 is recommended.
+</p>
+                    <div className="flex items-center gap-3">
+                      <input type="number" min={0} max={1} step={0.05} className="input w-24 text-sm"
+                        value={form.bat_min_swept_fraction ?? 0.3}
+                        onChange={e => setForm(f => ({ ...f, bat_min_swept_fraction: parseFloat(e.target.value) || 0 }))}/>
+                      <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                        (0–1, e.g. 0.3 = 30% of pulses must sweep)
+                      </span>
+                    </div>
+                  </div>
+                  {/* Max pulse rate */}
+                  <div>
+                    <p className="text-xs font-semibold mb-1" style={{ color: '#a78bfa' }}>
+                      Max pulse rate (pulses/sec)
+                    </p>
+                    <p className="text-xs mb-2" style={{ color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
+Bats call 5–30 times a second; motors and fans look much faster. Events above this rate are dropped.
+</p>
+                    <div className="flex items-center gap-3">
+                      <input type="number" min={10} max={300} step={5} className="input w-24 text-sm"
+                        value={form.bat_max_pulse_rate ?? 60}
+                        onChange={e => setForm(f => ({ ...f, bat_max_pulse_rate: parseInt(e.target.value) || 60 }))}/>
+                      <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>pulses/sec (default 60)</span>
+                    </div>
+                  </div>
+                  <div className="p-3" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-xs font-semibold mb-1" style={{ color: '#a78bfa' }}>
+                          Discard likely electrical/mechanical interference
+                        </p>
+                        <p className="text-xs" style={{ color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
+Off (default): recordings with a very regular timing pattern, usually electrical noise, are saved and flagged. On: they're dropped before saving and can't be recovered. A bat pass shouldn't trip this, but leave it off unless flagged noise is cluttering your recordings.
+</p>
+                      </div>
+                      <input type="checkbox"
+                        checked={form.bat_discard_likely_interference ?? false}
+                        onChange={e => setForm(f => ({ ...f, bat_discard_likely_interference: e.target.checked }))}
+                        className="w-4 h-4 accent-chirp-500 flex-shrink-0"/>
+                    </div>
+                  </div>
+                  <div className="p-3" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-xs font-semibold mb-1" style={{ color: '#a78bfa' }}>
+                          Auto-generate wobble-removed audio
+                        </p>
+                        <p className="text-xs" style={{ color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
+Off by default. On: each new bat recording also gets a version with the AudioMoth/fan whine reduced, made in the background so it plays instantly. You still pick it per recording, and it works with Enhanced audio. Expect about 11 dB less whine; a call that crosses the whine's pitch can be clipped.
+</p>
+                      </div>
+                      <input type="checkbox"
+                        checked={form.bat_auto_remove_wobble ?? false}
+                        onChange={e => setForm(f => ({ ...f, bat_auto_remove_wobble: e.target.checked }))}
+                        className="w-4 h-4 accent-chirp-500 flex-shrink-0"/>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {form.bat_detection_enabled && (
+              <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border-default)' }}>
+                <div className="px-4 py-3" style={{ background: 'var(--bg-raised)', borderBottom: '1px solid var(--border-subtle)' }}>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                    Identify bat species
+                  </p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
+Tries to name the bat species (Little brown bat, Big brown bat…) with a classifier trained on NABat data for the Northeast. It can be confidently wrong: in testing it named a species at 97% on silence. So a species is only shown, including in the Field Guide, Life List and iNaturalist submissions, when it clears the threshold below and beats the classifier's noise, cricket and silence scores. Otherwise the recording stays "Bat" and the guess is saved but not shown.
+</p>
+                </div>
+                <div className="p-4 space-y-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <label className="flex items-center gap-3 cursor-pointer flex-1">
+                      <input type="checkbox" checked={form.bat_species_id_enabled ?? false}
+                             onChange={e => setForm(f => ({ ...f, bat_species_id_enabled: e.target.checked }))}
+                             className="w-4 h-4 accent-chirp-500"/>
+                      <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Enable species classification</span>
+                    </label>
+                  </div>
+                  {form.bat_species_id_enabled && (
+                    <Slider label="Minimum confidence to assert a species"
+                            hint="Below this the recording stays “Bat”; the guess is saved but not shown."
+                            min={0.5} max={0.99} step={0.01}
+                            value={form.bat_species_id_min_confidence ?? 0.75}
+                            onChange={set('bat_species_id_min_confidence')}
+                            format={v => `${(v*100).toFixed(0)}%`}/>
+                  )}
+                </div>
+              </div>
+            )}
         </div>
       </Section>
 
@@ -4108,6 +4304,49 @@ Colors for each species in a recording's detection list, waveform and spectrogra
       <HaikuboxSection form={form} setForm={setForm} settings={settings}/>
       <BirdBuddySection form={form} setForm={setForm} settings={settings}/>
       <InatSection form={form} setForm={setForm} settings={settings}/>
+
+      <GroupHeader id="settings-ai-group"/>
+      <Section icon={Sparkles} title="AI Features" id="settings-ai">
+        <p className="text-xs text-gray-500 mb-4">
+          Daily and Weekly Journal, Bird Profile summaries and AI Second Opinion. Pick Anthropic, OpenAI,
+          Gemini or Ollama for each, or leave it off; a feature without a provider stays hidden.
+        </p>
+        <AiSettingsPanel form={form} setForm={setForm} settings={settings}/>
+
+        {/* AI Enhance — a local neural-network model, not
+            a cloud AI feature like the ones above, so no provider/API
+            key choice: it either runs on this server or it doesn't. */}
+        <div className="mt-5 pt-5 border-t border-surface-700">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-gray-200">AI Enhance</p>
+              <p className="text-xs text-gray-500 mt-1 max-w-2xl">
+Neural denoising for bird recordings and clips (biodenoising, Earth Species Project): isolates the call and lowers the background. An alternative to Enhanced and Rumble removed. Runs on this server with no API key, but needs <code>torch</code>/<code>torchaudio</code> (several hundred MB, not installed by default) and downloads a 75 MB model on first use. It works at 16 kHz, so sound above 8 kHz is lost; for high-pitched birds use Enhanced instead.
+</p>
+            </div>
+            <input type="checkbox"
+              checked={form.ai_enhance_enabled ?? false}
+              onChange={e => setForm(f => ({ ...f, ai_enhance_enabled: e.target.checked }))}
+              className="w-4 h-4 accent-chirp-500 flex-shrink-0 mt-0.5"
+            />
+          </div>
+          {(form.ai_enhance_enabled ?? false) && (
+            <div className="flex items-center justify-between gap-4 mt-3 pt-3 border-t border-surface-700">
+              <div>
+                <p className="text-xs font-medium text-gray-300">Open bird recordings in AI</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+Recordings still have the Original and Enhanced choices; this only makes AI the starting point.
+</p>
+              </div>
+              <input type="checkbox"
+                checked={form.ai_enhance_auto_apply ?? false}
+                onChange={e => setForm(f => ({ ...f, ai_enhance_auto_apply: e.target.checked }))}
+                className="w-4 h-4 accent-chirp-500 flex-shrink-0"
+              />
+            </div>
+          )}
+        </div>
+      </Section>
 
       <GroupHeader id="settings-storage-group"/>
       <Section icon={HardDrive} title="Storage Management" id="settings-storage">
@@ -4497,7 +4736,7 @@ When recordings take more than this, the <strong style={{ color:'var(--text-prim
                       Protect recordings with labels or notes
                     </p>
                     <p className="text-xs mt-0.5" style={{ color:'var(--text-tertiary)' }}>
-On: recordings you've labeled or noted are skipped by archive, age removal and size removal.
+On: recordings you've labeled or noted are skipped by archive, age removal and size removal. Saved recordings are always skipped.
 </p>
                   </div>
                 </label>
@@ -4624,7 +4863,7 @@ On: recordings you've labeled or noted are skipped by archive, age removal and s
               <p className="text-sm font-medium text-gray-200">Auto-delete station recordings that show nothing</p>
               <p className="text-xs text-gray-500 mt-1">
                 Checked after the server pass on each upload, and every 15 minutes for older ones.
-                Recordings with a label, notes or an iNaturalist submission are kept.
+                Saved recordings and those with a label, notes or an iNaturalist submission are kept.
               </p>
             </div>
             <input type="checkbox" className="toggle flex-shrink-0 mt-0.5"
@@ -4726,8 +4965,8 @@ On: recordings you've labeled or noted are skipped by archive, age removal and s
               </button>
             </div>
             <p className="text-xs text-gray-600">
-              Unlike auto-delete, these also take uploads and recordings with labels or notes. Audio is deleted
-              for good.
+              Unlike auto-delete, these also take uploads and recordings with labels or notes (not saved ones). Audio
+              is deleted for good.
             </p>
           </div>
         </div>
@@ -5091,225 +5330,10 @@ Applies the retention setting now. It also runs every hour.
         </div>
       </ExpCard>
 
-      <ExpCard id="bat" title="Bat Echolocation Detection" collapsed={expCollapsed} setCollapsed={setExpCollapsed}
-               subtitle={<>Detects ultrasonic pulse trains consistent with bat echolocation calls on a
-                  device's microphone. Flags <em>activity</em> (pulse count, peak frequency,
-                  whether the call swept in frequency) and saves a listenable time-expanded clip.
-                  Optional species classification is available below — off by default, since it's
-                  a genuinely experimental capability with tested accuracy limits (see its
-                  own description for detail).</>}>
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-sm text-gray-300">Enable bat echolocation detection</p>
-          <input
-                type="checkbox"
-                checked={form.bat_detection_enabled ?? false}
-                onChange={e => setForm(f => ({ ...f, bat_detection_enabled: e.target.checked }))}
-                className="w-4 h-4 accent-chirp-500 flex-shrink-0"
-              />
-            </div>
-            <BatMicInfoBox/>
-            {form.bat_detection_enabled && (
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-widest text-gray-500 mb-1.5">
-                  Ultrasonic Mic Device Name (optional)
-                </label>
-                <input
-                  className="input text-sm w-full"
-                  placeholder="e.g. UltraMic, M500 — leave blank to auto-pick the highest-rate input device"
-                  value={form.bat_detection_device_name || ''}
-                  onChange={e => setForm(f => ({ ...f, bat_detection_device_name: e.target.value }))}
-                />
-                <p className="text-xs text-gray-500 mt-1.5">
-Matches part of the mic name the Pi reports. Leave blank to use the input with the highest sample rate.
-</p>
-              </div>
-            )}
-            {form.bat_detection_enabled && (
-              <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border-default)' }}>
-                <div className="px-4 py-3" style={{ background: 'var(--bg-raised)', borderBottom: '1px solid var(--border-subtle)' }}>
-                  <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Noise rejection &amp; scheduling</p>
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
-Keeps machine noise (lawnmowers, motors) from counting as bats. Sent to the station automatically.
-</p>
-                </div>
-                <div className="p-4 space-y-4">
-                  {/* Time-of-day gate */}
-                  <div>
-                    <p className="text-xs font-semibold mb-2" style={{ color: '#fbbf24' }}>
-                      Active hours (local time)
-                    </p>
-                    <p className="text-xs mb-3" style={{ color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
-Only record bats between these times. Bats fly from about sunset to sunrise, and skipping daytime cuts most false alarms from equipment. 00:00–23:59 records all day.
-</p>
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <div className="flex items-center gap-2">
-                        <label className="text-xs font-medium" style={{ color: 'var(--text-tertiary)' }}>Start</label>
-                        <input type="time" className="input text-sm w-32"
-                          value={form.bat_active_hours_start ?? '20:00'}
-                          onChange={e => setForm(f => ({ ...f, bat_active_hours_start: e.target.value }))}/>
-                      </div>
-                      <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>→</span>
-                      <div className="flex items-center gap-2">
-                        <label className="text-xs font-medium" style={{ color: 'var(--text-tertiary)' }}>End</label>
-                        <input type="time" className="input text-sm w-32"
-                          value={form.bat_active_hours_end ?? '06:00'}
-                          onChange={e => setForm(f => ({ ...f, bat_active_hours_end: e.target.value }))}/>
-                      </div>
-                      <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                        {(form.bat_active_hours_start && form.bat_active_hours_end)
-                          ? `Active ${form.bat_active_hours_start} – ${form.bat_active_hours_end} (wraps midnight)`
-                          : 'No gating'}
-                      </p>
-                    </div>
-                  </div>
-                  {/* FM sweep filter */}
-                  <div>
-                    <p className="text-xs font-semibold mb-1" style={{ color: '#4ade80' }}>
-                      FM sweep filter — min swept fraction
-                    </p>
-                    <p className="text-xs mb-2" style={{ color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
-Bat calls sweep in pitch during each pulse; machine noise doesn't. This is the share of pulses that must sweep for an event to count. 0 turns it off; 0.3 is recommended.
-</p>
-                    <div className="flex items-center gap-3">
-                      <input type="number" min={0} max={1} step={0.05} className="input w-24 text-sm"
-                        value={form.bat_min_swept_fraction ?? 0.3}
-                        onChange={e => setForm(f => ({ ...f, bat_min_swept_fraction: parseFloat(e.target.value) || 0 }))}/>
-                      <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                        (0–1, e.g. 0.3 = 30% of pulses must sweep)
-                      </span>
-                    </div>
-                  </div>
-                  {/* Max pulse rate */}
-                  <div>
-                    <p className="text-xs font-semibold mb-1" style={{ color: '#a78bfa' }}>
-                      Max pulse rate (pulses/sec)
-                    </p>
-                    <p className="text-xs mb-2" style={{ color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
-Bats call 5–30 times a second; motors and fans look much faster. Events above this rate are dropped.
-</p>
-                    <div className="flex items-center gap-3">
-                      <input type="number" min={10} max={300} step={5} className="input w-24 text-sm"
-                        value={form.bat_max_pulse_rate ?? 60}
-                        onChange={e => setForm(f => ({ ...f, bat_max_pulse_rate: parseInt(e.target.value) || 60 }))}/>
-                      <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>pulses/sec (default 60)</span>
-                    </div>
-                  </div>
-                  <div className="p-3" style={{ borderTop: '1px solid var(--border-subtle)' }}>
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <p className="text-xs font-semibold mb-1" style={{ color: '#a78bfa' }}>
-                          Discard likely electrical/mechanical interference
-                        </p>
-                        <p className="text-xs" style={{ color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
-Off (default): recordings with a very regular timing pattern, usually electrical noise, are saved and flagged. On: they're dropped before saving and can't be recovered. A bat pass shouldn't trip this, but leave it off unless flagged noise is cluttering your recordings.
-</p>
-                      </div>
-                      <input type="checkbox"
-                        checked={form.bat_discard_likely_interference ?? false}
-                        onChange={e => setForm(f => ({ ...f, bat_discard_likely_interference: e.target.checked }))}
-                        className="w-4 h-4 accent-chirp-500 flex-shrink-0"/>
-                    </div>
-                  </div>
-                  <div className="p-3" style={{ borderTop: '1px solid var(--border-subtle)' }}>
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <p className="text-xs font-semibold mb-1" style={{ color: '#a78bfa' }}>
-                          Auto-generate wobble-removed audio (experimental)
-                        </p>
-                        <p className="text-xs" style={{ color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
-Off by default. On: each new bat recording also gets a version with the AudioMoth/fan whine reduced, made in the background so it plays instantly. You still pick it per recording, and it works with Enhanced audio. Expect about 11 dB less whine; a call that crosses the whine's pitch can be clipped.
-</p>
-                      </div>
-                      <input type="checkbox"
-                        checked={form.bat_auto_remove_wobble ?? false}
-                        onChange={e => setForm(f => ({ ...f, bat_auto_remove_wobble: e.target.checked }))}
-                        className="w-4 h-4 accent-chirp-500 flex-shrink-0"/>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-            {form.bat_detection_enabled && (
-              <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border-default)' }}>
-                <div className="px-4 py-3" style={{ background: 'var(--bg-raised)', borderBottom: '1px solid var(--border-subtle)' }}>
-                  <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                    Identify bat species
-                  </p>
-                  <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
-Tries to name the bat species (Little brown bat, Big brown bat…) with a classifier trained on NABat data for the Northeast. It can be confidently wrong: in testing it named a species at 97% on silence. So a species is only shown, including in the Field Guide, Life List and iNaturalist submissions, when it clears the threshold below and beats the classifier's noise, cricket and silence scores. Otherwise the recording stays "Bat" and the guess is saved but not shown.
-</p>
-                </div>
-                <div className="p-4 space-y-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <label className="flex items-center gap-3 cursor-pointer flex-1">
-                      <input type="checkbox" checked={form.bat_species_id_enabled ?? false}
-                             onChange={e => setForm(f => ({ ...f, bat_species_id_enabled: e.target.checked }))}
-                             className="w-4 h-4 accent-chirp-500"/>
-                      <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Enable species classification</span>
-                    </label>
-                  </div>
-                  {form.bat_species_id_enabled && (
-                    <Slider label="Minimum confidence to assert a species"
-                            hint="Below this the recording stays “Bat”; the guess is saved but not shown."
-                            min={0.5} max={0.99} step={0.01}
-                            value={form.bat_species_id_min_confidence ?? 0.75}
-                            onChange={set('bat_species_id_min_confidence')}
-                            format={v => `${(v*100).toFixed(0)}%`}/>
-                  )}
-                </div>
-              </div>
-            )}
-      </ExpCard>
 
-      {/* AI Features — Daily Journal, Bird Profile Summaries, Call
-          Re-analysis, across four providers. No single on/off toggle
-          the way the cards above have, since it's several independent
-          features each assignable to a different provider — the
-          content below (AiSettingsPanel) is its own self-contained
-          config UI rather than a checkbox that reveals more options. */}
-      {/* Detection models: BirdNET v3 and Nighthawk (ExperimentalModels.jsx) */}
-      <ExpCard id="models" title="Detection Models" collapsed={expCollapsed} setCollapsed={setExpCollapsed}
-               subtitle="Newer models to try alongside BirdNET 2.4: BirdNET v3 for day and night birdsong, Nighthawk for the flight calls of migrating birds at night. All off by default.">
+      <ExpCard id="nighthawk" title="Night Flight Calls" collapsed={expCollapsed} setCollapsed={setExpCollapsed}
+               subtitle="Nighthawk finds the flight calls of migrating birds in the stations' night audio.">
         <ExperimentalModels form={form} setForm={setForm}/>
-      </ExpCard>
-
-      <ExpCard id="ai" title="AI Features" collapsed={expCollapsed} setCollapsed={setExpCollapsed}
-               subtitle="Daily and Weekly Journal, Bird Profile summaries and AI Second Opinion. Pick Anthropic, OpenAI, Gemini or Ollama for each, or leave it off; a feature without a provider stays hidden.">
-        <AiSettingsPanel form={form} setForm={setForm} settings={settings}/>
-
-        {/* AI Enhance (Experimental) — a local neural-network model, not
-            a cloud AI feature like the ones above, so no provider/API
-            key choice: it either runs on this server or it doesn't. */}
-        <div className="mt-5 pt-5 border-t border-surface-700">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium text-gray-200">AI Enhance (Experimental)</p>
-              <p className="text-xs text-gray-500 mt-1 max-w-2xl">
-Neural denoising for bird recordings and clips (biodenoising, Earth Species Project): isolates the call and lowers the background. An alternative to Enhanced and Rumble removed. Runs on this server with no API key, but needs <code>torch</code>/<code>torchaudio</code> (several hundred MB, not installed by default) and downloads a 75 MB model on first use. It works at 16 kHz, so sound above 8 kHz is lost; for high-pitched birds use Enhanced instead.
-</p>
-            </div>
-            <input type="checkbox"
-              checked={form.ai_enhance_enabled ?? false}
-              onChange={e => setForm(f => ({ ...f, ai_enhance_enabled: e.target.checked }))}
-              className="w-4 h-4 accent-chirp-500 flex-shrink-0 mt-0.5"
-            />
-          </div>
-          {(form.ai_enhance_enabled ?? false) && (
-            <div className="flex items-center justify-between gap-4 mt-3 pt-3 border-t border-surface-700">
-              <div>
-                <p className="text-xs font-medium text-gray-300">Default to AI Enhance for new bird recordings</p>
-                <p className="text-xs text-gray-500 mt-0.5">
-Each recording keeps its toggle either way; this only sets which mode playback starts in, like Rumble Removal's "Auto".
-</p>
-              </div>
-              <input type="checkbox"
-                checked={form.ai_enhance_auto_apply ?? false}
-                onChange={e => setForm(f => ({ ...f, ai_enhance_auto_apply: e.target.checked }))}
-                className="w-4 h-4 accent-chirp-500 flex-shrink-0"
-              />
-            </div>
-          )}
-        </div>
       </ExpCard>
       </div>
 

@@ -661,6 +661,7 @@ class StorageManager:
             Recording.trigger_timestamp < cutoff,
             Recording.archived_at.is_(None),
             Recording.deleted_at.is_(None),
+            Recording.is_saved.isnot(True),
         )
         if keep_flagged:
             q = q.filter(Recording.label.is_(None), Recording.notes.is_(None))
@@ -705,6 +706,7 @@ class StorageManager:
         cutoff = datetime.utcnow() - timedelta(days=max_age_days)
         q = db.query(Recording).filter(
             Recording.trigger_timestamp < cutoff,
+            Recording.is_saved.isnot(True),
             # Haikubox-sourced rows have no audio file to free (wav_path
             # is "" by design — see haikubox_sync.py's _import_detection)
             # so deleting them here serves no disk-space purpose while
@@ -724,6 +726,7 @@ class StorageManager:
     def _prune_by_size(self, db, max_dir_gb: float, keep_flagged: bool, current_gb: float) -> int:
         from ..models import Recording
         q = db.query(Recording).filter(
+            Recording.is_saved.isnot(True),
             # Same exclusion as _prune_by_age above — a Haikubox row has
             # no file on disk to free, so even though it would
             # self-limit (file_size_gb computes to 0 for it, contributing

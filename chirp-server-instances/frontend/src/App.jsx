@@ -58,6 +58,7 @@ const Notifications      = lazyPage(() => import('./components/Notifications'))
 const Journal            = lazyPage(() => import('./components/Journal'))
 const Statistics         = lazyPage(() => import('./components/Statistics'))
 const NightCalls         = lazyPage(() => import('./components/NightCalls'))
+const NightCallDetail    = lazyPage(() => import('./components/NightCallDetail'))
 const Devices            = lazyPage(() => import('./components/Devices'))
 const Changelog          = lazyPage(() => import('./components/Changelog'))
 const Tutorial           = lazyPage(() => import('./components/Tutorial'))
@@ -109,13 +110,13 @@ const NAV = [
   { to: '/library',     icon: Award,           label: 'Life List',    adminOnly: false },
   { to: '/regional',    icon: BookOpen,        label: 'Field Guide',  adminOnly: false },
   { to: '/notifications', icon: Bell,          label: 'Notifications', adminOnly: false },
-  { to: '/notes',       icon: MessageSquare,   label: 'Notes',        adminOnly: false },
   { to: '/statistics',  icon: BarChart2,       label: 'Statistics',   adminOnly: false },
-  { to: '/night-calls', icon: Moon,           label: 'Night Calls',  adminOnly: false, nightCalls: true },
+  { to: '/night-calls', icon: Moon,            label: 'Night Calls',  adminOnly: false, nightCalls: true },
+  { to: '/notes',       icon: MessageSquare,   label: 'Notes',        adminOnly: false },
   { to: '/devices',     icon: Radio,           label: 'Devices',      adminOnly: true  },
   { to: '/activity',    icon: Activity,        label: 'Activity',     adminOnly: true  },
-  { to: '/users',       icon: Users,           label: 'Users',        adminOnly: true  },
   { to: '/logs',        icon: Terminal,        label: 'Logs',         adminOnly: true  },
+  { to: '/users',       icon: Users,           label: 'Users',        adminOnly: true  },
   { to: '/techdocs',    icon: FileText,        label: 'Tech Docs',    adminOnly: true  },
   // globalAdminOnly, not adminOnly — a per-instance admin role says
   // nothing about server-wide access; see registry_models.py's own
@@ -352,25 +353,25 @@ function MobileNav({ currentUser, location, isGlobalAdmin, nightCallsOn }) {
     { to: '/notifications', icon: Bell          },
   ]
 
-  // Overflow menu — admin-only items first, then shared items
+  // Overflow menu in three blocks: explore, station admin, you.
   const menuItems = [
-    { to: '/regional',   icon: BookOpen,      label: 'Field Guide' },
-    { to: '/notes',      icon: MessageSquare, label: 'Notes'       },
-    { to: '/statistics', icon: BarChart2,     label: 'Statistics'  },
-    ...(nightCallsOn ? [{ to: '/night-calls', icon: Moon, label: 'Night Calls' }] : []),
+    { to: '/regional',   icon: BookOpen,      label: 'Field Guide', section: 'explore' },
+    { to: '/statistics', icon: BarChart2,     label: 'Statistics',  section: 'explore' },
+    ...(nightCallsOn ? [{ to: '/night-calls', icon: Moon, label: 'Night Calls', section: 'explore' }] : []),
+    { to: '/notes',      icon: MessageSquare, label: 'Notes',       section: 'explore' },
     ...(isAdmin ? [
-      { to: '/devices',  icon: Radio,    label: 'Devices'   },
-      { to: '/activity', icon: Activity, label: 'Activity'  },
-      { to: '/users',    icon: Users,    label: 'Users'     },
-      { to: '/logs',     icon: Terminal, label: 'Logs'      },
-      { to: '/techdocs', icon: FileText, label: 'Tech Docs' },
+      { to: '/devices',  icon: Radio,    label: 'Devices',   section: 'admin' },
+      { to: '/activity', icon: Activity, label: 'Activity',  section: 'admin' },
+      { to: '/logs',     icon: Terminal, label: 'Logs',      section: 'admin' },
+      { to: '/users',    icon: Users,    label: 'Users',     section: 'admin' },
+      { to: '/techdocs', icon: FileText, label: 'Tech Docs', section: 'admin' },
     ] : []),
     ...(isGlobalAdmin ? [
-      { to: '/global-admin', icon: Shield, label: 'Global Admin' },
+      { to: '/global-admin', icon: Shield, label: 'Global Admin', section: 'admin' },
     ] : []),
-    { to: '/settings',   icon: Settings,      label: 'Settings'    },
-    { to: '/changelog',  icon: GitBranch,     label: "What's New", adminOnly: false  },
-    { to: '/profile',    icon: User,          label: 'My Profile'  },
+    { to: '/profile',    icon: User,          label: 'My Profile',  section: 'you' },
+    { to: '/settings',   icon: Settings,      label: 'Settings',    section: 'you' },
+    { to: '/changelog',  icon: GitBranch,     label: "What's New",  section: 'you' },
   ]
 
   useEffect(() => { setMenuOpen(false) }, [location.pathname])
@@ -384,7 +385,7 @@ function MobileNav({ currentUser, location, isGlobalAdmin, nightCallsOn }) {
           <div className="fixed right-3 z-50 rounded-xl overflow-hidden shadow-modal animate-slide-up"
                style={{ background: 'var(--bg-card)', border: '1px solid var(--border-default)', minWidth: 172,
                         bottom: 'calc(56px + max(env(safe-area-inset-bottom), 8px) + 8px)' }}>
-            {menuItems.map(({ to, icon: Icon, label }) => (
+            {menuItems.map(({ to, icon: Icon, label, section }, i) => (
               <NavLink key={to} to={to} onClick={() => setMenuOpen(false)}
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${isActive ? '' : 'hover:bg-raised'}`
@@ -392,6 +393,7 @@ function MobileNav({ currentUser, location, isGlobalAdmin, nightCallsOn }) {
                 style={({ isActive }) => ({
                   color: isActive ? 'var(--nav-active-text)' : 'var(--text-primary)',
                   background: isActive ? 'var(--nav-active-bg)' : undefined,
+                  borderTop: i > 0 && menuItems[i - 1].section !== section ? '1px solid var(--border-subtle)' : undefined,
                 })}>
                 <Icon size={16}/> {label}
               </NavLink>
@@ -820,6 +822,7 @@ export default function App() {
                 <Route path="/live-detect"    element={<LiveDetect/>}/>
                 <Route path="/statistics"     element={<Statistics/>}/>
                 <Route path="/night-calls"    element={<NightCalls/>}/>
+                <Route path="/night-calls/:id" element={<NightCallDetail/>}/>
                 <Route path="/devices"        element={<Devices/>}/>
                 <Route path="/activity"       element={<UserActivity/>}/>
                 <Route path="/tutorial"       element={<Tutorial/>}/>
