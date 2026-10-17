@@ -1,5 +1,5 @@
-## 1.4.2 (chirp-device) — 2026-10-16 — FEATURE — Mains hum filter
+## 0.5.14.e — 2026-10-16 — ENHANCEMENT — AI Second Opinion gives one overall rating
 
-- Notches mains hum (60 or 50 Hz and harmonics to 1 kHz, 3 Hz wide) on each mic before detection, recordings and night audio.
-- audio.hum_filter: auto (default; on only when hum stands 10 dB out, rechecked every 5 minutes), 60, 50 or off.
+- The card opens with one rating (Likely right, Probably right, Uncertain or Likely wrong) that combines the AI's read of the spectrogram with the audio check.
+- Audio check findings are listed under the rating; the AI's full reasoning folds under "Why".
 

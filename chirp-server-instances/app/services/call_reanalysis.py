@@ -706,6 +706,45 @@ def _rewrite_legacy_measured(text: str) -> str:
     return _LEGACY_MEASURED_RE.sub(repl, text)
 
 
+_AUDIO_CHECK_RE = re.compile(r"\*\*Audio check for ([^:*\n]+):\*\*\s*([^\n]*)")
+_LOWERED = "So the verdict was lowered from Consistent to Uncertain."
+
+
+def overall_rating(note, verdict, species=None):
+    """One rating for the AI Second Opinion card, combining the model's read
+    of the spectrogram (verdict) with the measured audio check, so the page
+    doesn't show "I am confident" above "lowered to Uncertain".
+    Returns {level, label, summary, checks} or None without a verdict.
+    level: likely | probably | uncertain | unlikely."""
+    if not note or not verdict:
+        return None
+    note = _rewrite_legacy_measured(note)
+    m = _AUDIO_CHECK_RE.search(note)
+    name = (m.group(1).strip() if m else None) or species or "this species"
+    checks = []
+    if m:
+        checks = [s.strip() for s in re.split(r"(?<=\.)\s+", m.group(2)) if s.strip()]
+    lowered = _LOWERED in checks
+    checks = [c for c in checks if c != _LOWERED]
+    art = "an" if name[:1].upper() in "AEIOU" else "a"
+    if verdict == "consistent":
+        if checks:
+            return {"level": "probably", "label": "Probably right", "checks": checks,
+                    "summary": f"The spectrogram matches {art} {name}, but the audio check found a caveat."}
+        return {"level": "likely", "label": "Likely right", "checks": checks,
+                "summary": f"The spectrogram matches {art} {name}, and nothing in the audio measurements argues against it."}
+    if verdict == "uncertain":
+        if lowered:
+            return {"level": "uncertain", "label": "Uncertain", "checks": checks,
+                    "summary": f"The spectrogram looks like {art} {name}, but the audio doesn't back it up."}
+        return {"level": "uncertain", "label": "Uncertain", "checks": checks,
+                "summary": f"The AI couldn't tell from the spectrogram whether this is {art} {name}."}
+    if verdict == "inconsistent":
+        return {"level": "unlikely", "label": "Likely wrong", "checks": checks,
+                "summary": f"The spectrogram doesn't look like {art} {name}."}
+    return None
+
+
 def _apply_measured_check(text: str, name: str, band, notes: list) -> str:
     """Append what the audio measurements say against the primary species
     (in plain sentences), and downgrade a CONSISTENT verdict to UNCERTAIN

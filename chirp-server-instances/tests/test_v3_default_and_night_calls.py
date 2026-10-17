@@ -121,3 +121,21 @@ def test_night_calls_range_detail_spectrogram(tmp_path):
     db = SessionLocal()
     db.query(FlightCall).filter(FlightCall.id.like("nct-%")).delete(synchronize_session=False)
     db.commit(); db.close()
+
+
+def test_second_opinion_overall_rating():
+    from app.services.call_reanalysis import overall_rating, _apply_measured_check, _parse_verdict
+    raw = ("CONSISTENT\n**Red-winged Blackbird:** the calls fit.\n\n"
+           "**Overall:** The evidence strongly supports Red-winged Blackbird.")
+    stored = _apply_measured_check(raw, "Red-winged Blackbird", None,
+                                   ["no sound in its boxes stands out from the background noise (measured)"])
+    v, note = _parse_verdict(stored)
+    r = overall_rating(note, v, "Red-winged Blackbird")
+    assert v == "uncertain" and r["level"] == "uncertain"
+    assert "doesn't back it up" in r["summary"]
+    assert r["checks"] == ["Nothing in its boxes is louder than the background noise."]
+    assert overall_rating("**Blue Jay:** fits.", "consistent", "Blue Jay")["level"] == "likely"
+    faint = "x\n\n**Audio check for Blue Jay:** The call is faint, only 6 dB louder than the background."
+    assert overall_rating(faint, "consistent")["level"] == "probably"
+    assert overall_rating("x", "inconsistent", "Blue Jay")["label"] == "Likely wrong"
+    assert overall_rating("x", None) is None

@@ -27,7 +27,7 @@ from ..models import Detection, Recording, BirdProfile, AppSettings, Comment
 from ..services.audio_processor import AudioProcessor, recommended_high_pass_hz, DSP_VERSION, compute_snr_db
 from ..services import ai_enhance
 from ..services.recorded_time import parse_recorded_at, time_from_filename
-from ..services.call_reanalysis import tidy_stored_note
+from ..services.call_reanalysis import tidy_stored_note, overall_rating
 
 logger = logging.getLogger("chirp.api.recordings")
 
@@ -377,6 +377,7 @@ class RecordingOut(BaseModel):
     bat_metadata: Optional[dict] = None       # pulse_count/peak_freq_hz/etc — only present when is_bat
     is_live_session: Optional[bool] = False   # True for a Live Detect session saved as one recording (see live_detect.py's save_session())
     ai_reanalysis_note: Optional[str] = None
+    ai_reanalysis_rating: Optional[dict] = None   # overall_rating(): one rating from the AI's read and the audio check
     ai_reanalysis_enabled: Optional[bool] = False
     ai_reanalysis_error: Optional[str] = None
     ai_reanalysis_generated_at: Optional[datetime] = None
@@ -529,6 +530,8 @@ def recording_to_out(rec: Recording, db=None, _app_settings=None, _profile_map: 
         bat_metadata=rec.bat_metadata or None,
         is_live_session=bool(getattr(rec, 'is_live_session', False)),
         ai_reanalysis_note=tidy_stored_note(rec.ai_reanalysis_note),
+        ai_reanalysis_rating=overall_rating(rec.ai_reanalysis_note, getattr(rec, "ai_reanalysis_verdict", None),
+                                            max(detections_out, key=lambda d: d.confidence).common_name if detections_out else None),
         ai_reanalysis_error=getattr(rec, "ai_reanalysis_error", None),
         ai_reanalysis_generated_at=getattr(rec, "ai_reanalysis_generated_at", None),
         ai_reanalysis_running=rec.id in _AI_RECHECK_RUNNING,

@@ -106,6 +106,50 @@ function EnhanceControl({ mode, onChange, aiAvailable, aiLoading, aiError, compa
   )
 }
 
+// AI Second Opinion: one overall rating (server overall_rating(): the AI's
+// read of the spectrogram combined with the measured audio check), the
+// audio check's findings, then the AI's full reasoning folded under "Why".
+const RATING_BADGE = { likely: 'badge-green', probably: 'badge-green', uncertain: 'badge-yellow', unlikely: 'badge-red' }
+const md = {
+  p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+  strong: ({ children }) => <strong style={{ color: 'var(--text-primary)' }}>{children}</strong>,
+}
+function SecondOpinionBody({ note, rating }) {
+  if (!rating) {
+    return (
+      <div className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+        <ReactMarkdown components={md}>{note}</ReactMarkdown>
+      </div>
+    )
+  }
+  // The audio check is shown above; the model's closing "Overall:" is its
+  // read of the image only, so it's labelled that way in the details.
+  const details = note
+    .split(/\n\s*\n/)
+    .filter(p => !p.trim().startsWith('**Audio check for'))
+    .join('\n\n')
+    .replace(/\*\*Overall:\*\*/g, '**The AI’s read of the spectrogram:**')
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg p-3 space-y-1.5" style={{ background: 'var(--bg-raised)' }}>
+        <span className={`badge ${RATING_BADGE[rating.level] || 'badge-yellow'} text-xs font-semibold`}>
+          {rating.label}
+        </span>
+        <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{rating.summary}</p>
+        {rating.checks?.length > 0 && (
+          <ul className="text-sm space-y-0.5" style={{ color: 'var(--text-secondary)' }}>
+            {rating.checks.map((c, i) => <li key={i}>• {c}</li>)}
+          </ul>
+        )}
+      </div>
+      <details className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+        <summary className="cursor-pointer text-xs font-medium" style={{ color: 'var(--text-tertiary)' }}>Why: the AI’s full read</summary>
+        <div className="mt-2"><ReactMarkdown components={md}>{details}</ReactMarkdown></div>
+      </details>
+    </div>
+  )
+}
+
 // ── Audio player with amplitude waveform ─────────────────────────────────────
 const WAVEFORM_BARS = 200   // number of amplitude bars to display
 const WAVEFORM_H = 56       // total canvas height in px (28px each half)
@@ -1928,16 +1972,7 @@ export default function RecordingDetail({ shared = false }) {
               text. Only p/strong are overridden — the prompt explicitly
               asks for no headers, lists, or other markdown, so nothing
               else needs styling here. */}
-          <div className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-            <ReactMarkdown
-              components={{
-                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                strong: ({ children }) => <strong style={{ color: 'var(--text-primary)' }}>{children}</strong>,
-              }}
-            >
-              {recording.ai_reanalysis_note}
-            </ReactMarkdown>
-          </div>
+          <SecondOpinionBody note={recording.ai_reanalysis_note} rating={recording.ai_reanalysis_rating}/>
           {inatCommentResult && (
             <p className={`text-xs mt-2 ${inatCommentResult.ok ? 'text-green-400' : 'text-red-400'}`}>
               {inatCommentResult.message}
