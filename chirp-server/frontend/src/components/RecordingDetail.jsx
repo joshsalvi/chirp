@@ -109,7 +109,33 @@ function EnhanceControl({ mode, onChange, aiAvailable, aiLoading, aiError, compa
 // AI Second Opinion: one overall rating (server overall_rating(): the AI's
 // read of the spectrogram combined with the measured audio check), the
 // audio check's findings, then the AI's full reasoning folded under "Why".
-const RATING_BADGE = { likely: 'badge-green', probably: 'badge-green', uncertain: 'badge-yellow', unlikely: 'badge-red' }
+// Rating scale, worst to best. Only the reached step is lit and labelled.
+const RATING_SCALE = [
+  { level: 'unlikely',  color: '#f87171', text: 'badge-red' },
+  { level: 'uncertain', color: '#fbbf24', text: 'badge-yellow' },
+  { level: 'probably',  color: '#a3e635', text: 'badge-green' },
+  { level: 'likely',    color: '#4ade80', text: 'badge-green' },
+]
+function RatingScale({ level, label }) {
+  const idx = Math.max(0, RATING_SCALE.findIndex(r => r.level === level))
+  const { text } = RATING_SCALE[idx]
+  return (
+    <div role="img" aria-label={`AI second opinion: ${label}`} className="space-y-1">
+      <div className="grid grid-cols-4 gap-1">
+        {RATING_SCALE.map((r, i) => (
+          <span key={r.level} className="h-2 rounded-full"
+                style={{ background: r.color, opacity: i === idx ? 1 : 0.18 }}/>
+        ))}
+      </div>
+      <div className="grid grid-cols-4 gap-1 text-xs font-semibold">
+        {/* badge-* for a text colour that reads in light themes too */}
+        <span className={text} style={{ background: 'none', border: 0, padding: 0, gridColumn: idx + 1, textAlign: idx === 0 ? 'left' : idx === 3 ? 'right' : 'center', whiteSpace: 'nowrap' }}>
+          {label}
+        </span>
+      </div>
+    </div>
+  )
+}
 const md = {
   p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
   strong: ({ children }) => <strong style={{ color: 'var(--text-primary)' }}>{children}</strong>,
@@ -132,9 +158,7 @@ function SecondOpinionBody({ note, rating }) {
   return (
     <div className="space-y-3">
       <div className="rounded-lg p-3 space-y-1.5" style={{ background: 'var(--bg-raised)' }}>
-        <span className={`badge ${RATING_BADGE[rating.level] || 'badge-yellow'} text-xs font-semibold`}>
-          {rating.label}
-        </span>
+        <RatingScale level={rating.level} label={rating.label}/>
         <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{rating.summary}</p>
         {rating.checks?.length > 0 && (
           <ul className="text-sm space-y-0.5" style={{ color: 'var(--text-secondary)' }}>

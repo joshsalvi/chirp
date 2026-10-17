@@ -1,4 +1,4 @@
-## 0.5.14.i — 2026-10-17 — BUGFIX — Detection rows fit on phones
+## 0.5.14.j — 2026-10-17 — ENHANCEMENT — AI Second Opinion rating on a scale
 
-- A recording's detection rows wrap onto two lines on narrow screens: time and confidence, then Jump, Clip and Enhance, nothing overlapping or cut off.
+- The rating shows as a four-step bar from Likely wrong to Likely right, with only the reached step lit and labelled.
 
