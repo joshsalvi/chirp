@@ -593,7 +593,10 @@ function DetectionCard({ det, recordingId, detections, onPlayAt, colorPalette, a
   const conf = det.confidence || 0
 
   return (
-    <div className="px-3 py-2 flex items-center gap-3" style={{ borderLeft: `3px solid ${color}` }}>
+    <div className="px-3 py-2 flex flex-wrap items-center gap-x-3 gap-y-2" style={{ borderLeft: `3px solid ${color}` }}>
+      {/* Two groups that wrap onto two lines on a phone: what was heard
+          (time, confidence, source), then what you can do with it. */}
+      <div className="flex items-center gap-3 flex-1 min-w-[220px]">
       <span className="text-xs font-mono flex-shrink-0" style={{ color: 'var(--text-tertiary)', minWidth: 80 }}>
         {(det.start_time || 0).toFixed(1)}s–{(det.end_time || 0).toFixed(1)}s
       </span>
@@ -623,7 +626,9 @@ function DetectionCard({ det, recordingId, detections, onPlayAt, colorPalette, a
         ? <span title="Re-analyzed server-side" className="flex-shrink-0 sm:hidden" style={{ color: '#60a5fa' }}><Server size={12}/></span>
         : <span title="Detected on-device" className="flex-shrink-0 sm:hidden" style={{ color: 'var(--text-tertiary)' }}><Cpu size={12}/></span>
       }
+      </div>
 
+      <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
       <button onClick={() => onPlayAt && onPlayAt(det.start_time || 0)}
               className="text-xs flex items-center gap-0.5 hover:opacity-80 transition-opacity flex-shrink-0"
               style={{ color }}>
@@ -652,6 +657,7 @@ function DetectionCard({ det, recordingId, detections, onPlayAt, colorPalette, a
           }}
           aiAvailable={aiEnhanceEnabled} aiLoading={aiClipLoading} aiError={aiClipError}/>
       )}
+      </div>
       <audio ref={clipRef}
              src={
                (aiClipEnhanced && !isBatDetection) ? api.recordings.clipAiEnhancedUrl(recordingId, det.id)

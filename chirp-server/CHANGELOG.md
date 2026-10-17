@@ -1,4 +1,4 @@
-## 0.5.14.h — 2026-10-17 — ENHANCEMENT — What's New for this week's changes
+## 0.5.14.i — 2026-10-17 — BUGFIX — Detection rows fit on phones
 
-- New What's New popup: AI Second Opinion's single rating, its audio check for short calls, and BirdNET v3's minimum applying to station detections.
+- A recording's detection rows wrap onto two lines on narrow screens: time and confidence, then Jump, Clip and Enhance, nothing overlapping or cut off.
 
