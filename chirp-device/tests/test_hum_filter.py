@@ -72,3 +72,17 @@ def test_forced_60_filters_immediately():
     out = _run(hf, y)
     assert hf.active
     assert _rms_db(out[SR:]) < _rms_db(y[SR:]) - 25
+
+
+def test_stays_on_through_one_quiet_check(monkeypatch):
+    import chirp.hum_filter as hfm
+    hf = HumFilter(SR, "auto")
+    seq = iter([(60.0, 30.0), (60.0, 2.0), (60.0, 25.0), (60.0, 2.0), (60.0, 1.0)])
+    monkeypatch.setattr(hfm, "measure_mains", lambda y, sr: next(seq))
+    monkeypatch.setattr(hfm, "RECHECK_SECONDS", 0.0)
+    chunk = np.zeros(int(SR * hfm.DETECT_SECONDS), dtype=np.float32)
+    states = []
+    for _ in range(5):
+        hf.process(chunk); states.append(hf.active)
+    assert states == [True, True, True, True, False]
+    assert hf.last_db == 1.0

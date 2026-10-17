@@ -29,7 +29,8 @@ MAX_HZ = 1000.0          # notch harmonics up to here
 BANDWIDTH_HZ = 3.0       # each notch's -3 dB width
 DETECT_SECONDS = 10.0
 RECHECK_SECONDS = 300.0
-MIN_PROMINENCE_DB = 10.0
+MIN_PROMINENCE_DB = 10.0  # turn on at this
+OFF_PROMINENCE_DB = 5.0   # once on, only turn off below this, twice in a row
 
 
 def _design(f0: float, sr: int) -> np.ndarray:
@@ -68,12 +69,16 @@ def hum_prominence(y: np.ndarray, sr: int, f0: float, harmonics: int = 5) -> flo
     return best
 
 
-def detect_mains(y: np.ndarray, sr: int) -> Optional[float]:
-    """50.0, 60.0, or None when neither stands out."""
+def measure_mains(y: np.ndarray, sr: int) -> tuple:
+    """(50.0 or 60.0, its prominence in dB), whichever stands out more."""
     p50, p60 = hum_prominence(y, sr, 50.0), hum_prominence(y, sr, 60.0)
-    if max(p50, p60) < MIN_PROMINENCE_DB:
-        return None
-    return 60.0 if p60 >= p50 else 50.0
+    return (60.0, p60) if p60 >= p50 else (50.0, p50)
+
+
+def detect_mains(y: np.ndarray, sr: int, threshold: float = MIN_PROMINENCE_DB) -> Optional[float]:
+    """50.0, 60.0, or None when neither stands out."""
+    f0, p = measure_mains(y, sr)
+    return f0 if p >= threshold else None
 
 
 class HumFilter:
@@ -90,6 +95,8 @@ class HumFilter:
         self._buf: list = []
         self._buffered = 0
         self._since_check = 0
+        self._quiet_checks = 0
+        self.last_db: Optional[float] = None   # hum level at the last check, dB above its neighbours
         if self.mode in ("50", "60"):
             self._set(float(self.mode))
 
@@ -123,7 +130,24 @@ class HumFilter:
             self._buf, self._buffered = [], 0
             self._since_check = int(RECHECK_SECONDS * self.sr)
             try:
-                self._set(detect_mains(y, self.sr))
+                f0, db = measure_mains(y, self.sr)
+                self.last_db = round(db, 1)
+                logger.info("Hum check (%s): %g Hz stands %.1f dB above its neighbours", self.name, f0, db)
+                if self._sos is None:
+                    if db >= MIN_PROMINENCE_DB:
+                        self._set(f0)
+                elif db < OFF_PROMINENCE_DB:
+                    # Birdsong or rain can hide the hum for a moment; one
+                    # quiet check (as on 17 Oct, off for 5 minutes at a
+                    # time) shouldn't let it back in.
+                    self._quiet_checks += 1
+                    if self._quiet_checks >= 2:
+                        self._quiet_checks = 0
+                        self._set(None)
+                else:
+                    self._quiet_checks = 0
+                    if f0 != self.f0 and db >= MIN_PROMINENCE_DB:
+                        self._set(f0)
             except Exception as e:        # never let detection break capture
                 logger.warning("Hum filter (%s): detection failed: %s", self.name, e)
 
