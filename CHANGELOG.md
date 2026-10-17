@@ -1,5 +1,4 @@
-## 1.4.3 (chirp-device) — 2026-10-17 — BUGFIX — Hum filter stays on
+## 1.4.4 (chirp-device) — 2026-10-17 — BUGFIX — Hum check logs both mains families
 
-- Once on, the hum filter turns off only after two checks in a row find the hum under 5 dB (one quiet check had let it off for 5 minutes at a time).
-- Each check logs how far the hum stands above its neighbours, to compare wiring changes.
+- Each hum check logs the 60 Hz and 50 Hz readings; 50 Hz is chosen only when it leads by 3 dB (weak hum read as 50 Hz in Massachusetts).
 

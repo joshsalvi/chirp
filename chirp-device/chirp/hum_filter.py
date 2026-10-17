@@ -69,10 +69,18 @@ def hum_prominence(y: np.ndarray, sr: int, f0: float, harmonics: int = 5) -> flo
     return best
 
 
+_last_pair = (0.0, 0.0)
+
+
 def measure_mains(y: np.ndarray, sr: int) -> tuple:
     """(50.0 or 60.0, its prominence in dB), whichever stands out more."""
+    global _last_pair
     p50, p60 = hum_prominence(y, sr, 50.0), hum_prominence(y, sr, 60.0)
-    return (60.0, p60) if p60 >= p50 else (50.0, p50)
+    _last_pair = (p60, p50)
+    # Weak hum reads about the same in both families (300 Hz is in both);
+    # 50 Hz needs a clear lead. A first check on 17 Oct picked 50 Hz in
+    # Massachusetts at 14.5 dB.
+    return (50.0, p50) if p50 > p60 + 3.0 else (60.0, p60)
 
 
 def detect_mains(y: np.ndarray, sr: int, threshold: float = MIN_PROMINENCE_DB) -> Optional[float]:
@@ -132,7 +140,8 @@ class HumFilter:
             try:
                 f0, db = measure_mains(y, self.sr)
                 self.last_db = round(db, 1)
-                logger.info("Hum check (%s): %g Hz stands %.1f dB above its neighbours", self.name, f0, db)
+                logger.info("Hum check (%s): 60 Hz family %.1f dB, 50 Hz family %.1f dB above their neighbours",
+                            self.name, *_last_pair)
                 if self._sos is None:
                     if db >= MIN_PROMINENCE_DB:
                         self._set(f0)
