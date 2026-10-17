@@ -173,7 +173,10 @@ export const api = {
     // Capacitor app rather than the PWA — see App.jsx's push
     // registration effect and services/apns_push.py for the full path
     // this feeds into.
-    registerNative: (deviceToken) => request('/push/register-native', { method: 'POST', body: JSON.stringify({ device_token: deviceToken }) }),
+    registerNative: (deviceToken) => {
+      try { localStorage.setItem('chirp_native_push_token', deviceToken) } catch {}   // native PUSH_TOKEN_KEY, for openServerPicker
+      return request('/push/register-native', { method: 'POST', body: JSON.stringify({ device_token: deviceToken }) })
+    },
     testNative: () => request('/push/test-native', { method: 'POST' }),
     unregisterNative: (deviceToken) => request('/push/unregister-native', { method: 'POST', body: JSON.stringify({ device_token: deviceToken }) }),
   },

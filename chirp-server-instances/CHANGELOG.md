@@ -1,3 +1,7 @@
+## 0.5.14.p — 2026-10-17 — BUGFIX — Notifications only from the server the app shows
+
+- Change server in the iPhone app now takes the phone off the old server's push list first; going back adds it again.
+
 ## 0.5.14.o — 2026-10-17 — BUGFIX — No duplicate notifications from a retired server
 
 - New setting CHIRP_NOTIFICATIONS_OFF=1 stops a server's pushes, emails, journals and digests; on for the retired chirp.joshuasalvimd.com server, which was sending a second Daily Journal.

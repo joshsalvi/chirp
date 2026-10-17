@@ -27,7 +27,28 @@ export const isApp = () =>
 export const hasServerPicker = () =>
   typeof navigator !== 'undefined' && /\bChirpApp\/2\b/.test(navigator.userAgent || '')
 
-export const openServerPicker = () => { window.location.href = 'capacitor://localhost/?pick=1' }
+// The APNs token this phone last registered (api.push.registerNative).
+export const PUSH_TOKEN_KEY = 'chirp_native_push_token'
+
+// Before switching servers, take this phone off this server's push list so
+// only the server the app shows sends notifications. Coming back registers
+// it again (App.jsx, on launch). Best-effort, at most 2 s.
+export async function openServerPicker() {
+  let token = null
+  try { token = localStorage.getItem(PUSH_TOKEN_KEY) } catch {}
+  if (token) {
+    const ctl = new AbortController()
+    const timer = setTimeout(() => ctl.abort(), 2000)
+    try {
+      await fetch('/api/v1/push/unregister-native', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ device_token: token }), signal: ctl.signal,
+      })
+    } catch {}
+    clearTimeout(timer)
+  }
+  window.location.href = 'capacitor://localhost/?pick=1'
+}
 
 // Picker builds allow navigation to any host (so any server loads in the
 // app), which would also keep plain links to other sites inside the app.
