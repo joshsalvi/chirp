@@ -6,6 +6,7 @@
  * and renders it with basic markdown parsing.
  */
 import { useState, useEffect } from 'react'
+import { api } from '../lib/api'
 import { APP_RELEASES, LATEST_APP, atLeast, useAppInfo } from '../lib/appVersion'
 
 // Escape raw HTML before applying our own markdown-style tags below, so a
@@ -177,6 +178,7 @@ export default function Changelog() {
       </div>
 
       {tab === 'ios' && <IosVersions groups={serverGroups} appInfo={appInfo}/>}
+      {tab === 'device' && <StationVersions latest={(deviceGroups[0]?.sections[0].match(/^## (\d+\.\d+\.\d+)/) || [])[1]}/>}
 
       {/* Major versions (0.5, 0.4…; the device's 1), each holding its minor versions */}
       {tab !== 'ios' && <div className="space-y-3 mb-8">
@@ -214,6 +216,40 @@ export default function Changelog() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// Device tab: the chirp-device version each station last reported
+// (heartbeat device_version), next to the newest one in the changelog.
+function StationVersions({ latest }) {
+  const [devs, setDevs] = useState(null)
+  useEffect(() => {
+    api.devices.list().then(r => setDevs(Array.isArray(r) ? r : (r?.devices || []))).catch(() => setDevs([]))
+  }, [])
+  if (!devs?.length) return null
+  return (
+    <div className="card p-4 mb-4">
+      <p className="text-xs uppercase tracking-wider mb-2" style={{ color: 'var(--text-tertiary)' }}>On your stations</p>
+      <div className="space-y-2">
+        {devs.map(d => {
+          const v = d.device_version
+          const current = v && latest && v === latest
+          return (
+            <div key={d.id} className="flex items-baseline justify-between gap-3">
+              <span className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>{d.name || d.device_id || 'Station'}</span>
+              <span className="flex items-baseline gap-2 flex-shrink-0">
+                <span className="font-mono text-lg font-bold" style={{ color: v ? 'var(--accent-400)' : 'var(--text-tertiary)' }}>{v || 'unknown'}</span>
+                {v && latest && (
+                  <span className="text-xs" style={{ color: current ? 'var(--text-tertiary)' : '#fbbf24' }}>
+                    {current ? 'latest' : `${latest} available`}
+                  </span>
+                )}
+              </span>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
