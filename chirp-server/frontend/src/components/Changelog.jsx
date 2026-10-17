@@ -225,7 +225,11 @@ export default function Changelog() {
 function StationVersions({ latest }) {
   const [devs, setDevs] = useState(null)
   useEffect(() => {
-    api.devices.list().then(r => setDevs(Array.isArray(r) ? r : (r?.devices || []))).catch(() => setDevs([]))
+    // Chirp stations only: Bird Buddy feeders and Haikuboxes are listed as
+    // devices too but don't run chirp-device.
+    const ours = d => !d.bird_buddy_feeder_id && !/^(birdbuddy|haikubox):/.test(d.hostname || '')
+      && !/^(bird buddy|haikubox)$/i.test(d.platform || '')
+    api.devices.list().then(r => setDevs((Array.isArray(r) ? r : (r?.devices || [])).filter(ours))).catch(() => setDevs([]))
   }, [])
   if (!devs?.length) return null
   return (

@@ -1,3 +1,7 @@
+## 0.5.14.q — 2026-10-17 — UX — Station versions: Chirp stations only
+
+- Changelog → Device no longer lists Bird Buddy feeders and Haikuboxes, which don't run Chirp's station software.
+
 ## 0.5.14.p — 2026-10-17 — BUGFIX — Notifications only from the server the app shows
 
 - Change server in the iPhone app now takes the phone off the old server's push list first; going back adds it again.
