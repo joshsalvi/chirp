@@ -93,6 +93,10 @@ def _send(cfg: dict, to: Union[str, List[str]], subject: str, html: str, text: s
     that subtype means "these parts are different renderings of the same
     content", not "here's the body plus a separate file").
     """
+    from .notify_off import notifications_off
+    if notifications_off():
+        logger.info("Email not sent: notifications are off on this server (CHIRP_NOTIFICATIONS_OFF)")
+        return False
     if not cfg or not to:
         return False
     recipients = [to] if isinstance(to, str) else to

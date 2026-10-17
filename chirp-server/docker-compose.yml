@@ -64,6 +64,9 @@ services:
       # working. Set both in .env, e.g. CHIRP_REDIRECT_HOSTS=chirp.example.com
       - CHIRP_REDIRECT_HOSTS=${CHIRP_REDIRECT_HOSTS:-}
       - CHIRP_REDIRECT_TO=${CHIRP_REDIRECT_TO:-}
+      # CHIRP_NOTIFICATIONS_OFF=1: no pushes, emails, journals or digests
+      # (a retired server kept only for its redirect or LAN access).
+      - CHIRP_NOTIFICATIONS_OFF=${CHIRP_NOTIFICATIONS_OFF:-}
       - TZ=${TZ:-America/New_York}
       # Reach this server itself over Tailscale/Headscale, not just its
       # local network — set CHIRP_TAILSCALE_ENABLED=true and a real

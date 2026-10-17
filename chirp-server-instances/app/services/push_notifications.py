@@ -86,6 +86,9 @@ def send_push_to_subscription(db, subscription, title: str, body: str, url: str 
     with the real failure reason instead of a generic message. A 404/410
     response means the subscription is dead; that row gets deleted here.
     """
+    from .notify_off import notifications_off
+    if notifications_off():
+        return PushResult(False, "notifications are off on this server (CHIRP_NOTIFICATIONS_OFF)")
     _public, private_key = get_or_create_vapid_keys(db)
     payload = {"title": title, "body": body}
     if url:

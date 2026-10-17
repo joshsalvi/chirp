@@ -1,3 +1,7 @@
+## 0.5.14.o — 2026-10-17 — BUGFIX — No duplicate notifications from a retired server
+
+- New setting CHIRP_NOTIFICATIONS_OFF=1 stops a server's pushes, emails, journals and digests; on for the retired chirp.joshuasalvimd.com server, which was sending a second Daily Journal.
+
 ## 0.5.14.n — 2026-10-17 — ENHANCEMENT — AI Second Opinion: one row per bird
 
 - One row per detected bird, each with its photo and its own rating on the scale; the AI's full read is under More.

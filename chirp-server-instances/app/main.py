@@ -366,6 +366,10 @@ async def lifespan(app: FastAPI):
     import threading as _threading
     _stop_digest = _threading.Event()
 
+    from .services.notify_off import notifications_off as _notifications_off
+    if _notifications_off():
+        logger.info("CHIRP_NOTIFICATIONS_OFF: no pushes, emails, journals or digests from this server")
+
     def _digest_loop():
         # Digest push and email, each at the location's own local hour
         # (services/scheduled_push.daily_digest_tick keeps the day sent).
@@ -385,7 +389,8 @@ async def lifespan(app: FastAPI):
                     logger.warning("Daily digest error for instance %s: %s", instance.name, _de)
 
     _digest_thread = _threading.Thread(target=_digest_loop, daemon=True, name="digest")
-    _digest_thread.start()
+    if not _notifications_off():
+        _digest_thread.start()
 
     # Night flight calls (Experimental): finish chunks a restart left
     # waiting and drop failed audio (services/nighthawk_service.py).
@@ -431,7 +436,8 @@ async def lifespan(app: FastAPI):
                     logger.warning("Scheduled push error for %s: %s", _inst_sp.name, _spe)
 
     import datetime as _dt_mod
-    _threading.Thread(target=_scheduled_push_loop, daemon=True, name="scheduled-push").start()
+    if not _notifications_off():
+        _threading.Thread(target=_scheduled_push_loop, daemon=True, name="scheduled-push").start()
 
     # Daily summary (AI-written "birder's journal") scheduler — experimental
     # feature, see services/daily_summary.py. Fires once at whatever
@@ -488,7 +494,8 @@ async def lifespan(app: FastAPI):
                 _time.sleep(61)  # skip the rest of this minute
 
     _summary_thread = _threading.Thread(target=_daily_summary_loop, daemon=True, name="daily-summary")
-    _summary_thread.start()
+    if not _notifications_off():
+        _summary_thread.start()
 
     # Weekly Journal scheduler — same local-timezone-aware pattern as
     # the daily loop above, gated on day-of-week too (Python's
@@ -528,7 +535,8 @@ async def lifespan(app: FastAPI):
                 _time.sleep(61)  # skip the rest of this minute
 
     _weekly_thread = _threading.Thread(target=_weekly_summary_loop, daemon=True, name="weekly-summary")
-    _weekly_thread.start()
+    if not _notifications_off():
+        _weekly_thread.start()
 
     # Bird Profile presence-summary refresh scheduler — off by default
     # (AppSettings.profile_summary_auto_refresh). Without this, a

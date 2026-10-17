@@ -185,6 +185,9 @@ def send_apns_push(db, device_token: str, title: str, body: str, url: str = None
     s / token_row: the caller's already-fetched AppSettings and
     ApnsDeviceToken rows, if it has them (send_apns_to_all passes both).
     """
+    from .notify_off import notifications_off
+    if notifications_off():
+        return ApnsResult(False, "notifications are off on this server (CHIRP_NOTIFICATIONS_OFF)")
     from ..models import AppSettings, ApnsDeviceToken
 
     if s is None:
