@@ -164,6 +164,12 @@ def test_empty_v3_pass_drops_station_detections():
     _drop_superseded_device_detections(db, "v3e-b", [], v3=False)
     left = {r for (r,) in db.query(Detection.recording_id).filter(Detection.recording_id.in_(["v3e-a", "v3e-b"]))}
     assert left == {"v3e-b"}
+    # a night caller the station heard isn't kept either, when v3 found something else
+    db.add(Detection(recording_id="v3e-a", common_name="Common Nighthawk", scientific_name="Chordeiles minor",
+                     label="Chordeiles minor_Common Nighthawk", confidence=0.35, start_time=0, end_time=3, source="device"))
+    db.commit()
+    _drop_superseded_device_detections(db, "v3e-a", [{"common_name": "Common Grackle"}], v3=True)
+    assert db.query(Detection).filter(Detection.recording_id == "v3e-a").count() == 0
     for rid in ("v3e-a", "v3e-b"):
         db.query(Detection).filter(Detection.recording_id == rid).delete()
         db.query(Recording).filter(Recording.id == rid).delete()

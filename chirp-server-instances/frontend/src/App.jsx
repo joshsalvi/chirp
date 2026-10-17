@@ -1,11 +1,6 @@
-import { Routes, Route, NavLink, useNavigate, Navigate, useLocation } from 'react-router-dom'
+import { Routes, Route, NavLink, useNavigate, Navigate, useLocation, useNavigationType } from 'react-router-dom'
 import { useState, useEffect, useLayoutEffect, useCallback, useRef, lazy, Suspense } from 'react'
-import {
-  LayoutDashboard, Mic, MapPin, Settings,
-  Activity, BarChart2, Bell, Upload, Award, Users, LogOut,
-  User, Radio, ChevronLeft, ChevronRight, Menu, X,
-  Feather, Terminal, ChevronDown, BookOpen, MessageSquare, GitBranch, FileText, AudioLines, Shield, Moon
-} from 'lucide-react'
+import { LayoutDashboard, Mic, MapPin, Settings, Activity, BarChart2, Bell, Upload, Award, Users, LogOut, User, Radio, ChevronLeft, ChevronRight, Menu, X, Feather, Terminal, ChevronDown, BookOpen, MessageSquare, GitBranch, FileText, AudioLines, Shield, Moon } from 'lucide-react'
 import { createWebSocket, api, tokenStore, markNavigation } from './lib/api'
 import { getStoredTheme, applyTheme } from './lib/theme'
 import { native, isNative, otherServerUrl } from './native'
@@ -154,6 +149,37 @@ function LiveBadge({ event, onClick }) {
   )
 }
 
+
+// ── Back / forward (top bar) ──────────────────────────────────────────────
+// React Router keeps the position in the browser's history at
+// history.state.idx; a new page (PUSH) cuts off anything ahead of it.
+// Works the same in the iPhone app, which has no browser buttons.
+let _navMax = 0
+try { _navMax = Number(sessionStorage.getItem('chirp_nav_max') || 0) } catch {}
+function HistoryNav() {
+  const location = useLocation()
+  const navType = useNavigationType()
+  const navigate = useNavigate()
+  const idx = (typeof window !== 'undefined' && window.history.state?.idx) || 0
+  if (navType === 'PUSH' || idx > _navMax) {
+    _navMax = idx
+    try { sessionStorage.setItem('chirp_nav_max', String(_navMax)) } catch {}
+  }
+  const canBack = idx > 0, canFwd = idx < _navMax
+  const btn = on => `w-8 h-8 flex items-center justify-center rounded-full transition-colors ${on ? '[@media(hover:hover)]:hover:bg-raised' : 'opacity-30 cursor-default'}`
+  return (
+    <div className="flex items-center" key={location.key}>
+      <button type="button" aria-label="Back" title="Back" disabled={!canBack}
+              onClick={() => canBack && navigate(-1)} className={btn(canBack)} style={{ color: 'var(--text-secondary)' }}>
+        <ChevronLeft size={20}/>
+      </button>
+      <button type="button" aria-label="Forward" title="Forward" disabled={!canFwd}
+              onClick={() => canFwd && navigate(1)} className={btn(canFwd)} style={{ color: 'var(--text-secondary)' }}>
+        <ChevronRight size={20}/>
+      </button>
+    </div>
+  )
+}
 
 // ── Center nav dropdown (desktop top bar) ─────────────────────────────────
 function NavDropdown({ navItems, currentPath }) {
@@ -758,6 +784,7 @@ export default function App() {
                 }}>
           {/* Left */}
           <div className="flex items-center gap-3">
+            <HistoryNav/>
             {/* Mobile logo */}
             <NavLink to="/" className="flex md:hidden items-center gap-2" style={{ textDecoration: 'none' }}>
               <ChirpLogo size={26}/>

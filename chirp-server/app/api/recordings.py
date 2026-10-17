@@ -110,10 +110,11 @@ def _drop_superseded_device_detections(db, rec_id: str, raw: list, v3: bool = Fa
     detections go too, except night callers it didn't reproduce, so a found
     Blue Jay doesn't erase a device nightjar.
 
-    v3: the pass was BirdNET v3. Then a pass that found nothing removes the
-    station's detections too (same night-caller exception): the station runs
-    BirdNET 2.4 at its own lower threshold, and keeping its 38% Mourning
-    Dove while v3 heard nothing at 50% showed birds below the v3 minimum."""
+    v3: the pass was BirdNET v3. Then every station detection v3 didn't
+    reproduce goes, found something or not, night callers included: the
+    station runs BirdNET 2.4 at its own lower threshold (its 38% Mourning
+    Dove, its 35% daytime Common Nighthawk in October), and v3 has its own
+    night and owl handling."""
     from ..models import AppSettings as _AS2
     _s2 = db.query(_AS2).filter(_AS2.id == 1).first()
     if not (bool(getattr(_s2, "server_reanalyze_delete_device", True)) if _s2 else True):
@@ -126,7 +127,7 @@ def _drop_superseded_device_detections(db, rec_id: str, raw: list, v3: bool = Fa
             continue
         if not raw and not v3:
             continue
-        if (_PURGE_PROTECTED_RE.search(dd.common_name or "")
+        if (not v3 and _PURGE_PROTECTED_RE.search(dd.common_name or "")
                 and dd.common_name not in server_names
                 and float(dd.confidence or 0) >= (
                     NIGHT_SPECIES_MIN_CONF if uses_night_floor(dd.common_name, **night_rules(_s2))
