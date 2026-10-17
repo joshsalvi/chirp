@@ -14,29 +14,33 @@
 // WHATS_NEW.version must match the VERSION file (stamp-sw-version.mjs
 // checks it). Set `popup` to the new version when `latest` changes.
 export const WHATS_NEW = {
-  version: '0.5.14.g',
+  version: '0.5.14.h',
   // The release whose `latest` text this is. The popup shows once per value,
   // so small fixes that don't change `latest` don't bring it back.
-  popup: '0.5.14.a',
+  popup: '0.5.14.h',
   title: "What's new in Chirp",
   latest: {
-    intro: 'BirdNET v3 is now the main model, and recordings are easier to keep and clean up.',
+    intro: 'Clearer AI second opinions, and detections that match the model you chose.',
     sections: [
       {
-        heading: '🐦 BirdNET v3 by default',
-        body: 'It finds more species at the same accuracy, and owls must hoot at their pitch to count. Admins can switch back to 2.4 in Settings → Detection.',
+        heading: '✨ One rating for AI Second Opinion',
+        body: 'Likely right, Probably right, Uncertain or Likely wrong, combining the AI’s read of the spectrogram with an audio check that now hears short calls too.',
       },
       {
-        heading: '🔖 Save and filter',
-        body: 'Save a recording to keep it out of automatic cleanup. Recordings also filter by time of day and by Saved.',
+        heading: '🐦 BirdNET v3’s minimum applies everywhere',
+        body: 'A station detection below the v3 minimum is removed when v3 doesn’t confirm it.',
       },
       {
-        heading: '✨ One Enhance button',
-        body: 'Original, Enhanced (rumble cut and noise reduced) or AI, in one control on every recording.',
+        heading: '🔌 Hum filter on stations',
+        body: 'Stations notch out mains hum from their microphones, keeping owl calls between the harmonics.',
       },
     ],
   },
   recent: [
+    { version: '0.5.14.g', summary: 'AI Second Opinion’s audio check hears short calls like chips and “pik”s.' },
+    { version: '0.5.14.f', summary: 'Station detections below the BirdNET v3 minimum are removed; tidier color picker.' },
+    { version: '0.5.14.e', summary: 'AI Second Opinion gives one overall rating.' },
+    { version: '0.5.14.c', summary: 'Clearer detection model settings.' },
     { version: '0.5.14.a', summary: 'BirdNET v3 by default, saved recordings, time-of-day filter, one Enhance control, Night Calls by week and month.' },
   ],
 }
