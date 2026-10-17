@@ -3827,32 +3827,33 @@ Recordings play through one Enhance control: Original, Enhanced (cuts low rumble
           <div>
             <p className="text-sm font-medium text-gray-200">Detection colors</p>
             <p className="text-xs text-gray-500 mt-1 mb-3">
-Colors for each species in a recording's detection list, waveform and spectrogram. They're spread across the palette by how many species the recording has, so even two or three species get clearly different colors.
-</p>
-            <div className="grid grid-cols-2 gap-2">
+              Colors for each species in a recording's detection list, waveform and spectrogram.
+            </p>
+            <div role="radiogroup" aria-label="Detection colors" className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {Object.entries(PALETTES).map(([key, palette]) => {
                 const selected = (form.detection_color_palette || DEFAULT_PALETTE) === key
                 return (
                   <button
                     key={key}
                     type="button"
+                    role="radio"
+                    aria-checked={selected}
                     onClick={() => setForm(f => ({ ...f, detection_color_palette: key }))}
-                    className={`text-left rounded-lg border px-3 py-2.5 transition-colors ${
+                    className={`text-left rounded-lg border px-3 py-2.5 transition-colors flex flex-col gap-2 min-w-0 ${
                       selected
                         ? 'border-chirp-500 bg-chirp-900/20'
                         : 'border-surface-600 bg-surface-800 hover:border-surface-500'
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-1.5">
+                    <span className="flex items-center justify-between gap-2">
                       <span className="text-sm font-medium text-gray-200">{palette.label}</span>
-                      {selected && <span className="text-chirp-400 text-xs">✓</span>}
-                    </div>
-                    <div className="flex gap-1 mb-1.5">
-                      {palette.colors.map((c, i) => (
-                        <span key={i} className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: c }}/>
-                      ))}
-                    </div>
-                    <p className="text-xs text-gray-500">{palette.description}</p>
+                      {selected && <Check size={14} className="text-chirp-400 flex-shrink-0"/>}
+                    </span>
+                    {/* One strip, any number of colors: always fits the card. */}
+                    <span className="flex h-3 rounded-full overflow-hidden" aria-hidden="true">
+                      {palette.colors.map((c, i) => <span key={i} className="flex-1" style={{ background: c }}/>)}
+                    </span>
+                    <span className="text-xs text-gray-500">{palette.description}</span>
                   </button>
                 )
               })}

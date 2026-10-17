@@ -101,14 +101,19 @@ def _prior_server_detections(db, rec_id: str) -> list:
                                                 Detection.source == "server").all()]
 
 
-def _drop_superseded_device_detections(db, rec_id: str, raw: list) -> None:
+def _drop_superseded_device_detections(db, rec_id: str, raw: list, v3: bool = False) -> None:
     """With server_reanalyze_delete_device on, after a server pass: device
     owls go unless the server pass found that owl too (its owl rules are
     checked against field recordings; the device's aren't: in two weeks at
     Natick, 1,367 of 1,376 device owls the server didn't reproduce were
     daytime noise). When the pass found something, the other device
     detections go too, except night callers it didn't reproduce, so a found
-    Blue Jay doesn't erase a device nightjar."""
+    Blue Jay doesn't erase a device nightjar.
+
+    v3: the pass was BirdNET v3. Then a pass that found nothing removes the
+    station's detections too (same night-caller exception): the station runs
+    BirdNET 2.4 at its own lower threshold, and keeping its 38% Mourning
+    Dove while v3 heard nothing at 50% showed birds below the v3 minimum."""
     from ..models import AppSettings as _AS2
     _s2 = db.query(_AS2).filter(_AS2.id == 1).first()
     if not (bool(getattr(_s2, "server_reanalyze_delete_device", True)) if _s2 else True):
@@ -119,7 +124,7 @@ def _drop_superseded_device_detections(db, rec_id: str, raw: list) -> None:
         if _OWL_NAME_RE.search(dd.common_name or ""):
             db.delete(dd)
             continue
-        if not raw:
+        if not raw and not v3:
             continue
         if (_PURGE_PROTECTED_RE.search(dd.common_name or "")
                 and dd.common_name not in server_names
@@ -913,6 +918,7 @@ def _run_server_birdnet(rec_id: str, db, replace_device_detections: bool = True,
 
     try:
         raw = None
+        ran_bn3 = False
         if _bn3_main(app_s):
             # BirdNET v3, the default model (Settings → Detection). BirdNET
             # 2.4's owl rules and near-miss log don't apply to its scores.
@@ -923,6 +929,7 @@ def _run_server_birdnet(rec_id: str, db, replace_device_detections: bool = True,
                     else float(getattr(app_s, "exp_birdnet3_min_conf", None) or birdnet3.DEFAULT_MIN_CONF)
                 raw = birdnet3.analyze(wav_path, lat=lat, lon=lon, when=rec_date, min_conf=bn3_conf,
                                        start_utc=rec.trigger_timestamp)
+                ran_bn3 = True
                 logger.info("Server BirdNET v3 (main): %d detection(s) for %s", len(raw), rec_id)
             except Exception as e:
                 logger.warning("BirdNET v3 unavailable for %s (%s) — using BirdNET 2.4", rec_id, e)
@@ -947,7 +954,7 @@ def _run_server_birdnet(rec_id: str, db, replace_device_detections: bool = True,
         db.commit()
 
         if replace_device_detections:
-            _drop_superseded_device_detections(db, rec_id, raw)
+            _drop_superseded_device_detections(db, rec_id, raw, v3=ran_bn3)
 
         import uuid as _uuid
         for d in raw:
@@ -4078,7 +4085,7 @@ def _process_manual_upload(rec_id: str, label: Optional[str] = None, use_ai_enha
                 _store_near_misses(db, rec_id, _diag, raw)
                 if _bn3_shadow(app_s_bn) and not rec.is_live_detect_clip:
                     _store_shadow(db, rec_id, rec.wav_path, rec_lat, rec_lon, rec_when, app_s_bn, rec.trigger_timestamp)
-            _drop_superseded_device_detections(db, rec_id, raw)
+            _drop_superseded_device_detections(db, rec_id, raw, v3=used_bn3)
 
             for det in raw:
                 common   = det.get("common_name", "Unknown")

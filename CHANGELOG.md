@@ -1,5 +1,5 @@
-## 0.5.14.e — 2026-10-16 — ENHANCEMENT — AI Second Opinion gives one overall rating
+## 0.5.14.f — 2026-10-17 — BUGFIX — No station detections below the v3 minimum; tidier color picker
 
-- The card opens with one rating (Likely right, Probably right, Uncertain or Likely wrong) that combines the AI's read of the spectrogram with the audio check.
-- Audio check findings are listed under the rating; the AI's full reasoning folds under "Why".
+- With BirdNET v3, when the server pass finds nothing, the station's own (BirdNET 2.4) detections are removed too, as they already were when it found something; night callers are still kept.
+- Detection colors: one color strip per palette that fits the card, shorter descriptions.
 

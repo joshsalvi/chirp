@@ -139,3 +139,32 @@ def test_second_opinion_overall_rating():
     assert overall_rating(faint, "consistent")["level"] == "probably"
     assert overall_rating("x", "inconsistent", "Blue Jay")["label"] == "Likely wrong"
     assert overall_rating("x", None) is None
+
+
+def test_empty_v3_pass_drops_station_detections():
+    """Station (BirdNET 2.4) found a 38% Mourning Dove; v3 found nothing at
+    its 50% minimum: the station's detection goes. With 2.4 it stays."""
+    import datetime as dt
+    from app.api.recordings import _drop_superseded_device_detections
+    from app.database import SessionLocal, init_db
+    from app.models import AppSettings, Detection, Recording
+    init_db()
+    db = SessionLocal()
+    s = db.query(AppSettings).filter(AppSettings.id == 1).first() or AppSettings(id=1)
+    s.server_reanalyze_delete_device = True
+    db.merge(s); db.commit()
+    for rid in ("v3e-a", "v3e-b"):
+        db.query(Detection).filter(Detection.recording_id == rid).delete()
+        db.query(Recording).filter(Recording.id == rid).delete()
+        db.add(Recording(id=rid, filename=rid, wav_path="", trigger_timestamp=dt.datetime(2026, 10, 17, 12, 47), duration_seconds=35))
+        db.add(Detection(recording_id=rid, common_name="Mourning Dove", scientific_name="Zenaida macroura",
+                         label="Zenaida macroura_Mourning Dove", confidence=0.379, start_time=0, end_time=3, source="device"))
+    db.commit()
+    _drop_superseded_device_detections(db, "v3e-a", [], v3=True)
+    _drop_superseded_device_detections(db, "v3e-b", [], v3=False)
+    left = {r for (r,) in db.query(Detection.recording_id).filter(Detection.recording_id.in_(["v3e-a", "v3e-b"]))}
+    assert left == {"v3e-b"}
+    for rid in ("v3e-a", "v3e-b"):
+        db.query(Detection).filter(Detection.recording_id == rid).delete()
+        db.query(Recording).filter(Recording.id == rid).delete()
+    db.commit(); db.close()

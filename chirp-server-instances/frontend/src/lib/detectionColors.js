@@ -23,7 +23,7 @@
 export const PALETTES = {
   vivid: {
     label: 'Vivid',
-    description: 'The original, high-saturation rainbow wheel.',
+    description: 'Bright, saturated rainbow.',
     colors: [
       '#ef4444', // Red
       '#f97316', // Orange
@@ -41,7 +41,7 @@ export const PALETTES = {
   },
   colorblind_safe: {
     label: 'Colorblind Safe',
-    description: 'Okabe–Ito palette — chosen to stay distinct under the common forms of color vision deficiency.',
+    description: 'Okabe–Ito colors, distinct with color blindness.',
     colors: [
       '#E69F00', // Orange
       '#56B4E9', // Sky blue
@@ -55,7 +55,7 @@ export const PALETTES = {
   },
   pastel: {
     label: 'Pastel',
-    description: 'Softer, lower-saturation tones for a gentler look.',
+    description: 'Softer, lighter tones.',
     colors: [
       '#fca5a5', // Red
       '#fdba74', // Orange
@@ -73,7 +73,7 @@ export const PALETTES = {
   },
   high_contrast: {
     label: 'High Contrast',
-    description: 'Maximally distinct hues and brightness, for quick scanning at a glance.',
+    description: 'Most distinct hues and brightness.',
     colors: [
       '#ffffff', // White
       '#facc15', // Yellow
