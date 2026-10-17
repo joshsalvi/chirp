@@ -191,3 +191,31 @@ def test_short_calls_measured(tmp_path):
     calls, quiet = measure_detection_bands(p, [(0, 10), (12, 18)])
     assert calls and 6500 <= calls["peak_hz"] <= 7500 and calls["excess_db"] >= 8
     assert quiet is None
+
+
+def test_second_opinion_species_rows():
+    from app.services.call_reanalysis import (species_ratings, _apply_species_check,
+                                              tidy_stored_note)
+    note = ("**Blue Jay** [CONSISTENT] (likelihood 90%) Harsh jeer calls.\n\n"
+            "**Northern Cardinal** [INCONSISTENT] (likelihood 15%) No slurred whistles.\n\n"
+            "**Tufted Titmouse** (likelihood 60%) Older note without a tag.\n\n"
+            "**Overall:** Blue Jay yes.")
+    note = _apply_species_check(note, "Northern Cardinal", {"low_hz": 3000, "high_hz": 5000,
+                                "peak_hz": 4000, "excess_db": 3}, ["faint: only 3 dB above the background"])
+    # A consistent species with nothing measurable is lowered to uncertain.
+    note = note.replace("**Tufted Titmouse** (likelihood", "**Tufted Titmouse** [CONSISTENT] (likelihood")
+    note = _apply_species_check(note, "Tufted Titmouse", None,
+                                ["no sound in its boxes stands out from the background noise (measured)"])
+    rows = species_ratings(note, "consistent",
+                           ["Blue Jay", "Northern Cardinal", "Tufted Titmouse", "Mourning Dove"])
+    assert [(r["name"], r["level"]) for r in rows] == [
+        ("Blue Jay", "likely"), ("Northern Cardinal", "unlikely"),
+        ("Tufted Titmouse", "uncertain"), ("Mourning Dove", None)]
+    assert rows[0]["likelihood"] == 90 and rows[0]["label"] == "Likely right"
+    assert "[UNCERTAIN]" in note and "**Audio check for Tufted Titmouse:**" in note
+    shown = tidy_stored_note(note)
+    assert "[" not in shown and "**Blue Jay** (likelihood 90%)" in shown
+    # Older notes: primary uses the stored verdict, others their likelihood.
+    old = "**Blue Jay** (likelihood 80%) x\n\n**Tufted Titmouse** (likelihood 55%) y"
+    assert [r["level"] for r in species_ratings(old, "uncertain", ["Blue Jay", "Tufted Titmouse"])] == [
+        "uncertain", "probably"]

@@ -1,3 +1,8 @@
+## 0.5.14.n — 2026-10-17 — ENHANCEMENT — AI Second Opinion: one row per bird
+
+- One row per detected bird, each with its photo and its own rating on the scale; the AI's full read is under More.
+- The AI now gives each bird its own verdict, and the audio check runs for every bird, not just the top one.
+
 ## 0.5.14.m — 2026-10-17 — BUGFIX — Changelog history restored; station versions
 
 - The Changelog page shows every release again (releases since 0.5.14.b had replaced the history).

@@ -27,7 +27,7 @@ from ..models import Detection, Recording, BirdProfile, AppSettings, Comment
 from ..services.audio_processor import AudioProcessor, recommended_high_pass_hz, DSP_VERSION, compute_snr_db
 from ..services import ai_enhance
 from ..services.recorded_time import parse_recorded_at, time_from_filename
-from ..services.call_reanalysis import tidy_stored_note, overall_rating
+from ..services.call_reanalysis import tidy_stored_note, overall_rating, species_ratings
 
 logger = logging.getLogger("chirp.api.recordings")
 
@@ -384,6 +384,7 @@ class RecordingOut(BaseModel):
     is_live_session: Optional[bool] = False   # True for a Live Detect session saved as one recording (see live_detect.py's save_session())
     ai_reanalysis_note: Optional[str] = None
     ai_reanalysis_rating: Optional[dict] = None   # overall_rating(): one rating from the AI's read and the audio check
+    ai_reanalysis_species: List[dict] = []        # species_ratings(): one row per flagged species, primary first
     ai_reanalysis_enabled: Optional[bool] = False
     ai_reanalysis_error: Optional[str] = None
     ai_reanalysis_generated_at: Optional[datetime] = None
@@ -538,6 +539,7 @@ def recording_to_out(rec: Recording, db=None, _app_settings=None, _profile_map: 
         ai_reanalysis_note=tidy_stored_note(rec.ai_reanalysis_note),
         ai_reanalysis_rating=overall_rating(rec.ai_reanalysis_note, getattr(rec, "ai_reanalysis_verdict", None),
                                             max(detections_out, key=lambda d: d.confidence).common_name if detections_out else None),
+        ai_reanalysis_species=_second_opinion_rows(rec, detections_out),
         ai_reanalysis_error=getattr(rec, "ai_reanalysis_error", None),
         ai_reanalysis_generated_at=getattr(rec, "ai_reanalysis_generated_at", None),
         ai_reanalysis_running=rec.id in _AI_RECHECK_RUNNING,
@@ -794,6 +796,25 @@ async def _broadcast_new_recording(rec_id: str, species: str, confidence: float)
     except Exception:
         pass
 
+
+
+def _second_opinion_rows(rec, detections_out) -> list:
+    """AI Second Opinion rows: each flagged species once, highest-confidence
+    first, with its rating and photo."""
+    if not rec.ai_reanalysis_note or not detections_out:
+        return []
+    top = max(detections_out, key=lambda d: d.confidence or 0)
+    names, photos = [top.common_name], {}
+    for d in sorted(detections_out, key=lambda d: d.start_time or 0):
+        if d.common_name not in names:
+            names.append(d.common_name)
+    for d in detections_out:
+        if d.bird_photo_url and d.common_name not in photos:
+            photos[d.common_name] = d.bird_photo_url
+    rows = species_ratings(rec.ai_reanalysis_note, getattr(rec, "ai_reanalysis_verdict", None), names)
+    for r in rows:
+        r["photo_url"] = photos.get(r["name"])
+    return rows
 
 
 def _get_file_size(wav_path: Optional[str]) -> Optional[int]:

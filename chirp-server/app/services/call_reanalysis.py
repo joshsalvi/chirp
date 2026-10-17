@@ -284,6 +284,7 @@ def tidy_stored_note(text):
     if not text:
         return text
     text = _rewrite_legacy_measured(text)
+    text = re.sub(r"\s*\[\s*(?:CONSISTENT|INCONSISTENT|UNCERTAIN)\s*\]", "", text, flags=re.I)
     heads = sum(1 for para in re.split(r"\n\s*\n", text)
                 if para.lstrip().startswith("**") and not _SECTION_RE.match(para))
     return _tidy_note(text, multi_species=heads >= 2)
@@ -761,6 +762,86 @@ def _apply_measured_check(text: str, name: str, band, notes: list) -> str:
         caveats.append("verdict changed from Consistent to Uncertain")
     return text.rstrip() + "\n\n" + _audio_check_para(name, caveats)
 
+_SPECIES_VERDICT_RE = re.compile(
+    r"\*\*([^*\n]{2,60}?)\*\*\s*\[\s*(CONSISTENT|INCONSISTENT|UNCERTAIN)\s*\]", re.I)
+_VERDICT_INSIDE_BOLD_RE = re.compile(
+    r"\*\*([^*\n]{2,60}?)\s*\[\s*(CONSISTENT|INCONSISTENT|UNCERTAIN)\s*\]\s*\*\*", re.I)
+
+
+def _species_verdicts(text: str) -> dict:
+    """{species name: consistent|inconsistent|uncertain} from the
+    '**Name** [VERDICT]' headings (0.5.14.n on)."""
+    text = _VERDICT_INSIDE_BOLD_RE.sub(lambda m: f"**{m.group(1).strip()}** [{m.group(2)}]", text or "")
+    return {m.group(1).strip(): m.group(2).lower() for m in _SPECIES_VERDICT_RE.finditer(text)}
+
+
+def _apply_species_check(text: str, name: str, band, notes: list) -> str:
+    """_apply_measured_check for a species other than the primary: its
+    audio check paragraph, and its own [CONSISTENT] lowered to [UNCERTAIN]
+    on the same rule."""
+    caveats = [n for n in notes if not n.startswith("the server's own BirdNET pass also")]
+    if not caveats:
+        return text
+    text = _VERDICT_INSIDE_BOLD_RE.sub(lambda m: f"**{m.group(1).strip()}** [{m.group(2)}]", text)
+    in_rumble = any("rumble range" in c for c in caveats)
+    if _species_verdicts(text).get(name) == "consistent" and (band is None or in_rumble):
+        text = re.sub(r"(\*\*" + re.escape(name) + r"\*\*\s*)\[\s*CONSISTENT\s*\]",
+                      r"\1[UNCERTAIN]", text, count=1, flags=re.I)
+        caveats.append("verdict changed from Consistent to Uncertain")
+    return text.rstrip() + "\n\n" + _audio_check_para(name, caveats)
+
+
+_LEVELS = {
+    "likely": "Likely right", "probably": "Probably right",
+    "uncertain": "Uncertain", "unlikely": "Likely wrong",
+}
+
+
+def species_ratings(note, verdict, species):
+    """One rating per flagged species for the AI Second Opinion rows:
+    [{name, level, label, likelihood}], in the order given (primary first).
+    The species' own [VERDICT] from the note; for the primary species in
+    older notes, the stored verdict; otherwise its likelihood (75%+ likely,
+    50+ probably, 25+ uncertain, below that unlikely). An audio check with
+    caveats turns 'likely' into 'probably'. level is None when the note
+    says nothing about that species."""
+    if not note or not species:
+        return []
+    note = _rewrite_legacy_measured(note)
+    tagged = {k.lower(): v for k, v in _species_verdicts(note).items()}
+    likes = {m.group(1).strip().lower(): int(m.group(2)) for m in re.finditer(
+        r"\*\*([^*\n]{2,60}?)\*\*\s*(?:\[[^\]\n]*\]\s*)?\(\s*likelihood\s*(\d{1,3})\s*%\s*\)", note, re.I)}
+    checks = {}
+    for m in _AUDIO_CHECK_RE.finditer(note):
+        checks[m.group(1).strip().lower()] = [
+            c.strip() for c in re.split(r"(?<=\.)\s+", m.group(2)) if c.strip()]
+    out = []
+    for i, name in enumerate(species):
+        key = name.lower()
+        v = tagged.get(key) or (verdict if i == 0 else None)
+        cs = checks.get(key, [])
+        lowered = _LOWERED in cs
+        cs = [c for c in cs if c != _LOWERED]
+        like = likes.get(key)
+        if v == "consistent":
+            level = "probably" if cs else "likely"
+        elif v == "uncertain":
+            level = "uncertain"
+        elif v == "inconsistent":
+            level = "unlikely"
+        elif like is not None:
+            level = ("likely" if like >= 75 else "probably" if like >= 50
+                     else "uncertain" if like >= 25 else "unlikely")
+            if level == "likely" and cs:
+                level = "probably"
+        else:
+            level = None
+        if lowered and level in ("likely", "probably"):
+            level = "uncertain"
+        out.append({"name": name, "level": level, "label": _LEVELS.get(level), "likelihood": like})
+    return out
+
+
 def _fmt_band(b: dict) -> str:
     k = lambda hz: f"{hz / 1000:.2f}" if hz < 1000 else f"{hz / 1000:.1f}"
     return (f"measured peak about {k(b['peak_hz'])} kHz, most energy "
@@ -974,7 +1055,11 @@ def _reanalyze_bird_call(db, recording, detections, top, proc, provider, api_key
         "under Also visible) a likelihood: your estimate, 0\u2013100%, that it is calling in "
         "this recording, from what you see and the measured facts. Write it right after "
         "the bold name, like **Blue Jay** (likelihood 85%), once, and keep it honest: 50% means "
-        "a coin flip, and a low number is useful.\n"
+        "a coin flip, and a low number is useful. For each species BirdNET flagged (the "
+        "species paragraphs, not Other species detected or Also visible), put that species' "
+        "own one-word verdict in square brackets between the bold name and the likelihood, "
+        "like **Blue Jay** [CONSISTENT] (likelihood 85%), using the same three words as Line 1; "
+        "Line 1 stays the verdict for the primary species.\n"
         + ("With several species, go straight from Line 1 to the first species' "
            "paragraph: no opening summary, since the Overall paragraph is the summary. "
            if multi_species else "")
@@ -1102,8 +1187,11 @@ def _reanalyze_bird_call(db, recording, detections, top, proc, provider, api_key
     text = _tidy_note(_strip_truncated_trailing_section(text), multi_species)
     text = _ensure_pulses_reported(text, pulses)
     text = _ensure_background_reported(text, bg)
-    return _apply_measured_check(text, top.common_name, bands.get(top.common_name),
+    text = _apply_measured_check(text, top.common_name, bands.get(top.common_name),
                                  evidence.get(top.common_name) or [])
+    for name in ordered_species[1:]:
+        text = _apply_species_check(text, name, bands.get(name), evidence.get(name) or [])
+    return text
 
 
 def _regional_candidates(db, limit: int = 40) -> list:

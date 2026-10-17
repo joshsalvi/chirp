@@ -7,7 +7,7 @@ import {
   Play, Pause, Download, ArrowLeft,
   AlertCircle, RefreshCw, Pencil, Trash2, Save, X,
   Share2, Copy, Check, CheckCircle, MapPin, ChevronDown, ChevronUp, Activity, Sparkles, Wand2,
-  Archive, ArchiveRestore, Server, Cpu, MessageSquare, Bookmark, BookmarkCheck
+  Archive, ArchiveRestore, Server, Cpu, MessageSquare, Bookmark, BookmarkCheck, Bird
 } from 'lucide-react'
 import { BirdIcon, BatIcon } from './BirdBatIcons'
 import { api, mediaUrl, clearApiCache } from '../lib/api'
@@ -106,9 +106,8 @@ function EnhanceControl({ mode, onChange, aiAvailable, aiLoading, aiError, compa
   )
 }
 
-// AI Second Opinion: one overall rating (server overall_rating(): the AI's
-// read of the spectrogram combined with the measured audio check), the
-// audio check's findings, then the AI's full reasoning folded under "Why".
+// AI Second Opinion rating, combining the AI's read of the spectrogram with
+// the measured audio check (call_reanalysis.species_ratings/overall_rating).
 // Rating scale, worst to best. Only the reached step is lit and labelled.
 const RATING_SCALE = [
   { level: 'unlikely',  color: '#f87171', text: 'badge-red' },
@@ -116,11 +115,11 @@ const RATING_SCALE = [
   { level: 'probably',  color: '#a3e635', text: 'badge-green' },
   { level: 'likely',    color: '#4ade80', text: 'badge-green' },
 ]
-function RatingScale({ level, label }) {
+function RatingScale({ level, label, name }) {
   const idx = Math.max(0, RATING_SCALE.findIndex(r => r.level === level))
   const { text } = RATING_SCALE[idx]
   return (
-    <div role="img" aria-label={`AI second opinion: ${label}`} className="space-y-1">
+    <div role="img" aria-label={`AI second opinion${name ? ' for ' + name : ''}: ${label}`} className="space-y-1">
       <div className="grid grid-cols-4 gap-1">
         {RATING_SCALE.map((r, i) => (
           <span key={r.level} className="h-2 rounded-full"
@@ -140,34 +139,42 @@ const md = {
   p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
   strong: ({ children }) => <strong style={{ color: 'var(--text-primary)' }}>{children}</strong>,
 }
-function SecondOpinionBody({ note, rating }) {
-  if (!rating) {
+// One row per flagged species (server species_ratings()): photo, name and
+// where its rating sits on the scale. The AI's full read folds under "More".
+function SecondOpinionBody({ note, rating, rows }) {
+  const rated = (rows || []).filter(r => r.level)
+  if (!rated.length && !rating) {
     return (
       <div className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
         <ReactMarkdown components={md}>{note}</ReactMarkdown>
       </div>
     )
   }
-  // The audio check is shown above; the model's closing "Overall:" is its
-  // read of the image only, so it's labelled that way in the details.
-  const details = note
-    .split(/\n\s*\n/)
-    .filter(p => !p.trim().startsWith('**Audio check for'))
-    .join('\n\n')
-    .replace(/\*\*Overall:\*\*/g, '**The AI’s read of the spectrogram:**')
+  const list = rows?.length ? rows : [{ name: null, level: rating.level, label: rating.label }]
+  const details = note.replace(/\*\*Overall:\*\*/g, '**The AI’s read of the spectrogram:**')
   return (
     <div className="space-y-3">
-      <div className="rounded-lg p-3 space-y-1.5" style={{ background: 'var(--bg-raised)' }}>
-        <RatingScale level={rating.level} label={rating.label}/>
-        <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{rating.summary}</p>
-        {rating.checks?.length > 0 && (
-          <ul className="text-sm space-y-0.5" style={{ color: 'var(--text-secondary)' }}>
-            {rating.checks.map((c, i) => <li key={i}>• {c}</li>)}
-          </ul>
-        )}
+      <div className="space-y-3">
+        {list.map((r, i) => (
+          <div key={r.name || i} className="flex items-center gap-3">
+            {r.name !== null && (
+              r.photo_url
+                ? <img src={r.photo_url} alt="" loading="lazy" className="w-11 h-11 rounded-full object-cover flex-shrink-0"
+                       style={{ background: 'var(--bg-raised)' }}/>
+                : <span className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{ background: 'var(--bg-raised)', color: 'var(--text-tertiary)' }}><Bird size={18}/></span>
+            )}
+            <div className="flex-1 min-w-0 space-y-1">
+              {r.name && <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{r.name}</p>}
+              {r.level
+                ? <RatingScale level={r.level} label={r.label} name={r.name}/>
+                : <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Not rated</p>}
+            </div>
+          </div>
+        ))}
       </div>
       <details className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-        <summary className="cursor-pointer text-xs font-medium" style={{ color: 'var(--text-tertiary)' }}>Why: the AI’s full read</summary>
+        <summary className="cursor-pointer text-xs font-medium" style={{ color: 'var(--text-tertiary)' }}>More</summary>
         <div className="mt-2"><ReactMarkdown components={md}>{details}</ReactMarkdown></div>
       </details>
     </div>
@@ -2002,7 +2009,7 @@ export default function RecordingDetail({ shared = false }) {
               text. Only p/strong are overridden — the prompt explicitly
               asks for no headers, lists, or other markdown, so nothing
               else needs styling here. */}
-          <SecondOpinionBody note={recording.ai_reanalysis_note} rating={recording.ai_reanalysis_rating}/>
+          <SecondOpinionBody note={recording.ai_reanalysis_note} rating={recording.ai_reanalysis_rating} rows={recording.ai_reanalysis_species}/>
           {inatCommentResult && (
             <p className={`text-xs mt-2 ${inatCommentResult.ok ? 'text-green-400' : 'text-red-400'}`}>
               {inatCommentResult.message}
