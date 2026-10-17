@@ -1,4 +1,5 @@
-## 1.4.4 (chirp-device) — 2026-10-17 — BUGFIX — Hum check logs both mains families
+## 0.5.14.g — 2026-10-17 — BUGFIX — Audio check hears short calls
 
-- Each hum check logs the 60 Hz and 50 Hz readings; 50 Hz is chosen only when it leads by 3 dB (weak hum read as 50 Hz in Massachusetts).
+- AI Second Opinion's audio check now measures short calls (chips, "pik"s, 20–50 ms) too; faint Downy Woodpecker and chickadee calls at 6–8 kHz read as "nothing above the background" before.
+- The AI gets those measured frequencies, so it no longer guesses them from the image.
 

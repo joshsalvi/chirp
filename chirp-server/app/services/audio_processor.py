@@ -200,34 +200,50 @@ def measure_detection_bands(wav_path: str, segments: list,
     x = data.mean(axis=1).astype(np.float64)
     if len(x) < sr // 2:
         return [None] * len(segments)
-    nper, hop = 4096, 1024
-    f, t, S = sps.stft(x, sr, nperseg=nper, noverlap=nper - hop, boundary=None)
-    P = np.abs(S) ** 2 + 1e-20
-    sel = (f >= fmin) & (f <= min(fmax, sr / 2 - 100))
-    for fx in exclude_hz or []:
-        sel &= np.abs(f - float(fx)) > 250.0
-    f, P = f[sel], P[sel]
-    floor_db = 10 * np.log10(np.median(P, axis=1))
-    out = []
-    for start, end in segments:
-        cols = (t >= float(start)) & (t <= float(end))
-        if cols.sum() < 2:
-            out.append(None)
-            continue
-        excess = 10 * np.log10(np.percentile(P[:, cols], 90, axis=1)) - floor_db
+
+    def spectra(nper):
+        f, t, S = sps.stft(x, sr, nperseg=nper, noverlap=nper - nper // 4, boundary=None)
+        P = np.abs(S) ** 2 + 1e-20
+        sel = (f >= fmin) & (f <= min(fmax, sr / 2 - 100))
+        for fx in exclude_hz or []:
+            sel &= np.abs(f - float(fx)) > 250.0
+        f, P = f[sel], P[sel]
+        return f, t, P, 10 * np.log10(np.median(P, axis=1))
+
+    def band(f, excess, absolute):
         base = float(np.median(excess))      # noise fluctuation sits here
         if excess.max() - base < 6.0:
-            out.append(None)
-            continue
+            return None
         # bins in the top half (in dB) between background and the peak
         w = np.clip(excess - (base + 0.5 * (excess.max() - base)), 0, None)
         c = np.cumsum(w) / w.sum()
-        out.append({
+        return {
             "peak_hz": float(f[int(np.argmax(excess))]),
             "low_hz": float(f[int(np.searchsorted(c, 0.1))]),
             "high_hz": float(f[min(len(f) - 1, int(np.searchsorted(c, 0.9)))]),
-            "excess_db": float(excess.max()),
-        })
+            "excess_db": float(excess.max() if absolute else excess.max() - base),
+        }
+
+    # Sustained sound (songs, whistles, hoots): 85 ms frames, the loud 10 %.
+    fs, ts, Ps, floor_s = spectra(4096)
+    # Short calls (chips, "pik"s, chickadee "chick"s, 20-50 ms) vanish in
+    # those frames: 21 ms frames and the loudest 0.5 %, smoothed over
+    # 150 Hz. On 17 Oct a Downy Woodpecker and chickadee calling at
+    # 6-8 kHz read as "nothing above the background" without this
+    # (8-20 dB here, 3.6 dB in a stretch with no calls).
+    ft, tt, Pt, floor_t = spectra(1024)
+    k = max(1, int(round(150.0 / (ft[1] - ft[0]))))
+    out = []
+    for start, end in segments:
+        best = None
+        cols = (ts >= float(start)) & (ts <= float(end))
+        if cols.sum() >= 2:
+            best = band(fs, 10 * np.log10(np.percentile(Ps[:, cols], 90, axis=1)) - floor_s, True)
+        cols = (tt >= float(start)) & (tt <= float(end))
+        if best is None and cols.sum() >= 8:
+            ex = 10 * np.log10(np.percentile(Pt[:, cols], 99.5, axis=1)) - floor_t
+            best = band(ft, np.convolve(ex, np.ones(k) / k, mode="same"), False)
+        out.append(best)
     return out
 
 

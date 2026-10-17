@@ -168,3 +168,20 @@ def test_empty_v3_pass_drops_station_detections():
         db.query(Detection).filter(Detection.recording_id == rid).delete()
         db.query(Recording).filter(Recording.id == rid).delete()
     db.commit(); db.close()
+
+
+def test_short_calls_measured(tmp_path):
+    """Short faint chips (25 ms at 7 kHz) in hiss register as a band, and a
+    stretch without them doesn't."""
+    from app.services.audio_processor import measure_detection_bands
+    sr = 48000
+    rng = np.random.default_rng(5)
+    y = 0.01 * rng.standard_normal(sr * 20)
+    t = np.arange(int(sr * 0.025)) / sr
+    chip = 0.02 * np.sin(2 * np.pi * 7000 * t) * np.hanning(len(t))
+    for s in np.arange(1.0, 9.0, 0.7):
+        i = int(s * sr); y[i:i + len(chip)] += chip
+    p = str(tmp_path / "chips.wav"); sf.write(p, y.astype(np.float32), sr)
+    calls, quiet = measure_detection_bands(p, [(0, 10), (12, 18)])
+    assert calls and 6500 <= calls["peak_hz"] <= 7500 and calls["excess_db"] >= 8
+    assert quiet is None
