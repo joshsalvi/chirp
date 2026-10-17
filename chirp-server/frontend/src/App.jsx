@@ -158,7 +158,8 @@ function HistoryNav() {
     _navMax = idx
     try { sessionStorage.setItem('chirp_nav_max', String(_navMax)) } catch {}
   }
-  const canBack = idx > 0, canFwd = idx < _navMax
+  // Back goes up to five pages behind the newest one visited.
+  const canBack = idx > Math.max(0, _navMax - 5), canFwd = idx < _navMax
   const btn = on => `w-8 h-8 flex items-center justify-center rounded-full transition-colors ${on ? '[@media(hover:hover)]:hover:bg-raised' : 'opacity-30 cursor-default'}`
   return (
     <div className="flex items-center" key={location.key}>
@@ -740,12 +741,12 @@ export default function App() {
                 }}>
           {/* Left */}
           <div className="flex items-center gap-3">
-            <HistoryNav/>
             {/* Mobile logo */}
             <NavLink to="/" className="flex md:hidden items-center gap-2" style={{ textDecoration: 'none' }}>
               <ChirpLogo size={26}/>
               <span className="font-display font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Chirp</span>
             </NavLink>
+            <HistoryNav/>
             {/* Desktop status */}
             <div className="hidden md:flex items-center gap-2">
               <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${connected ? 'live-dot' : ''}`}
