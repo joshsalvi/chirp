@@ -1,3 +1,7 @@
+## 0.5.14.x — 2026-10-18 — UX — Recordings list remembers where you were
+
+- Leaving Recordings and coming back keeps the page number, filters (station, time of day, saved, date range), search and scroll position.
+
 ## 0.5.14.w — 2026-10-18 — BUGFIX — Maps stay under the tab bar
 
 - The recording and range maps no longer draw over the bottom tab bar and header when scrolled.

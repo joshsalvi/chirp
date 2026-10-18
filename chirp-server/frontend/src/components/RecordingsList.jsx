@@ -230,8 +230,21 @@ export default function RecordingsList() {
     })
   }, [setSearchParams])
 
-  // Restore state from sessionStorage on mount
-  const saved = loadPageState(STATE_KEY)
+  // Restore state from sessionStorage on mount. Read once: the save effects
+  // below overwrite it (without scrollTop) on the first render, so a
+  // per-render read lost the scroll position before it could be restored.
+  const [saved] = useState(() => loadPageState(STATE_KEY, 12 * 60 * 60 * 1000))
+  // Filters kept in the URL (station, time of day, bats, saved…) come back
+  // too when the page is opened plainly (tab bar, menu, Back). A link with
+  // its own filters (?device_id=…, ?species=…) keeps those instead.
+  useEffect(() => {
+    if (!saved?.qs || location.search) return
+    const q = new URLSearchParams(saved.qs)
+    q.delete('species')
+    if ([...q.keys()].length) setSearchParams(q, { replace: true })
+  }, [])   // eslint-disable-line react-hooks/exhaustive-deps
+  const dateFilter = useDateRangeFilter(saved?.date)
+  const { resolveRange, datePreset, customStart, customEnd } = dateFilter
   // ?species=Name (from a bird profile or the digest) sets the species filter.
   const urlSpecies = searchParams.get('species')
   const [page,        setPage]        = useState(urlSpecies != null ? 0 : (saved?.page || 0))
@@ -301,8 +314,8 @@ export default function RecordingsList() {
   // limit/customLimit was in effect last time one of the OTHER deps changed.
   // Navigating away and back would then restore a stale per-page choice.
   useEffect(() => {
-    savePageState(STATE_KEY, { page, limit, customLimit, search, minConf, customConf, showFilters, viewMode })
-  }, [page, limit, customLimit, search, minConf, customConf, showFilters, viewMode])
+    savePageState(STATE_KEY, { ...stateNow(), scrollTop: scrollRef.current?.closest('main')?.scrollTop ?? saved?.scrollTop })
+  }, [page, limit, customLimit, search, minConf, customConf, showFilters, viewMode, datePreset, customStart, customEnd, location.search])
 
   // Restore scroll after load. scrollRef itself is just a marker element
   // (see the root <div> below) — the scroll container is <main>
@@ -330,10 +343,10 @@ export default function RecordingsList() {
   useEffect(() => {
     const el = scrollRef.current?.closest('main')
     if (!el) return
-    const onScroll = () => savePageState(STATE_KEY, { page, limit, customLimit, search, minConf, customConf, showFilters, viewMode, scrollTop: el.scrollTop })
+    const onScroll = () => savePageState(STATE_KEY, { ...stateNow(), scrollTop: el.scrollTop })
     el.addEventListener('scroll', onScroll, { passive: true })
     return () => el.removeEventListener('scroll', onScroll)
-  }, [page, limit, customLimit, search, minConf, customConf, showFilters, viewMode])
+  }, [page, limit, customLimit, search, minConf, customConf, showFilters, viewMode, datePreset, customStart, customEnd, location.search])
 
   // Single source of truth for the page size in effect — was
   // previously recomputed inline in 6 different places with inconsistent
@@ -351,8 +364,6 @@ export default function RecordingsList() {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
   }, [customLimit, limit, viewMode])
 
-  const dateFilter = useDateRangeFilter()
-  const { resolveRange, datePreset, customStart, customEnd } = dateFilter
   // Date preset/custom values feed into resolveRange's own memoized
   // identity (see DateRangeFilter.jsx's useCallback deps), so depending
   // on resolveRange itself in the data-loading effect below is enough to
@@ -363,7 +374,18 @@ export default function RecordingsList() {
   // narrower range while on page 3+ doesn't land on an empty out-of-range
   // page, matching every other filter on this page already resetting to
   // page 0 on change.
-  useEffect(() => { setPage(0) }, [datePreset, customStart, customEnd])
+  // Everything needed to come back to this page as it was.
+  function stateNow() {
+    return { page, limit, customLimit, search, minConf, customConf, showFilters, viewMode,
+             date: { datePreset, customStart, customEnd }, qs: location.search }
+  }
+
+  // Skips the first run: on mount it reset a restored page number to 1.
+  const dateMounted = useRef(false)
+  useEffect(() => {
+    if (!dateMounted.current) { dateMounted.current = true; return }
+    setPage(0)
+  }, [datePreset, customStart, customEnd])
 
   useEffect(() => {
     // Debounced + guarded against stale out-of-order responses. Before

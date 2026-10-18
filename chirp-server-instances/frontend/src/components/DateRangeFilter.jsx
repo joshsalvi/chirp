@@ -20,10 +20,11 @@ export const DATE_PRESETS = [
  * HaikuboxDetections.jsx so RecordingsList.jsx can use the identical,
  * already-tested behavior rather than a second hand-written copy.
  */
-export function useDateRangeFilter() {
-  const [datePreset, setDatePreset] = useState('all')
-  const [customStart, setCustomStart] = useState('')   // yyyy-mm-dd, from <input type="date">
-  const [customEnd, setCustomEnd] = useState('')
+// initial: a saved {datePreset, customStart, customEnd} to start from.
+export function useDateRangeFilter(initial) {
+  const [datePreset, setDatePreset] = useState(initial?.datePreset || 'all')
+  const [customStart, setCustomStart] = useState(initial?.customStart || '')   // yyyy-mm-dd, from <input type="date">
+  const [customEnd, setCustomEnd] = useState(initial?.customEnd || '')
 
   // Resolve the active preset/custom range into a concrete {start, end}
   // ISO pair to actually send the server — kept separate from the preset
