@@ -14,29 +14,38 @@
 // WHATS_NEW.version must match the VERSION file (stamp-sw-version.mjs
 // checks it). Set `popup` to the new version when `latest` changes.
 export const WHATS_NEW = {
-  version: '0.5.14.u',
+  version: '0.5.14.v',
   // The release whose `latest` text this is. The popup shows once per value,
   // so small fixes that don't change `latest` don't bring it back.
-  popup: '0.5.14.h',
+  popup: '0.5.14.v',
   title: "What's new in Chirp",
   latest: {
-    intro: 'Clearer AI second opinions, and detections that match the model you chose.',
+    intro: 'A rating for every bird, room for owls on the spectrogram, and easier getting around.',
     sections: [
       {
-        heading: '✨ One rating for AI Second Opinion',
-        body: 'Likely right, Probably right, Uncertain or Likely wrong, combining the AI’s read of the spectrogram with an audio check that now hears short calls too.',
+        heading: '✨ AI Second Opinion, bird by bird',
+        body: 'Each detected bird gets its own row with its photo and where it sits on the scale from Likely wrong to Likely right; the full read is under More.',
       },
       {
-        heading: '🐦 BirdNET v3’s minimum applies everywhere',
-        body: 'A station detection below the v3 minimum is removed when v3 doesn’t confirm it.',
+        heading: '🦉 Low pitch view',
+        body: 'Recordings with owls and other low callers open with low notes stretched so their calls are easy to see. The Low pitch button switches any recording.',
       },
       {
-        heading: '🔌 Hum filter on stations',
-        body: 'Stations notch out mains hum from their microphones, keeping owl calls between the harmonics.',
+        heading: '↩️ Back and Forward',
+        body: 'Arrows next to the logo take you back up to five pages and forward again.',
       },
     ],
   },
   recent: [
+    { version: '0.5.14.u', summary: 'Low pitch view for owls and other low callers.' },
+    { version: '0.5.14.t', summary: 'Profile photos on notes.' },
+    { version: '0.5.14.s', summary: 'Uploaded profile photos show.' },
+    { version: '0.5.14.r', summary: 'Maps without the “API key required” watermark.' },
+    { version: '0.5.14.p', summary: 'Notifications come only from the server the app shows.' },
+    { version: '0.5.14.n', summary: 'AI Second Opinion rates each bird.' },
+    { version: '0.5.14.m', summary: 'Changelog history restored; Changelog → Device shows each station’s version.' },
+    { version: '0.5.14.k', summary: 'Back and Forward buttons; BirdNET v3 removes station night callers it doesn’t confirm.' },
+    { version: '0.5.14.j', summary: 'AI Second Opinion rating shown on a scale.' },
     { version: '0.5.14.g', summary: 'AI Second Opinion’s audio check hears short calls like chips and “pik”s.' },
     { version: '0.5.14.f', summary: 'Station detections below the BirdNET v3 minimum are removed; tidier color picker.' },
     { version: '0.5.14.e', summary: 'AI Second Opinion gives one overall rating.' },

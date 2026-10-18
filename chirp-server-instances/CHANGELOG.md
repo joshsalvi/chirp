@@ -1,3 +1,7 @@
+## 0.5.14.v — 2026-10-18 — UX — What's New popup brought up to date
+
+- The What's New popup shows again, covering per-bird AI ratings, the Low pitch view and Back/Forward.
+
 ## 0.5.14.u — 2026-10-18 — FEATURE — Low pitch view for owls
 
 - Recordings with an owl or another low caller open with low notes stretched (mel spacing), so their calls get room instead of a thin line at the bottom.
