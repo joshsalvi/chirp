@@ -529,12 +529,23 @@ def update_profile_photo(
         # Save uploaded photo to data directory
         photos_dir = os.path.join(cfg.data_dir, "user_photos")
         os.makedirs(photos_dir, exist_ok=True)
-        ext = os.path.splitext(photo.filename)[-1].lower() or ".jpg"
+        ext = os.path.splitext(photo.filename)[-1].lower()
+        if ext not in _PHOTO_EXTS:
+            ext = ".jpg"
+        # One photo per user: drop the old one if it had another extension.
+        for old in _PHOTO_EXTS:
+            if old != ext:
+                try:
+                    os.remove(os.path.join(photos_dir, f"{user.id}_photo{old}"))
+                except OSError:
+                    pass
         dest = os.path.join(photos_dir, f"{user.id}_photo{ext}")
         with open(dest, "wb") as f:
             shutil.copyfileobj(photo.file, f)
-        # Serve it via a static path
-        user.photo_url = f"/api/v1/auth/me/photo/{user.id}{ext}"
+        # ?v= changes with each upload, so the day-long cache below
+        # doesn't keep showing the previous photo.
+        import time as _time
+        user.photo_url = f"/api/v1/auth/me/photo/{user.id}{ext}?v={int(_time.time())}"
     elif photo_url:
         user.photo_url = photo_url.strip()
 
@@ -542,21 +553,27 @@ def update_profile_photo(
     return {"ok": True, "photo_url": user.photo_url}
 
 
-@router.get("/me/photo/{user_id}{ext:path}")
-def serve_user_photo(user_id: str, ext: str):
-    """Serve uploaded user profile photos."""
+_PHOTO_EXTS = (".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic")
+
+
+@router.get("/me/photo/{name}")
+def serve_user_photo(name: str):
+    """Serve an uploaded profile photo: /me/photo/{user id}{.ext}. (The route
+    was "{user_id}{ext:path}", which put the extension inside user_id, so
+    every uploaded photo 404'd.)"""
     import os
+    import re as _re
     from fastapi.responses import FileResponse
     from ..config import settings as cfg
+    user_id, ext = os.path.splitext(name)
+    if not _re.fullmatch(r"[A-Za-z0-9-]{1,64}", user_id):
+        raise HTTPException(status_code=404, detail="Photo not found")
     photos_dir = os.path.join(cfg.data_dir, "user_photos")
-    for candidate in [f"{user_id}_photo{ext}", f"{user_id}_photo.jpg", f"{user_id}_photo.png"]:
-        p = os.path.join(photos_dir, candidate)
+    exts = ([ext.lower()] if ext.lower() in _PHOTO_EXTS else []) + list(_PHOTO_EXTS)
+    for e in exts:
+        p = os.path.join(photos_dir, f"{user_id}_photo{e}")
         if os.path.exists(p):
-            # Same missing-Cache-Control gap found and fixed across
-            # several other photo endpoints this same pass (see
-            # birds.py's get_bird_photo) — a user's own avatar, shown
-            # wherever they're credited (sidebar, comments, notes),
-            # rarely changes.
+            # A user's avatar rarely changes; uploads add ?v= to bust this.
             return FileResponse(p, headers={"Cache-Control": "public, max-age=86400"})
     raise HTTPException(status_code=404, detail="Photo not found")
 

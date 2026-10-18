@@ -1,3 +1,7 @@
+## 0.5.14.s — 2026-10-18 — BUGFIX — Profile photos show after upload
+
+- Uploaded profile photos never showed (the address put the file extension into the user ID, so it was never found); a new upload also replaces the cached old photo.
+
 ## 0.5.14.r — 2026-10-17 — BUGFIX — Maps without the CARTO watermark
 
 - The recording and range maps use a CARTO key (CHIRP_CARTO_KEY, also in the Unraid template); CARTO now marks tiles "API key required" without one.
