@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
-import { Link, useLocation, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigationType, useSearchParams } from 'react-router-dom'
 import { useTz } from '../lib/time'
 import { Search, Mic, Activity, Upload, Trash2, SlidersHorizontal, X, LayoutGrid, List as ListIcon, ChevronDown, ChevronUp, Play, Pause, Sparkles, Archive, CheckSquare, Square, MoreHorizontal, RefreshCw, AudioLines, Bookmark } from 'lucide-react'
 import ManualUpload from './ManualUpload'
@@ -230,19 +230,18 @@ export default function RecordingsList() {
     })
   }, [setSearchParams])
 
-  // Restore state from sessionStorage on mount. Read once: the save effects
-  // below overwrite it (without scrollTop) on the first render, so a
-  // per-render read lost the scroll position before it could be restored.
-  const [saved] = useState(() => loadPageState(STATE_KEY, 12 * 60 * 60 * 1000))
-  // Filters kept in the URL (station, time of day, bats, saved…) come back
-  // too when the page is opened plainly (tab bar, menu, Back). A link with
-  // its own filters (?device_id=…, ?species=…) keeps those instead.
-  useEffect(() => {
-    if (!saved?.qs || location.search) return
-    const q = new URLSearchParams(saved.qs)
-    q.delete('species')
-    if ([...q.keys()].length) setSearchParams(q, { replace: true })
-  }, [])   // eslint-disable-line react-hooks/exhaustive-deps
+  // Back/Forward (a POP, also a reload) returns to the page as it was: page,
+  // filters, date range, search and scroll. Opening Recordings any other
+  // way (tab bar, menu, a link) starts fresh on page 1, keeping only the
+  // grid/list view and page size. Filters in the URL come back with the
+  // history entry itself. Read once: the save effects below overwrite it
+  // on the first render.
+  const navType = useNavigationType()
+  const [saved] = useState(() => {
+    const st = loadPageState(STATE_KEY, 12 * 60 * 60 * 1000)
+    if (navType === 'POP' || !st) return st
+    return { viewMode: st.viewMode, limit: st.limit, customLimit: st.customLimit }
+  })
   const dateFilter = useDateRangeFilter(saved?.date)
   const { resolveRange, datePreset, customStart, customEnd } = dateFilter
   // ?species=Name (from a bird profile or the digest) sets the species filter.

@@ -1,6 +1,6 @@
 {
   "name": "chirp-frontend",
-  "version": "0.5.14.x",
+  "version": "0.5.14.y",
   "private": true,
   "type": "module",
   "scripts": {

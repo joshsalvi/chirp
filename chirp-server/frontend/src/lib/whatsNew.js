@@ -14,7 +14,7 @@
 // WHATS_NEW.version must match the VERSION file (stamp-sw-version.mjs
 // checks it). Set `popup` to the new version when `latest` changes.
 export const WHATS_NEW = {
-  version: '0.5.14.x',
+  version: '0.5.14.y',
   // The release whose `latest` text this is. The popup shows once per value,
   // so small fixes that don't change `latest` don't bring it back.
   popup: '0.5.14.v',
@@ -37,7 +37,7 @@ export const WHATS_NEW = {
     ],
   },
   recent: [
-    { version: '0.5.14.x', summary: 'Recordings keeps your page, filters and scroll when you come back.' },
+    { version: '0.5.14.y', summary: 'Back returns Recordings to the same page, filters and scroll; opening it fresh starts on page 1.' },
     { version: '0.5.14.u', summary: 'Low pitch view for owls and other low callers.' },
     { version: '0.5.14.t', summary: 'Profile photos on notes.' },
     { version: '0.5.14.s', summary: 'Uploaded profile photos show.' },

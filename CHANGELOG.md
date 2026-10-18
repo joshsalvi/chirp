@@ -1,3 +1,7 @@
+## 0.5.14.y — 2026-10-18 — UX — Only Back restores the Recordings list
+
+- Back (or Forward) returns Recordings to the same page, filters and scroll; opening it from the tab bar, menu or a link starts on page 1 with no filters (grid/list view and page size are kept).
+
 ## 0.5.14.x — 2026-10-18 — UX — Recordings list remembers where you were
 
 - Leaving Recordings and coming back keeps the page number, filters (station, time of day, saved, date range), search and scroll position.
