@@ -325,6 +325,23 @@ def _sweep_enhanced(rec) -> int:
         return 0
 
 
+def _low_pitch_view(rec, scale: str) -> bool:
+    """Spectrogram frequency spacing for the app's view: scale=mel or
+    linear as asked; auto (the default) uses mel spacing when the recording
+    has an owl or another low caller, so their calls aren't a thin line at
+    the bottom of a 0-8 kHz image."""
+    if scale == "mel":
+        return True
+    if scale == "linear":
+        return False
+    from ..services.audio_processor import LOW_FREQUENCY_CALLERS
+    return any(d.common_name in LOW_FREQUENCY_CALLERS for d in (rec.detections or []))
+
+
+def _low_suffix(path: str, low: bool) -> str:
+    return path[:-4] + "_low.png" if low else path
+
+
 def _enhanced_spec_path(recording_id: str) -> str:
     return os.path.join(settings.spectrograms_dir,
                         f"{recording_id}_spectrogram_enhanced_{DSP_VERSION}.png")
@@ -385,6 +402,7 @@ class RecordingOut(BaseModel):
     ai_reanalysis_note: Optional[str] = None
     ai_reanalysis_rating: Optional[dict] = None   # overall_rating(): one rating from the AI's read and the audio check
     ai_reanalysis_species: List[dict] = []        # species_ratings(): one row per flagged species, primary first
+    low_pitch_view: bool = False                  # auto spectrogram spacing is mel (an owl or other low caller is here)
     ai_reanalysis_enabled: Optional[bool] = False
     ai_reanalysis_error: Optional[str] = None
     ai_reanalysis_generated_at: Optional[datetime] = None
@@ -540,6 +558,7 @@ def recording_to_out(rec: Recording, db=None, _app_settings=None, _profile_map: 
         ai_reanalysis_rating=overall_rating(rec.ai_reanalysis_note, getattr(rec, "ai_reanalysis_verdict", None),
                                             max(detections_out, key=lambda d: d.confidence).common_name if detections_out else None),
         ai_reanalysis_species=_second_opinion_rows(rec, detections_out),
+        low_pitch_view=(not rec.is_bat) and _low_pitch_view(rec, "auto"),
         ai_reanalysis_error=getattr(rec, "ai_reanalysis_error", None),
         ai_reanalysis_generated_at=getattr(rec, "ai_reanalysis_generated_at", None),
         ai_reanalysis_running=rec.id in _AI_RECHECK_RUNNING,
@@ -2511,7 +2530,7 @@ def stream_audio_dewobbled_enhanced(recording_id: str, db: Session = Depends(get
 
 
 @router.get("/{recording_id}/spectrogram/enhanced")
-def get_spectrogram_enhanced(recording_id: str, db: Session = Depends(get_db)):
+def get_spectrogram_enhanced(recording_id: str, scale: str = "auto", db: Session = Depends(get_db)):
     """
     Return a spectrogram PNG generated from the noise-reduced "Enhanced"
     audio (see enhance_audio()'s docstring and the sibling
@@ -2550,7 +2569,8 @@ def get_spectrogram_enhanced(recording_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Enhanced spectrogram not available for bat recordings")
 
     spec_dir = settings.spectrograms_dir
-    enhanced_spec_path = _enhanced_spec_path(recording_id)
+    low = _low_pitch_view(rec, scale)
+    enhanced_spec_path = _low_suffix(_enhanced_spec_path(recording_id), low)
 
     if os.path.exists(enhanced_spec_path):
         return FileResponse(
@@ -2591,7 +2611,7 @@ def get_spectrogram_enhanced(recording_id: str, db: Session = Depends(get_db)):
         generated = processor.generate_spectrogram(
             enhanced_wav_path, spec_dir, recording_id,
             detections=visible_dets or None,
-            conf_key=f"enhanced_{DSP_VERSION}",
+            conf_key=f"enhanced_{DSP_VERSION}" + ("_low" if low else ""), low_pitch=low,
             color_palette=getattr(app_s, "detection_color_palette", None) or "vivid",
         )
         logger.debug(
@@ -2607,7 +2627,7 @@ def get_spectrogram_enhanced(recording_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{recording_id}/spectrogram/ai-enhanced")
-def get_spectrogram_ai_enhanced(recording_id: str, db: Session = Depends(get_db)):
+def get_spectrogram_ai_enhanced(recording_id: str, scale: str = "auto", db: Session = Depends(get_db)):
     """
     AI Enhance's spectrogram counterpart — mirrors /spectrogram/enhanced
     above exactly, but from the neural-denoised audio (services/
@@ -2631,7 +2651,8 @@ def get_spectrogram_ai_enhanced(recording_id: str, db: Session = Depends(get_db)
         raise HTTPException(status_code=404, detail="AI Enhance is not available for bat recordings")
 
     spec_dir = settings.spectrograms_dir
-    ai_spec_path = os.path.join(spec_dir, f"{recording_id}_spectrogram_aienhanced_{ai_enhance.AI_ENHANCE_VERSION}.png")
+    low = _low_pitch_view(rec, scale)
+    ai_spec_path = _low_suffix(os.path.join(spec_dir, f"{recording_id}_spectrogram_aienhanced_{ai_enhance.AI_ENHANCE_VERSION}.png"), low)
     if os.path.exists(ai_spec_path):
         return FileResponse(
             ai_spec_path, media_type="image/png",
@@ -2667,7 +2688,7 @@ def get_spectrogram_ai_enhanced(recording_id: str, db: Session = Depends(get_db)
         generated = processor.generate_spectrogram(
             ai_wav_path, spec_dir, recording_id,
             detections=visible_dets or None,
-            conf_key="aienhanced",
+            conf_key="aienhanced" + ("_low" if low else ""), low_pitch=low,
             color_palette=getattr(app_s, "detection_color_palette", None) or "vivid",
         )
         return FileResponse(
@@ -2679,7 +2700,7 @@ def get_spectrogram_ai_enhanced(recording_id: str, db: Session = Depends(get_db)
 
 
 @router.get("/{recording_id}/spectrogram/rumble-removed")
-def get_spectrogram_rumble_removed(recording_id: str, db: Session = Depends(get_db)):
+def get_spectrogram_rumble_removed(recording_id: str, scale: str = "auto", db: Session = Depends(get_db)):
     """
     Spectrogram counterpart to the Rumble Removed playback toggle —
     mirrors /spectrogram/enhanced above exactly, but from the plain
@@ -2699,7 +2720,8 @@ def get_spectrogram_rumble_removed(recording_id: str, db: Session = Depends(get_
         raise HTTPException(status_code=404, detail="Rumble removal is not available for bat recordings")
 
     spec_dir = settings.spectrograms_dir
-    spec_path = os.path.join(spec_dir, f"{recording_id}_spectrogram_rumbleremoved_{DSP_VERSION}.png")
+    low = _low_pitch_view(rec, scale)
+    spec_path = _low_suffix(os.path.join(spec_dir, f"{recording_id}_spectrogram_rumbleremoved_{DSP_VERSION}.png"), low)
     if os.path.exists(spec_path):
         return FileResponse(
             spec_path, media_type="image/png",
@@ -2731,7 +2753,7 @@ def get_spectrogram_rumble_removed(recording_id: str, db: Session = Depends(get_
         generated = processor.generate_spectrogram(
             wav_path, spec_dir, recording_id,
             detections=visible_dets or None,
-            conf_key=f"rumbleremoved_{DSP_VERSION}",
+            conf_key=f"rumbleremoved_{DSP_VERSION}" + ("_low" if low else ""), low_pitch=low,
             color_palette=getattr(app_s, "detection_color_palette", None) or "vivid",
         )
         return FileResponse(
@@ -2743,7 +2765,7 @@ def get_spectrogram_rumble_removed(recording_id: str, db: Session = Depends(get_
 
 
 @router.get("/{recording_id}/spectrogram/rumble-removed-enhanced")
-def get_spectrogram_rumble_removed_enhanced(recording_id: str, db: Session = Depends(get_db)):
+def get_spectrogram_rumble_removed_enhanced(recording_id: str, scale: str = "auto", db: Session = Depends(get_db)):
     """
     Spectrogram counterpart to Rumble Removed + Enhanced combined —
     same reasoning as get_spectrogram_rumble_removed above, from the
@@ -2756,7 +2778,8 @@ def get_spectrogram_rumble_removed_enhanced(recording_id: str, db: Session = Dep
         raise HTTPException(status_code=404, detail="Rumble removal is not available for bat recordings")
 
     spec_dir = settings.spectrograms_dir
-    spec_path = os.path.join(spec_dir, f"{recording_id}_spectrogram_rumbleremovedenhanced_{DSP_VERSION}.png")
+    low = _low_pitch_view(rec, scale)
+    spec_path = _low_suffix(os.path.join(spec_dir, f"{recording_id}_spectrogram_rumbleremovedenhanced_{DSP_VERSION}.png"), low)
     if os.path.exists(spec_path):
         return FileResponse(
             spec_path, media_type="image/png",
@@ -2788,7 +2811,7 @@ def get_spectrogram_rumble_removed_enhanced(recording_id: str, db: Session = Dep
         generated = processor.generate_spectrogram(
             wav_path, spec_dir, recording_id,
             detections=visible_dets or None,
-            conf_key=f"rumbleremovedenhanced_{DSP_VERSION}",
+            conf_key=f"rumbleremovedenhanced_{DSP_VERSION}" + ("_low" if low else ""), low_pitch=low,
             color_palette=getattr(app_s, "detection_color_palette", None) or "vivid",
         )
         return FileResponse(
@@ -2800,7 +2823,7 @@ def get_spectrogram_rumble_removed_enhanced(recording_id: str, db: Session = Dep
 
 
 @router.get("/{recording_id}/spectrogram")
-def get_spectrogram(recording_id: str, thumb: bool = False, db: Session = Depends(get_db)):
+def get_spectrogram(recording_id: str, thumb: bool = False, scale: str = "auto", db: Session = Depends(get_db)):
     """
     Return the spectrogram PNG for a recording.
 
@@ -2864,13 +2887,15 @@ def get_spectrogram(recording_id: str, thumb: bool = False, db: Session = Depend
 
     # Stable cache key: e.g. "0", "25", "50", "75"
     conf_key = str(int(round(display_min_conf * 100)))
+    low = _low_pitch_view(rec, scale)
+    view_key = conf_key + ("_low" if low else "")
 
     # Check whether the per-threshold file already exists (the name includes
     # the colour palette, as generate_spectrogram saves it).
     from ..services.audio_processor import spectrogram_filename
     _palette = getattr(app_s, "detection_color_palette", None) or "vivid"
     spec_dir  = settings.spectrograms_dir
-    spec_path = os.path.join(spec_dir, spectrogram_filename(recording_id, conf_key, thumb, _palette))
+    spec_path = os.path.join(spec_dir, spectrogram_filename(recording_id, view_key, thumb, _palette))
 
     # Fast path: file already on disk → serve with immutable cache headers
     if os.path.exists(spec_path):
@@ -2895,7 +2920,7 @@ def get_spectrogram(recording_id: str, thumb: bool = False, db: Session = Depend
         # underlying image) is far better than showing nothing at all.
         # Probe likely names instead of globbing: the folder holds hundreds
         # of thousands of files, and a glob lists all of them per request.
-        _keys = [conf_key, "0"] + [str(k) for k in range(101) if str(k) not in (conf_key, "0")]
+        _keys = ([view_key] if low else []) + [conf_key, "0"] + [str(k) for k in range(101) if str(k) not in (conf_key, "0")]
         _pals = [_palette] + (["vivid"] if _palette != "vivid" else [])
         fallback_candidates = []
         for _k in _keys:
@@ -2933,14 +2958,15 @@ def get_spectrogram(recording_id: str, thumb: bool = False, db: Session = Depend
         generated = processor.generate_spectrogram(
             rec.wav_path, spec_dir, recording_id,
             detections=visible_dets or None,
-            conf_key=conf_key,
+            conf_key=view_key,
             thumb=thumb,
+            low_pitch=low,
             color_palette=getattr(app_s, "detection_color_palette", None) or "vivid",
         )
         # Update DB pointer to the threshold=0 file (canonical cached path)
         # — only for the full-resolution version; the thumb variant has no
         # corresponding DB column to point at.
-        if conf_key == "0" and not thumb:
+        if view_key == "0" and not thumb:
             rec.spectrogram_path = generated
             db.commit()
         return FileResponse(

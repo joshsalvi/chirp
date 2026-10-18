@@ -1,3 +1,8 @@
+## 0.5.14.u — 2026-10-18 — FEATURE — Low pitch view for owls
+
+- Recordings with an owl or another low caller open with low notes stretched (mel spacing), so their calls get room instead of a thin line at the bottom.
+- A Low pitch toggle above the spectrogram switches any bird recording between that and even pitch spacing.
+
 ## 0.5.14.t — 2026-10-18 — ENHANCEMENT — Profile photos on notes
 
 - Notes, All Notes and the dashboard's Recent comments show each author's profile photo instead of their initial.

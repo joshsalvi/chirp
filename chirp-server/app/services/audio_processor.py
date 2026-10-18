@@ -774,6 +774,7 @@ class AudioProcessor:
         time_range: Optional[tuple] = None,  # (start_s, end_s) crop; axis keeps absolute times
         mel_axis: bool = False,       # mel-spaced frequency axis: low calls (owls, doves) get real height
         fig_height: Optional[float] = None,
+        low_pitch: bool = False,      # same mel spacing for the app's own view (caller adds "_low" to conf_key)
     ) -> str:
         """
         Generate a mel spectrogram PNG for a WAV recording with detection overlays.
@@ -881,7 +882,7 @@ class AudioProcessor:
             ax.set_ylim(0, min(max(max_sig_freq * 1.2, 4.0), 11.0))
         else:
             ax.set_ylim(0, 11)
-        if mel_axis:
+        if mel_axis or low_pitch:
             # Same spacing the mel bins already have, so 0.3-1 kHz gets a
             # fair share of the image instead of the bottom few pixels.
             _to_mel = lambda k: 2595.0 * np.log10(1.0 + np.maximum(k, 0) * 1000.0 / 700.0)
@@ -890,6 +891,8 @@ class AudioProcessor:
             top_k = ax.get_ylim()[1]
             ticks = [k for k in (0.25, 0.5, 1, 2, 3, 4, 6, 8, 10) if k < top_k]
             ax.set_yticks(ticks)
+            ax.set_yticklabels([f"{k:g}" for k in ticks])
+        if mel_axis:
             ax.set_yticklabels([f"{k:g} kHz" for k in ticks])
             # Room for readable axis labels: this image is read by a model,
             # not overlaid by the frontend, so the labels must be inside it.

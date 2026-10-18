@@ -1114,7 +1114,7 @@ function BirdnetMetadata({ recording, onReanalyze, reanalyzing = false }) {
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
-function SpectrogramImage({ recordingId, isBat = false, enhanced = false, aiEnhanced = false, rumbleRemoved = false, allowManualReanalyze = true, refreshKey = 0 }) {
+function SpectrogramImage({ recordingId, isBat = false, enhanced = false, aiEnhanced = false, rumbleRemoved = false, allowManualReanalyze = true, refreshKey = 0, lowPitch = false }) {
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState(false)
   const [expanded, setExpanded] = useState(false)
@@ -1136,15 +1136,18 @@ function SpectrogramImage({ recordingId, isBat = false, enhanced = false, aiEnha
   // classical toggles" rule the audio player's effectiveSrc uses.
   // rumbleRemoved+enhanced both on uses the combined endpoint, matching
   // the audio player's own combinable rumble+enhanced behavior.
+  // scale: mel spacing (low calls get room) or even spacing; the server's
+  // own "auto" choice comes in as lowPitch (RecordingOut.low_pitch_view).
+  const sc = `&scale=${lowPitch ? 'mel' : 'linear'}`
   const src = aiEnhanced && !isBat
-    ? `/api/v1/recordings/${recordingId}/spectrogram/ai-enhanced?v=${refreshKey}`
+    ? `/api/v1/recordings/${recordingId}/spectrogram/ai-enhanced?v=${refreshKey}${sc}`
     : (rumbleRemoved && enhanced && !isBat)
-    ? `/api/v1/recordings/${recordingId}/spectrogram/rumble-removed-enhanced?v=${refreshKey}`
+    ? `/api/v1/recordings/${recordingId}/spectrogram/rumble-removed-enhanced?v=${refreshKey}${sc}`
     : rumbleRemoved && !isBat
-    ? `/api/v1/recordings/${recordingId}/spectrogram/rumble-removed?v=${refreshKey}`
+    ? `/api/v1/recordings/${recordingId}/spectrogram/rumble-removed?v=${refreshKey}${sc}`
     : enhanced && !isBat
-    ? `/api/v1/recordings/${recordingId}/spectrogram/enhanced?v=${refreshKey}`
-    : `/api/v1/recordings/${recordingId}/spectrogram?c=${confKey}&v=${refreshKey}`
+    ? `/api/v1/recordings/${recordingId}/spectrogram/enhanced?v=${refreshKey}${sc}`
+    : `/api/v1/recordings/${recordingId}/spectrogram?c=${confKey}&v=${refreshKey}${isBat ? '' : sc}`
   // Bat spectrograms use a plain linear-frequency STFT (see
   // generate_bat_spectrogram()'s docstring for why mel scale is the wrong
   // tool for ultrasonic content) — "Mel spectrogram" would be an inaccurate
@@ -1553,6 +1556,9 @@ export default function RecordingDetail({ shared = false }) {
   // rather than only the audio while the spectrogram silently stayed on
   // the original regardless of which playback mode was selected.
   const [enhanced, setEnhanced] = useState(false)
+  const [lowPitch, setLowPitch] = useState(null)   // null: the server's choice (low_pitch_view)
+  const lowPitchOn = lowPitch ?? !!recording?.low_pitch_view
+  useEffect(() => { setLowPitch(null) }, [recording?.id])
   // Lifted the same way `enhanced` is, for the same reason — see
   // SpectrogramImage's own aiEnhanced prop. Defaults from
   // aiEnhanceAutoApply once the recording loads (mirroring how
@@ -2044,7 +2050,19 @@ export default function RecordingDetail({ shared = false }) {
         <div className="px-4 py-2 border-b border-surface-700 flex items-center justify-between">
           <span className="text-sm font-medium text-gray-300">Mel Spectrogram</span>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-gray-500">Colors match detections</span>
+            <span className="text-xs text-gray-500 hidden sm:inline">Colors match detections</span>
+            {!recording.is_bat && recording.has_audio !== false && (
+              // Even pitch spacing, or mel spacing that gives low calls
+              // (owls, doves) room. Starts on whichever the server picked.
+              <button type="button" onClick={() => setLowPitch(!lowPitchOn)} aria-pressed={lowPitchOn}
+                      title={lowPitchOn ? 'Low notes stretched: tap for even pitch spacing' : 'Even pitch spacing: tap to stretch low notes (owls, doves)'}
+                      className="text-xs px-2 py-0.5 rounded-full transition-colors"
+                      style={lowPitchOn
+                        ? { background: 'var(--nav-active-bg)', color: 'var(--nav-active-text)' }
+                        : { background: 'var(--bg-raised)', color: 'var(--text-secondary)' }}>
+                Low pitch
+              </button>
+            )}
             {recording.has_audio !== false && (
               <button type="button" onClick={downloadAudio} disabled={downloadingAudio}
                  title="Download the recording"
@@ -2057,9 +2075,9 @@ export default function RecordingDetail({ shared = false }) {
         </div>
         <div className="bg-surface-950 overflow-x-auto">
           {recording.archived_at
-            ? <SpectrogramImage recordingId={recording.id} spectrogramUrl={recording.spectrogram_url} isBat={recording.is_bat} enhanced={false} allowManualReanalyze={allowManualReanalyze} refreshKey={reanalyzeVersion}/>
+            ? <SpectrogramImage recordingId={recording.id} spectrogramUrl={recording.spectrogram_url} isBat={recording.is_bat} enhanced={false} allowManualReanalyze={allowManualReanalyze} refreshKey={reanalyzeVersion} lowPitch={lowPitchOn}/>
             : recording.has_audio !== false
-              ? <SpectrogramImage recordingId={recording.id} spectrogramUrl={recording.spectrogram_url} isBat={recording.is_bat} enhanced={enhanced} aiEnhanced={aiEnhanced} rumbleRemoved={rumbleRemoved} allowManualReanalyze={allowManualReanalyze} refreshKey={reanalyzeVersion}/>
+              ? <SpectrogramImage recordingId={recording.id} spectrogramUrl={recording.spectrogram_url} isBat={recording.is_bat} enhanced={enhanced} aiEnhanced={aiEnhanced} rumbleRemoved={rumbleRemoved} allowManualReanalyze={allowManualReanalyze} refreshKey={reanalyzeVersion} lowPitch={lowPitchOn}/>
               : <div className="flex items-center justify-center h-24 text-sm" style={{ color: 'var(--text-tertiary)' }}>
                   No audio — Haikubox detections are metadata-only
                 </div>
