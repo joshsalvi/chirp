@@ -3308,7 +3308,8 @@ def get_recording_comments(recording_id: str, db: Session = Depends(get_db), use
         .all()
     )
     hidden = _mod.blocked_authors(db, user)
-    return [_comment_out(c) for c in comments if c.author not in hidden]
+    from ..services.author_photos import with_author_photos
+    return with_author_photos(db, [_comment_out(c) for c in comments if c.author not in hidden])
 
 
 @router.post("/{recording_id}/comments")
@@ -3328,7 +3329,8 @@ def post_recording_comment(recording_id: str, body: dict, db: Session = Depends(
     db.add(c)
     db.commit()
     db.refresh(c)
-    return _comment_out(c)
+    from ..services.author_photos import with_author_photos
+    return with_author_photos(db, [_comment_out(c)])[0]
 
 
 @router.delete("/{recording_id}/comments/{comment_id}")
@@ -3365,7 +3367,8 @@ def update_recording_comment(recording_id: str, comment_id: str, body: dict, db:
     c.body = new_body
     c.updated_at = _dt.utcnow()
     db.commit()
-    return _comment_out(c)
+    from ..services.author_photos import with_author_photos
+    return with_author_photos(db, [_comment_out(c)])[0]
 
 
 # ── Edit Recording ────────────────────────────────────────────────────────────

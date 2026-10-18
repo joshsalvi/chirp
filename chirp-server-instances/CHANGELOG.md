@@ -1,3 +1,7 @@
+## 0.5.14.t — 2026-10-18 — ENHANCEMENT — Profile photos on notes
+
+- Notes, All Notes and the dashboard's Recent comments show each author's profile photo instead of their initial.
+
 ## 0.5.14.s — 2026-10-18 — BUGFIX — Profile photos show after upload
 
 - Uploaded profile photos never showed (the address put the file extension into the user ID, so it was never found); a new upload also replaces the cached old photo.

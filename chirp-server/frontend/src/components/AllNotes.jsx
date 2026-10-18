@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { MessageSquare, Mic, Search, X } from 'lucide-react'
 import { BirdIcon } from './BirdBatIcons'
 import { api } from '../lib/api'
-import { NoteActions } from './Comments'
+import { NoteActions, AuthorAvatar } from './Comments'
 
 function timeAgo(isoStr) {
   if (!isoStr) return ''
@@ -86,10 +86,7 @@ export default function AllNotes() {
                    style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-default)' }}>
                 <div className="flex items-start gap-3">
                   {/* Avatar */}
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
-                       style={{ background: 'var(--nav-active-bg)', color: 'var(--accent-400)' }}>
-                    {(n.author || 'A')[0].toUpperCase()}
-                  </div>
+                  <AuthorAvatar name={n.author} photo={n.author_photo_url} size={32} accent/>
                   <div className="flex-1 min-w-0">
                     {/* Meta row */}
                     <div className="flex items-center gap-1.5 flex-wrap mb-1.5">

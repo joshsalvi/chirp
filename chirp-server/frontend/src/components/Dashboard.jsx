@@ -9,6 +9,7 @@ import { api } from '../lib/api'
 import { useTz } from '../lib/time'
 import ChirpLogo from './ChirpLogo'
 import { isCardOpen, setCardOpen } from '../lib/cardState'
+import { AuthorAvatar } from './Comments'
 
 // Small helper for Dashboard sections with their own custom, interactive
 // header (period buttons, an embedded toggle link, etc.) that can't just
@@ -1641,10 +1642,7 @@ export default function Dashboard({ currentUser, requiresAuth, onDashboardModeCh
               <Link key={c.id} to={c.context_url || '#'}
                 className="flex items-start gap-3 p-3 rounded-xl transition-all hover:bg-raised animate-slide-up"
                 style={{ textDecoration: 'none', animationDelay: `${i * 40}ms` }}>
-                <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
-                     style={{ background: 'var(--nav-active-bg)', color: 'var(--accent-400)' }}>
-                  {(c.author || 'A')[0].toUpperCase()}
-                </div>
+                <AuthorAvatar name={c.author} photo={c.author_photo_url} accent/>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5 min-w-0">
                     <span className="text-xs font-semibold truncate min-w-0" style={{ color: 'var(--text-primary)', maxWidth: '40%' }}>

@@ -1616,7 +1616,8 @@ def get_recent_comments(limit: int = 10, db: Session = Depends(get_db), user=Dep
             item["context_name"] = "Recording"
             item["context_url"]  = f"/recordings/{c.recording_id}"
         result.append(item)
-    return result
+    from ..services.author_photos import with_author_photos
+    return with_author_photos(db, result)
 
 
 @router.get("/{profile_id}", response_model=BirdProfileOut)
@@ -1975,7 +1976,8 @@ def get_bird_comments(profile_id: str, db: Session = Depends(get_db), user=Depen
         .all()
     )
     hidden = _mod.blocked_authors(db, user)
-    return [_comment_out(c) for c in comments if c.author not in hidden]
+    from ..services.author_photos import with_author_photos
+    return with_author_photos(db, [_comment_out(c) for c in comments if c.author not in hidden])
 
 
 @router.post("/{profile_id}/comments")
@@ -1995,7 +1997,8 @@ def post_bird_comment(profile_id: str, body: dict, db: Session = Depends(get_db)
     db.add(c)
     db.commit()
     db.refresh(c)
-    return _comment_out(c)
+    from ..services.author_photos import with_author_photos
+    return with_author_photos(db, [_comment_out(c)])[0]
 
 
 @router.delete("/{profile_id}/comments/{comment_id}")
@@ -2032,7 +2035,8 @@ def update_bird_comment(profile_id: str, comment_id: str, body: dict, db: Sessio
     c.body = new_body
     c.updated_at = _dt.utcnow()
     db.commit()
-    return _comment_out(c)
+    from ..services.author_photos import with_author_photos
+    return with_author_photos(db, [_comment_out(c)])[0]
 
 
 def _comment_out(c: Comment) -> dict:

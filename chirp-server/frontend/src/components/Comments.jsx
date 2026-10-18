@@ -5,8 +5,26 @@
  */
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Send, Trash2, MessageSquare, Pencil, Check, X, MoreHorizontal, Flag, UserX } from 'lucide-react'
-import { api } from '../lib/api'
+import { api, mediaUrl } from '../lib/api'
 import { hapticEvent } from '../lib/haptics'
+
+// A note author's profile photo (author_photo_url), or their initial.
+// Shared with All Notes and the dashboard's Recent comments.
+export function AuthorAvatar({ name, photo, size = 28, accent = false, style }) {
+  const [failed, setFailed] = useState(false)
+  const box = { width: size, height: size, ...style }
+  if (photo && !failed) {
+    return <img src={mediaUrl(photo)} alt="" onError={() => setFailed(true)}
+                className="rounded-full flex-shrink-0 object-cover" style={{ ...box, background: 'var(--bg-raised)' }}/>
+  }
+  return (
+    <div className="rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
+         style={{ ...box, background: accent ? 'var(--nav-active-bg)' : 'var(--bg-raised)',
+                  color: accent ? 'var(--accent-400)' : 'var(--text-secondary)' }}>
+      {(name || 'A')[0].toUpperCase()}
+    </div>
+  )
+}
 
 // Report or block, for a note someone else wrote. Shared with All Notes.
 export function NoteActions({ c, onBlocked }) {
@@ -108,10 +126,7 @@ function CommentRow({ c, currentUser, onDelete, onUpdate, onBlocked }) {
   return (
     <div className="flex gap-2.5 group">
       {/* Avatar */}
-      <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
-           style={{ background: 'var(--bg-raised)', color: 'var(--text-secondary)', marginTop: 2 }}>
-        {(c.author || 'A')[0].toUpperCase()}
-      </div>
+      <AuthorAvatar name={c.author} photo={c.author_photo_url} style={{ marginTop: 2 }}/>
 
       {/* Bubble */}
       <div className="flex-1 min-w-0 rounded-xl px-3 py-2"
@@ -193,6 +208,10 @@ export default function Comments({
   const [submitting, setSubmitting] = useState(false)
   const [error,      setError]      = useState(null)
   const textRef = useRef(null)
+  const [myPhoto, setMyPhoto] = useState(null)
+  useEffect(() => {
+    api.auth.me().then(r => (r?.json ? r.json() : r)).then(u => setMyPhoto(u?.photo_url || null)).catch(() => {})
+  }, [])
 
   const load = useCallback(() => {
     fetchFn()
@@ -237,10 +256,7 @@ export default function Comments({
     <div className="space-y-3">
       {/* Composer */}
       <div className="flex gap-2">
-        <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
-             style={{ background: 'var(--nav-active-bg)', color: 'var(--accent-400)', marginTop: 2 }}>
-          {(currentUser || 'A')[0].toUpperCase()}
-        </div>
+        <AuthorAvatar name={currentUser} photo={myPhoto} accent style={{ marginTop: 2 }}/>
         <div className="flex-1 space-y-1.5">
           <textarea ref={textRef} className="input w-full resize-none text-sm" rows={2}
                     placeholder={placeholder} value={body}
