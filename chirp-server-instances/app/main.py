@@ -797,6 +797,7 @@ UNPROTECTED = {
     "/api/v1/auth/register",
     "/api/v1/health",
     "/api/v1/changelog",     # readable by all users, auth or not
+    "/api/v1/map-config",    # map tile key (CHIRP_CARTO_KEY), public like the tiles themselves
     "/api/v1/ios-resign/event",   # X-API-Key (stack device key), see api/ios_resign.py
     "/api/v1/support",            # support / feature form (rate-limited), see api/support.py
     "/api/v1/site-requests",      # public sign-up form on /about (rate-limited), see api/site_requests.py
@@ -1099,6 +1100,15 @@ async def serve_icon():
 @app.get("/api/v1/health")
 async def health():
     return {"status": "ok", "version": settings.app_version}
+
+
+@app.get("/api/v1/map-config")
+async def map_config():
+    """CARTO basemap key for the dark map tiles (CHIRP_CARTO_KEY). CARTO
+    has required one since 2026; tiles without it carry an 'API key
+    required' watermark. The key travels in every tile URL anyway, so it's
+    public; restrict it to this site's domain in the CARTO dashboard."""
+    return {"carto_key": os.environ.get("CHIRP_CARTO_KEY", "").strip() or None}
 
 
 @app.get("/api/v1/changelog")

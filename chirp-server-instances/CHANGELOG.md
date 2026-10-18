@@ -1,3 +1,7 @@
+## 0.5.14.r — 2026-10-17 — BUGFIX — Maps without the CARTO watermark
+
+- The recording and range maps use a CARTO key (CHIRP_CARTO_KEY, also in the Unraid template); CARTO now marks tiles "API key required" without one.
+
 ## 0.5.14.q — 2026-10-17 — UX — Station versions: Chirp stations only
 
 - Changelog → Device no longer lists Bird Buddy feeders and Haikuboxes, which don't run Chirp's station software.

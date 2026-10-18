@@ -22,6 +22,7 @@ services:
       - CHIRP_GLOBAL_ADMIN_USERNAME=${CHIRP_GLOBAL_ADMIN_USERNAME:-}
       - CHIRP_SERVER_URL=${CHIRP_SERVER_URL:-}
       - CHIRP_EBIRD_API_KEY=${CHIRP_EBIRD_API_KEY:-}
+      - CHIRP_CARTO_KEY=${CHIRP_CARTO_KEY:-}   # map tiles, carto.com/basemaps/apikey
       - CHIRP_AUTH_ENABLED=true
       - CHIRP_DATA_DIR=/app/data
       - CHIRP_RECORDINGS_DIR=/app/data/recordings

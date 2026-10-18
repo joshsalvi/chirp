@@ -19,6 +19,7 @@ import InatSubmitButton from './InatSubmitButton'
 import ReanalysisHistory from './ReanalysisHistory'
 import ShadowComparison from './ShadowComparison'
 import { hapticEvent } from '../lib/haptics'
+import { cartoDarkUrl } from '../lib/mapTiles'
 
 function CollapsibleSection({ title, icon: Icon, defaultOpen = false, children }) {
   const [open, setOpen] = useState(defaultOpen)
@@ -937,8 +938,10 @@ function RecordingMap({ lat, lon }) {
       if (!mapRef.current || mapInstanceRef.current) return
       const L = window.L
       const map = L.map(mapRef.current, { center: [lat, lon], zoom: 11, scrollWheelZoom: false })
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-        { attribution: '© OpenStreetMap © CARTO', maxZoom: 19 }).addTo(map)
+      cartoDarkUrl().then(url => {
+        const base = L.tileLayer(url, { attribution: '© OpenStreetMap © CARTO', maxZoom: 19 }).addTo(map)
+        base.bringToBack()
+      })
       const icon = L.divIcon({
         className: '',
         html: `<div style="width:14px;height:14px;background:#22c55e;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.5)"></div>`,

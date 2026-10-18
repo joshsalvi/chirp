@@ -52,6 +52,7 @@ services:
       - CHIRP_SECRET_KEY=${CHIRP_SECRET_KEY:-changeme-use-a-real-secret}
       - CHIRP_DEVICE_API_KEY=${CHIRP_DEVICE_API_KEY:-chirp-device-key-change-me}
       - CHIRP_EBIRD_API_KEY=${CHIRP_EBIRD_API_KEY:-}
+      - CHIRP_CARTO_KEY=${CHIRP_CARTO_KEY:-}   # map tiles, carto.com/basemaps/apikey
       - CHIRP_DATA_DIR=/app/data
       - CHIRP_RECORDINGS_DIR=/app/data/recordings
       - CHIRP_MEDIA_DIR=/app/data/media/birds

@@ -18,6 +18,7 @@ import { api } from '../lib/api'
 import { useTz } from '../lib/time'
 import Comments from './Comments'
 import UnifiedCard from './UnifiedCard'
+import { cartoDarkUrl } from '../lib/mapTiles'
 
 const MONTHS_SHORT = ['J','F','M','A','M','J','J','A','S','O','N','D']
 const MONTHS_FULL = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
@@ -1110,8 +1111,10 @@ function ObservationMap({ taxonId, commonName }) {
       if (!ref.current) return
       const L = window.L
       const map = L.map(ref.current, { center: [30, -30], zoom: 2, scrollWheelZoom: false })
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-        { attribution: '© OpenStreetMap © CARTO', maxZoom: 18 }).addTo(map)
+      cartoDarkUrl().then(url => {
+        const base = L.tileLayer(url, { attribution: '© OpenStreetMap © CARTO', maxZoom: 18 }).addTo(map)
+        base.bringToBack()
+      })
       L.tileLayer(
         `https://api.inaturalist.org/v1/colored_heatmap/{z}/{x}/{y}.png?taxon_id=${taxonId}&color=%2322c55e`,
         { opacity: 0.7, maxZoom: 18, attribution: '© iNaturalist' }

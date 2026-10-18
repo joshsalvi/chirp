@@ -66,6 +66,7 @@ services:
       # reasoning. Safe to leave set permanently once bootstrapped.
       - CHIRP_GLOBAL_ADMIN_USERNAME=${CHIRP_GLOBAL_ADMIN_USERNAME:-joshsalvi}
       - CHIRP_EBIRD_API_KEY=${CHIRP_EBIRD_API_KEY:-}
+      - CHIRP_CARTO_KEY=${CHIRP_CARTO_KEY:-}   # map tiles, carto.com/basemaps/apikey
       - CHIRP_DATA_DIR=/app/data
       - CHIRP_RECORDINGS_DIR=/app/data/recordings
       - CHIRP_MEDIA_DIR=/app/data/media/birds
