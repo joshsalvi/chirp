@@ -2425,3 +2425,8 @@ html.vp-shift { --inset-top: calc(max(env(safe-area-inset-top, 0px) - var(--vp-s
 @media (hover: none) and (pointer: coarse) {
   .kbd-hint { display: none; }
 }
+
+/* Leaflet maps: its panes and zoom buttons use z-index 400–1000, which put
+   them over the bottom tab bar and header. A stacking context keeps them
+   inside the map. */
+.leaflet-container { position: relative; z-index: 0; isolation: isolate; }

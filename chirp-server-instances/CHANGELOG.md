@@ -1,3 +1,7 @@
+## 0.5.14.w — 2026-10-18 — BUGFIX — Maps stay under the tab bar
+
+- The recording and range maps no longer draw over the bottom tab bar and header when scrolled.
+
 ## 0.5.14.v — 2026-10-18 — UX — What's New popup brought up to date
 
 - The What's New popup shows again, covering per-bird AI ratings, the Low pitch view and Back/Forward.
