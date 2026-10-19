@@ -21,15 +21,20 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # amd64 only for now: arm64 builds under emulation (well over an
+          # hour) and hasn't been tested end to end. Unraid is x86_64.
           - image: chirp
             context: chirp-server-instances
-            platforms: linux/amd64,linux/arm64
+            platforms: linux/amd64
+            short: "Bird and bat call detection server and web app for Chirp stations (BirdNET)."
           - image: chirp-headscale
             context: chirp-server-instances/headscale
             platforms: linux/amd64,linux/arm64
+            short: "Headscale for Chirp: lets stations away from home reach your Chirp server."
           - image: chirp-caddy
             context: chirp-server-instances/caddy
             platforms: linux/amd64,linux/arm64
+            short: "Caddy with Cloudflare DNS, giving Chirp Headscale a public HTTPS address."
     steps:
       - uses: actions/checkout@v4
       - name: Version
@@ -59,3 +64,14 @@ jobs:
             org.opencontainers.image.source=https://github.com/joshsalvi/chirp
           cache-from: type=gha,scope=pub-${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=pub-${{ matrix.image }}
+      # Docker Hub overview from unraid/dockerhub/<image>.md. Needs a token
+      # that may edit repositories (Read & Write is enough for most accounts);
+      # a failure here doesn't fail the release.
+      - uses: peter-evans/dockerhub-description@v4
+        continue-on-error: true
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image }}
+          readme-filepath: unraid/dockerhub/${{ matrix.image }}.md
+          short-description: ${{ matrix.short }}

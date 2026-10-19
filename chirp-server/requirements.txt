@@ -24,7 +24,10 @@ pyproj>=3.6.0           # Coordinate reprojection — eBird S&T GeoTIFFs use Equ
 # tensorflow-cpu is required: tflite-runtime 2.14 has a known incompatibility with
 # birdnetlib's bundled BirdNET model files (CreateWrapperFromFile PyCapsule error).
 # tensorflow-cpu is the CPU-only build (~230MB) — no GPU deps, works reliably.
-tensorflow-cpu>=2.14.0
+# tensorflow-cpu has no ARM wheels; ARM (Docker Hub arm64 image, Pi) uses
+# the full tensorflow package, which does.
+tensorflow-cpu>=2.14.0; platform_machine == "x86_64"
+tensorflow>=2.14.0; platform_machine == "aarch64"
 birdnetlib>=0.9.0
 # Settings → Experimental: BirdNET v3 (ONNX, model downloaded on first use)
 # and Nighthawk (installed with --no-deps in the Dockerfile: its own pins ask

@@ -1,3 +1,8 @@
+## 0.5.14.z — 2026-10-19 — DEVELOPER — Docker Hub build fixed
+
+- The Docker Hub build failed on arm64 (no tensorflow-cpu for ARM); ARM now uses tensorflow, and the chirp image is built for amd64 only until arm64 is tested.
+- Docker Hub overviews for the three images (unraid/dockerhub/), set by the publish workflow.
+
 ## 0.5.14.y — 2026-10-18 — UX — Only Back restores the Recordings list
 
 - Back (or Forward) returns Recordings to the same page, filters and scroll; opening it from the tab bar, menu or a link starts on page 1 with no filters (grid/list view and page size are kept).
