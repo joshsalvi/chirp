@@ -25,7 +25,7 @@
 #                                  ourchirp.com; named "Chirp β", uploaded but
 #                                  never handed to external testers
 #   WATCH=1 PICKER=1 ./build-ios.sh --testflight   also build the Apple Watch
-#                                  app (ios-watch/; Live Detect only). Needs
+#                                  app (ios-watch/: Live Detect, recent recordings). Needs
 #                                  the xcodeproj gem and a paid team
 #   PUSH=1 / PUSH=0                force push notifications on/off (default:
 #                                  on for a paid team, off for a free one,

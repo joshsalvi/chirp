@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="favicon.ico?v=0.5.15.a" sizes="16x16 32x32 48x48">
+<link rel="icon" href="favicon.svg?v=0.5.15.a" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=0.5.15.a">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chirp troubleshooting</title>
+<meta name="description" content="Fixes for common Chirp problems: the app, notifications, Apple Watch, stations, detections and running your own server.">
+<link rel="stylesheet" href="docs.css">
+<script src="site.js"></script>
+<style>
+  .search { position: relative; margin: 18px 0 10px; }
+  .search input { width: 100%; box-sizing: border-box; padding: 13px 14px 13px 42px; border-radius: 14px; border: 1px solid var(--line);
+    background: var(--card); color: var(--ink); font: 16px var(--sans); }
+  .search input:focus { outline: 2px solid rgba(251,191,36,.5); outline-offset: 1px; }
+  .search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); opacity: .55; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 8px; }
+  .chips button { border: 1px solid var(--line); background: transparent; color: var(--ink2); border-radius: 999px; padding: 7px 13px;
+    font: 14px var(--sans); cursor: pointer; }
+  .chips button[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); background: rgba(251,191,36,.08); }
+  #count { color: var(--ink3); font-size: 14px; margin: 6px 0 0; min-height: 21px; }
+  section.cat:first-of-type > h2 { margin-top: 28px; }
+  section.cat > h2 { display: flex; align-items: center; gap: 10px; }
+  details.q { border: 1px solid var(--line); border-radius: 14px; background: var(--card); margin: 10px 0; }
+  details.q > summary { cursor: pointer; list-style: none; padding: 13px 44px 13px 16px; position: relative; color: var(--ink); font-weight: 600; }
+  details.q > summary::-webkit-details-marker { display: none; }
+  details.q > summary::after { content: "+"; position: absolute; right: 16px; top: 10px; font-size: 22px; color: var(--ink3); font-weight: 400; }
+  details.q[open] > summary::after { content: "–"; }
+  details.q > div { padding: 0 16px 14px; }
+  details.q > div > p:first-child { margin-top: 0; }
+  details.q p, details.q li { font-size: 15.5px; }
+  .why { color: var(--ink3); font-size: 14.5px !important; }
+  .soon { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #93c5fd;
+    border: 1px solid rgba(147,197,253,.35); border-radius: 999px; padding: 1px 8px; margin-left: 6px; vertical-align: 2px; }
+  .copy { float: right; font-size: 13px; color: var(--ink3); cursor: pointer; background: none; border: 0; padding: 0; }
+  .copy:hover { color: var(--amber); }
+  .empty { display: none; }
+  @media (max-width: 560px) { details.q > summary { font-size: 15.5px; } }
+</style>
+</head>
+<body>
+<nav><div class="bar">
+  <a class="brand" href="about"><img src="logo.svg" alt="">Chirp</a>
+  <div class="links">
+    <a class="hide-sm" href="about">About</a>
+    <a class="hide-sm" href="setup.html">Set up</a>
+    <a class="hide-sm" href="guide.html">User guide</a>
+    <a class="on" href="troubleshooting.html">Help</a>
+    <a class="btn btn-primary" href="/login">Sign in</a>
+  </div>
+</div></nav>
+
+<div class="layout">
+  <aside class="toc">
+    <p>Troubleshooting</p>
+    <a href="#app">App and website</a>
+    <a href="#notifications">Notifications</a>
+    <a href="#watch">Apple Watch</a>
+    <a href="#station">Stations</a>
+    <a href="#audio">Sound and microphones</a>
+    <a href="#detections">Detections</a>
+    <a href="#server">Running your own server</a>
+    <a href="#more">Before it happens</a>
+    <p>Still stuck</p>
+    <a href="support.html#contact">Contact us</a>
+  </aside>
+
+  <main>
+    <div class="eyebrow">Help</div>
+    <h1>Troubleshooting</h1>
+    <p class="lede">Find your problem by searching or by topic. Each answer starts with the quickest fix.</p>
+
+    <div class="search">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Search: notifications, offline, hum, owls…" aria-label="Search troubleshooting" autocomplete="off">
+    </div>
+    <div class="chips" role="group" aria-label="Topics">
+      <button type="button" data-cat="all" aria-pressed="true">All</button>
+      <button type="button" data-cat="app">App</button>
+      <button type="button" data-cat="notifications">Notifications</button>
+      <button type="button" data-cat="watch">Watch</button>
+      <button type="button" data-cat="station">Stations</button>
+      <button type="button" data-cat="audio">Sound</button>
+      <button type="button" data-cat="detections">Detections</button>
+      <button type="button" data-cat="server">Own server</button>
+      <button type="button" data-cat="more">Before it happens</button>
+    </div>
+    <p id="count" role="status"></p>
+
+    <!-- ───────────────────────── App and website ───────────────────────── -->
+    <section class="cat" data-cat="app">
+    <h2 id="app">App and website</h2>
+
+    <details class="q" id="cant-sign-in"><summary>I can't sign in</summary><div>
+      <ol>
+        <li>Check you're on the right site: <b>ourchirp.com</b> for hosted sites, or your own server's address.</li>
+        <li>Passwords are case-sensitive; check Caps Lock and autocorrect. Forgot it? <a href="support.html#contact">Contact us</a> (hosted sites) or ask whoever runs your server.</li>
+        <li>New to a site? You need an invite code from whoever runs it. Tap <b>Create account</b> and enter it.</li>
+        <li>On the iPhone app, close it fully (swipe it away) and open it again.</li>
+      </ol>
+      <p class="why">One password works for every site you belong to; changing it on one changes it everywhere.</p>
+    </div></details>
+
+    <details class="q" id="old-version"><summary>The page looks old or a new feature is missing after an update</summary><div>
+      <p>Your browser or the app kept an older copy. Reload the page; on a computer use <b>Shift-reload</b> (⌘⇧R or Ctrl⇧R). On iPhone, close Chirp and open it again.</p>
+      <p>Check the version at the bottom of the menu, or in <b>⋮ → Changelog</b>, against the newest release listed there.</p>
+    </div></details>
+
+    <details class="q" id="offline-page"><summary>The app shows "You're offline" or a blank screen</summary><div>
+      <ul>
+        <li>Check the phone has internet: open any website in Safari.</li>
+        <li>If other sites work, the Chirp server may be restarting after an update. Wait a minute and pull down to reload.</li>
+        <li>Running your own server? Make sure it's on and reachable from outside your home (see <a href="#remote-access">reaching your server away from home</a>).</li>
+      </ul>
+    </div></details>
+
+    <details class="q" id="map-watermark"><summary>The map says "API key required"</summary><div>
+      <p>The map tiles come from CARTO, which now needs a key. On ourchirp.com this is set up. On your own server, get a free key at <a href="https://carto.com/basemaps/apikey" target="_blank" rel="noopener">carto.com/basemaps/apikey <span class="ext">↗</span></a> and set <code>CHIRP_CARTO_KEY</code> (Unraid: <b>CARTO map key</b>). Restart the container.</p>
+      <p class="why">Restrict the key to your site's address in the CARTO dashboard: it travels with every map tile, so anyone viewing a map can see it.</p>
+    </div></details>
+
+    <details class="q" id="profile-photo"><summary>My profile photo doesn't show</summary><div>
+      <p>Upload it again from <b>⋮ → My Profile</b> (tap the camera on your picture). Photos uploaded before version 0.5.14.s were saved but never displayed. JPEG, PNG, HEIC, WebP and GIF all work.</p>
+    </div></details>
+
+    <details class="q" id="recordings-list-reset"><summary>Recordings went back to page 1 and my filters are gone</summary><div>
+      <p>That's on purpose: opening Recordings from the tab bar or menu starts fresh. Use <b>Back</b> (the ‹ arrow at the top, your browser's back button or a swipe back) to return to the same page, filters and scroll position.</p>
+    </div></details>
+
+    <details class="q" id="page-wide"><summary>A page scrolls sideways or something is cut off on my phone</summary><div>
+      <p>Turn the phone to portrait and back, then reload. If it stays, take a screenshot and <a href="support.html#contact">send it to us</a> with the page name. These are quick to fix.</p>
+    </div></details>
+    </section>
+
+    <!-- ───────────────────────── Notifications ───────────────────────── -->
+    <section class="cat" data-cat="notifications">
+    <h2 id="notifications">Notifications</h2>
+
+    <details class="q" id="no-notifications"><summary>I don't get any notifications</summary><div>
+      <ol>
+        <li>iPhone <b>Settings → Chirp → Notifications</b>: allow them.</li>
+        <li>In Chirp, <b>⋮ → Settings → My Notifications</b>: turn on the alerts you want (new species, Daily Journal, digest, watched birds).</li>
+        <li>Send yourself a test from the same page.</li>
+        <li>Focus modes and Notification Summary can hold alerts back; add Chirp as an allowed app.</li>
+        <li>On your own server, an admin needs a push relay token or Apple key in <b>Settings → Alerts & Email</b>.</li>
+      </ol>
+      <p class="why">Everything sent also stays in the Notifications tab, so you can check whether the alert was created at all.</p>
+    </div></details>
+
+    <details class="q" id="duplicate-notifications"><summary>I get the same notification twice</summary><div>
+      <p>Usually two Chirp servers both know your phone: an old server you used before and the one you use now. Each sends its own copy, and the wording often differs (two Daily Journals, for example).</p>
+      <ul>
+        <li>In the iPhone app, switching servers with <b>Change server</b> now takes your phone off the old one.</li>
+        <li>On an old server you keep running, set <code>CHIRP_NOTIFICATIONS_OFF=1</code> to stop its pushes and emails.</li>
+      </ul>
+    </div></details>
+
+    <details class="q" id="late-notifications"><summary>Notifications arrive late</summary><div>
+      <p>Apple delays pushes in Low Power Mode and when the phone is idle for a while. New-species alerts go out once the station uploads and the server finishes identifying the recording, usually within a minute. The Daily Journal is sent at 6 pm and the digest at the time your site sets.</p>
+    </div></details>
+
+    <details class="q" id="no-email"><summary>No emails arrive (digest, new species, alerts)</summary><div>
+      <ul>
+        <li>Check spam, and add the sender to your contacts.</li>
+        <li>Own server: set up the email server in <b>Settings → Alerts & Email → Email (SMTP)</b> and press <b>Test configuration</b>. Gmail needs an app password, not your normal one.</li>
+        <li>If the server has <code>CHIRP_NOTIFICATIONS_OFF=1</code>, it sends no email at all.</li>
+      </ul>
+    </div></details>
+
+    <details class="q" id="station-offline-alerts"><summary>Too many (or no) "station offline" alerts</summary><div>
+      <p>Admins choose these in <b>My Notifications</b>. A station counts as offline after it misses its check-ins for the delay set in <b>Settings → Alerts & Email</b>; raise the delay if Wi-Fi blips set it off.</p>
+    </div></details>
+    </section>
+
+    <!-- ───────────────────────── Apple Watch ───────────────────────── -->
+    <section class="cat" data-cat="watch">
+    <h2 id="watch">Apple Watch <span class="soon">Beta</span></h2>
+
+    <details class="q" id="watch-sign-in"><summary>The watch says "Sign in on your iPhone"</summary><div>
+      <ol>
+        <li>Open Chirp on the paired iPhone and sign in. The watch signs in by itself within a few seconds.</li>
+        <li>Keep Chirp open on the iPhone and tap <b>Try again</b> on the watch.</li>
+        <li>Still stuck: restart the watch, then repeat.</li>
+      </ol>
+      <p class="why">The watch's sign-in lasts 30 days and renews whenever the iPhone app is open.</p>
+    </div></details>
+
+    <details class="q" id="watch-recordings"><summary>Recent recordings won't load or play on the watch</summary><div>
+      <ul>
+        <li>"Needs an update": the server is older than 0.5.15. Hosted sites already have it; on your own server, update the container.</li>
+        <li>Recordings don't play while Live Detect is listening. Stop listening first.</li>
+        <li>No sound: turn up the volume with the Digital Crown while it plays, and check the watch isn't in Silent Mode with headphones expected.</li>
+        <li>It plays the first minute of each recording, downloaded over the watch's Wi-Fi, cellular or the iPhone, so the first play takes a few seconds.</li>
+      </ul>
+    </div></details>
+
+    <details class="q" id="watch-live"><summary>Live Detect on the watch hears nothing</summary><div>
+      <ul>
+        <li>Allow the microphone: on the watch, <b>Settings → Privacy & Security → Microphone → Chirp</b>.</li>
+        <li>Hold your wrist up and away from your sleeve; wind and clothing rubbing drown out birds.</li>
+        <li>The status line shows how many clips were checked. If it stays at 0, the watch can't reach the server: check Wi-Fi or that the iPhone is nearby.</li>
+      </ul>
+    </div></details>
+    </section>
+
+    <!-- ───────────────────────── Stations ───────────────────────── -->
+    <section class="cat" data-cat="station">
+    <h2 id="station">Stations</h2>
+
+    <details class="q" id="station-offline"><summary>My station shows offline</summary><div>
+      <ol>
+        <li>Is it powered? A Raspberry Pi 5 needs the 27 W (5 V, 5 A) supply; weaker ones cause random restarts.</li>
+        <li>Is it on Wi-Fi? <code>ping</code> its address from a computer on the same network.</li>
+        <li>Read its log: <code>journalctl -u chirp-device -n 50</code> on the Pi.</li>
+        <li>Check <code>upload.server_url</code> in <code>config.yaml</code> is your current server, e.g. <code>https://www.ourchirp.com/api/v1/recordings/upload</code>, and that the <code>api_key</code> matches a key in <b>Devices</b>.</li>
+        <li>Restart it: <code>sudo systemctl restart chirp-device</code>.</li>
+      </ol>
+      <p class="why">A station still pointing at an address you've retired keeps uploading into nothing. After moving servers, update every target in <code>config.yaml</code>.</p>
+    </div></details>
+
+    <details class="q" id="no-recordings"><summary>The station is online but nothing new shows up</summary><div>
+      <ul>
+        <li>Run <code>python main.py --test-audio</code> on the Pi and whistle. If the level doesn't move, the microphone isn't being heard (see <a href="#mic-not-found">microphone not found</a>).</li>
+        <li><code>python main.py --test-upload</code> checks it can reach the server.</li>
+        <li>Quiet day? Recordings without a detection above your site's minimum confidence are hidden; turn on the <b>Unknown only</b> filter in Recordings to see them.</li>
+        <li>Check the station's clock is right (<code>date</code>). A wrong clock puts recordings at the wrong time.</li>
+      </ul>
+    </div></details>
+
+    <details class="q" id="station-version"><summary>Which software is my station running?</summary><div>
+      <p><b>⋮ → Changelog → Device</b> lists each station's version and whether a newer one is out. To update, run the station's update steps from the <a href="setup.html#install">setup guide</a>, then restart it.</p>
+    </div></details>
+
+    <details class="q" id="coral"><summary>The Coral accelerator isn't used</summary><div>
+      <ul>
+        <li>Use <code>./install-coral.sh</code> rather than the plain installer.</li>
+        <li>M.2 Coral on a Pi 5: run <code>./fix-gasket.sh</code> once, then reboot.</li>
+        <li><b>Devices</b> shows the backend each station uses. CPU-only detection still works, just slower.</li>
+      </ul>
+    </div></details>
+
+    <details class="q" id="sd-card"><summary>The station stops after weeks of running, or its files turn read-only</summary><div>
+      <p>The SD card is wearing out or full. Check space with <code>df -h</code>. Turn on deleting recordings after upload in <code>config.yaml</code>, use a high-endurance card, or boot from an SSD.</p>
+    </div></details>
+    </section>
+
+    <!-- ───────────────────────── Sound and microphones ───────────────────────── -->
+    <section class="cat" data-cat="audio">
+    <h2 id="audio">Sound and microphones</h2>
+
+    <details class="q" id="hum"><summary>There's a low buzz or hum in every recording</summary><div>
+      <p>That's mains hum: 60 Hz in North America (50 Hz elsewhere) and its harmonics, picked up from power wiring or a ground loop. On the spectrogram it's a set of steady lines at the very bottom.</p>
+      <ol>
+        <li>The station's hum filter removes it: <code>audio.hum_filter: "auto"</code> in <code>config.yaml</code> (the default since station 1.4.2). Set <code>"60"</code> or <code>"50"</code> to force it on.</li>
+        <li>Move the microphone cable away from power bricks and extension cords, and plug the Pi's supply into a different outlet.</li>
+        <li>Avoid USB ground-loop isolators with plug-in-power microphones (such as Clippy mics): they can cut the mic's power and make the hum worse.</li>
+      </ol>
+      <p class="why">The filter only notches narrow bands at the hum's pitches, so owl hoots between them are kept.</p>
+    </div></details>
+
+    <details class="q" id="mic-not-found"><summary>Microphone not found</summary><div>
+      <ul>
+        <li>List what the Pi sees: <code>python main.py --list-devices</code>.</li>
+        <li>Unplug and replug the USB mic, or try another USB port (the blue USB 3 ports on a Pi 5 work best).</li>
+        <li>If your mic is listed under a name the station doesn't pick, add part of that name to <code>audio.device_name_hints</code>.</li>
+      </ul>
+    </div></details>
+
+    <details class="q" id="wind-rain"><summary>Recordings are full of wind, rain or traffic noise</summary><div>
+      <ul>
+        <li>Add a foam or fur windscreen, and shelter the mic under an eave.</li>
+        <li>Use <b>Enhance</b> on a recording, or <b>Rumble removed</b> for low traffic noise, to hear the bird better.</li>
+        <li>Point the mic away from the road.</li>
+      </ul>
+    </div></details>
+
+    <details class="q" id="gaps"><summary>There are gaps or clicks in the audio</summary><div>
+      <p>Update the station to 1.4.1 or later, which fixed a gap when several mics were merged. If it continues, the Pi may be overloaded or underpowered: check <code>vcgencmd get_throttled</code> (anything other than <code>0x0</code> means power or heat trouble).</p>
+    </div></details>
+
+    <details class="q" id="live-detect-mic"><summary>Live Detect says the microphone is blocked</summary><div>
+      <ul>
+        <li>iPhone: <b>Settings → Chirp → Microphone</b> on.</li>
+        <li>Browser: allow the microphone for the site, and use an <code>https://</code> address; browsers block the mic on plain <code>http://</code>.</li>
+      </ul>
+    </div></details>
+    </section>
+
+    <!-- ───────────────────────── Detections ───────────────────────── -->
+    <section class="cat" data-cat="detections">
+    <h2 id="detections">Detections</h2>
+
+    <details class="q" id="wrong-birds"><summary>Chirp names birds that don't live here</summary><div>
+      <p>Set your site's location in <b>Settings → General</b>. BirdNET then weighs species by what's expected at your place and season; stations pick up the change within a minute.</p>
+    </div></details>
+
+    <details class="q" id="detection-removed"><summary>A detection disappeared, or the station's guess changed</summary><div>
+      <p>The station makes a first guess, then the server checks the recording again with BirdNET v3. When the server's pass doesn't confirm a station detection, it's removed (the <b>Auto-delete device identifications</b> setting in <b>Settings → Detection</b>). Turn that off to keep station guesses alongside the server's.</p>
+    </div></details>
+
+    <details class="q" id="below-minimum"><summary>I see detections below my minimum confidence</summary><div>
+      <p>There are two minimums: BirdNET v3's own minimum (in <b>Settings → Detection</b>, under the v3 choice) and the display minimum for what the app shows. Raise the display minimum to hide low ones everywhere. Since 0.5.14.f, station detections below the v3 minimum are removed when v3 doesn't confirm them.</p>
+    </div></details>
+
+    <details class="q" id="false-owls"><summary>Too many owls at night that aren't owls</summary><div>
+      <ul>
+        <li>Night noise (crickets, distant traffic, dogs) can look like hoots. Open the recording and use <b>AI Second Opinion</b>, which checks the sound against each bird.</li>
+        <li>The <b>Low pitch</b> view stretches low notes so you can see the hoot's shape yourself.</li>
+        <li>Fix the hum first (<a href="#hum">above</a>); mains hum sits right where owls call.</li>
+      </ul>
+    </div></details>
+
+    <details class="q" id="missed-calls"><summary>It misses birds I can hear</summary><div>
+      <ul>
+        <li>Raise <b>Sensitivity</b> for the station in <b>Devices</b> (default 1.5) to catch faint, distant calls; expect a few more false ones.</li>
+        <li>Move the mic closer to feeders or trees, away from walls that echo.</li>
+        <li>Check the station is set to your location (<a href="#wrong-birds">above</a>); a wrong location can rule a species out.</li>
+      </ul>
+    </div></details>
+
+    <details class="q" id="second-opinion"><summary>AI Second Opinion is missing, slow or says "Not rated"</summary><div>
+      <ul>
+        <li>An admin has to turn it on and add an AI key in <b>Settings → AI Features</b>.</li>
+        <li>It takes 10–60 seconds; the button shows it's working.</li>
+        <li><b>Not rated</b> means the AI didn't write about that bird. Run it again; recordings checked before 0.5.14.n rate birds from their likelihood instead.</li>
+        <li>If your AI provider is out of credit or the key changed, it fails with the provider's message.</li>
+      </ul>
+    </div></details>
+
+    <details class="q" id="spectrogram-low"><summary>Owl calls are a thin line at the bottom of the spectrogram</summary><div>
+      <p>Tap <b>Low pitch</b> above the spectrogram. Recordings with an owl or other low caller open that way already; the button switches any recording.</p>
+    </div></details>
+
+    <details class="q" id="night-calls"><summary>Night flight calls don't appear</summary><div>
+      <p>Turn on night flight calls in <b>Settings → Experimental</b>, and make sure the station's night audio is on (station 1.4.0 or later). Calls show up under <b>Night Calls</b> the next morning.</p>
+    </div></details>
+
+    <details class="q" id="bats"><summary>No bats, or bats I can't hear</summary><div>
+      <p>Bat detection needs an ultrasonic microphone (such as an AudioMoth) and <b>Settings → Bats</b> turned on. Bat calls are too high to hear; use <b>Enhanced</b> playback, which slows them into human hearing.</p>
+    </div></details>
+    </section>
+
+    <!-- ───────────────────────── Own server ───────────────────────── -->
+    <section class="cat" data-cat="server">
+    <h2 id="server">Running your own server</h2>
+
+    <details class="q" id="container-wont-start"><summary>The container won't start or keeps restarting</summary><div>
+      <ul>
+        <li>Read the log: <code>docker logs chirp --tail 100</code> (Unraid: the container's log icon).</li>
+        <li>Set <code>CHIRP_SECRET_KEY</code> to a long random string (<code>openssl rand -hex 32</code>) and keep it the same across updates; changing it signs everyone out.</li>
+        <li>Port taken: the web app uses 8768 on the host network. Change <code>CHIRP_PORT</code> if something else uses it.</li>
+        <li>The data folder must be writable and have free space.</li>
+      </ul>
+    </div></details>
+
+    <details class="q" id="arm"><summary>The Docker image won't run on a Raspberry Pi or ARM machine</summary><div>
+      <p>The <code>joshsalvi/chirp</code> image is built for x86-64 (Intel and AMD), which covers Unraid and most servers. ARM support is planned; for now, build the image yourself from the source on that machine.</p>
+    </div></details>
+
+    <details class="q" id="remote-access"><summary>Stations or phones can't reach my server away from home</summary><div>
+      <ul>
+        <li>Simplest: put the server behind HTTPS with a reverse proxy or Cloudflare Tunnel, and use that address everywhere.</li>
+        <li>For stations only: use Tailscale or the Chirp Headscale container, and set <code>CHIRP_TAILSCALE_ENABLED=true</code>.</li>
+        <li>Headscale can't sit behind Cloudflare's proxy: set its DNS record to <b>DNS only</b> and give it HTTPS with the Chirp Caddy container.</li>
+      </ul>
+    </div></details>
+
+    <details class="q" id="unraid-mover"><summary>On Unraid, Tailscale or Headscale stops working after a while</summary><div>
+      <p>The Unraid mover broke a socket file by moving it to the array. Put Headscale's data and run folders (and Chirp's data if it uses Tailscale) on a cache-only share, then restart both containers.</p>
+    </div></details>
+
+    <details class="q" id="iphone-push-own"><summary>The iPhone app gets no notifications from my server</summary><div>
+      <p>Your server needs permission to send pushes to the Chirp app. Request a relay token from the About page, then paste it into <b>Settings → Alerts & Email → Relay token</b> and send a test from <b>My Notifications</b>.</p>
+    </div></details>
+
+    <details class="q" id="retired-address"><summary>I moved to a new address and want the old one to forward</summary><div>
+      <p>Keep the old server running with <code>CHIRP_REDIRECT_HOSTS=old.example.com</code> and <code>CHIRP_REDIRECT_TO=https://new.example.com</code>: pages forward to the same path on the new address. Add <code>CHIRP_NOTIFICATIONS_OFF=1</code> so it stops sending duplicate notifications, and point every station at the new address.</p>
+    </div></details>
+
+    <details class="q" id="disk-space"><summary>The server is running out of space</summary><div>
+      <ul>
+        <li><b>Settings → Storage & Backup</b>: set <b>Compression quality</b> (lossless FLAC keeps full quality at about half the size) and turn on <b>Auto-delete station recordings that show nothing</b>.</li>
+        <li>Archive old recordings: the spectrogram and detections stay, the audio goes.</li>
+        <li>Spectrogram images are rebuilt on demand, so clearing their cache is safe.</li>
+      </ul>
+    </div></details>
+
+    <details class="q" id="backups"><summary>How do I back up, or move to a new machine?</summary><div>
+      <p>Use <b>Settings → Storage & Backup</b> for a database backup, and copy the whole data folder (<code>/app/data</code>) for recordings and photos. On the new machine, start the container with the same <code>CHIRP_SECRET_KEY</code> and the copied folder.</p>
+    </div></details>
+
+    <details class="q" id="birdnet-v3"><summary>BirdNET v3 isn't available or the server falls back to 2.4</summary><div>
+      <p>The server downloads the v3 model on first start. Check it has internet and space, then restart; the log says when the download finishes. Until then, detection uses BirdNET 2.4.</p>
+    </div></details>
+    </section>
+
+    <!-- ───────────────────────── Predicted ───────────────────────── -->
+    <section class="cat" data-cat="more">
+    <h2 id="more">Before it happens</h2>
+    <p>Problems we expect people to meet sooner or later, and how to head them off.</p>
+
+    <details class="q" id="heat-cold"><summary>Station in a hot attic or a cold winter</summary><div>
+      <p>A Pi slows itself down above about 80 °C and can crash in heat. Give it a fan or a shaded, ventilated box. In freezing weather, condensation is the bigger risk: keep it in a sealed box with a desiccant pack and the mic pointing down.</p>
+    </div></details>
+
+    <details class="q" id="power-cuts"><summary>Power cuts and storms</summary><div>
+      <p>Stations restart on their own and upload what they saved. Sudden power loss can corrupt an SD card; a small UPS or an SSD instead of the card protects against it.</p>
+    </div></details>
+
+    <details class="q" id="animals"><summary>Squirrels, rain and sprinklers</summary><div>
+      <p>Squirrels chew cables and foam windscreens; run cable through conduit. Mount the mic where sprinklers don't reach and rain doesn't drip onto it; constant drips read as clicks.</p>
+    </div></details>
+
+    <details class="q" id="keys-expire"><summary>An AI, eBird or map key stops working</summary><div>
+      <p>Keys expire, run out of credit or get revoked. AI features then fail with the provider's message, the Field Guide goes empty, or maps show a watermark. Replace the key in Settings (or the container's settings for <code>CHIRP_CARTO_KEY</code>) and try again.</p>
+    </div></details>
+
+    <details class="q" id="cert"><summary>"Not secure" warnings on my own server</summary><div>
+      <p>The HTTPS certificate expired. Most proxies renew automatically; check yours can still reach the internet and that the domain's DNS still points to it. The iPhone app and Live Detect need a valid certificate.</p>
+    </div></details>
+
+    <details class="q" id="clock"><summary>Times are off by hours</summary><div>
+      <p>Set your site's time zone in <b>Settings → General</b>, and the container's <code>TZ</code> on your own server. On a station, <code>timedatectl</code> should say the clock is synchronized.</p>
+    </div></details>
+
+    <details class="q" id="testflight"><summary>The TestFlight beta stopped opening</summary><div>
+      <p>TestFlight builds expire after 90 days. Open TestFlight and install the newest build.</p>
+    </div></details>
+    </section>
+
+    <p class="empty" id="empty">Nothing matches. Try another word, or <a href="support.html#contact">ask us</a>.</p>
+
+    <h2 id="contact">Still stuck?</h2>
+    <p><a href="support.html#contact">Contact us</a> with what you tried and a screenshot. For setup, see the <a href="setup.html">setup guide</a>; for every page and setting, the <a href="guide.html">user guide</a>.</p>
+  </main>
+</div>
+
+<footer><div class="bar">
+  <span>© 2026 Joshua Salvi · Chirp</span>
+  <div class="links">
+    <a href="about">About</a><a href="setup.html">Set up</a><a href="guide.html">User guide</a><a href="support.html">Support</a><a href="privacy.html">Privacy</a>
+    <a href="https://github.com/joshsalvi/chirp" target="_blank" rel="noopener">GitHub ↗</a>
+  </div>
+</div></footer>
+
+<script>
+(function () {
+  var q = document.getElementById('q'), count = document.getElementById('count'), empty = document.getElementById('empty')
+  var items = Array.prototype.slice.call(document.querySelectorAll('details.q'))
+  var sections = Array.prototype.slice.call(document.querySelectorAll('section.cat'))
+  var chips = Array.prototype.slice.call(document.querySelectorAll('.chips button'))
+  var cat = 'all'
+
+  // A link button on every answer, for sending someone straight to it.
+  items.forEach(function (d) {
+    var b = document.createElement('button')
+    b.type = 'button'; b.className = 'copy'; b.textContent = 'Copy link'
+    b.addEventListener('click', function () {
+      var url = location.origin + location.pathname + '#' + d.id
+      if (navigator.clipboard) navigator.clipboard.writeText(url).then(function () { b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy link' }, 1500) })
+      history.replaceState(null, '', '#' + d.id)
+    })
+    d.querySelector(':scope > div').prepend(b)
+  })
+
+  function norm(s) { return s.toLowerCase().replace(/\s+/g, ' ') }
+  function apply() {
+    var words = norm(q.value).trim().split(' ').filter(Boolean), shown = 0
+    sections.forEach(function (sec) {
+      var inCat = cat === 'all' || sec.dataset.cat === cat, any = false
+      sec.querySelectorAll('details.q').forEach(function (d) {
+        var text = norm(d.textContent)
+        // Words match at the start of a word: "hum" finds hum, not human.
+        var hit = inCat && words.every(function (w) {
+          return new RegExp('(^|[^a-z0-9])' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(text)
+        })
+        d.hidden = !hit
+        if (hit) { any = true; shown++ }
+        if (words.length && hit) d.open = true
+      })
+      sec.hidden = !any
+    })
+    empty.style.display = shown ? 'none' : 'block'
+    count.textContent = words.length || cat !== 'all' ? shown + (shown === 1 ? ' answer' : ' answers') : ''
+  }
+  q.addEventListener('input', apply)
+  chips.forEach(function (c) {
+    c.addEventListener('click', function () {
+      cat = c.dataset.cat
+      chips.forEach(function (x) { x.setAttribute('aria-pressed', x === c ? 'true' : 'false') })
+      apply()
+    })
+  })
+  // ?q=hum searches; #hum opens that answer.
+  var m = /[?&]q=([^&]+)/.exec(location.search)
+  if (m) { q.value = decodeURIComponent(m[1].replace(/\+/g, ' ')); apply() }
+  function openHash() {
+    var d = location.hash && document.getElementById(location.hash.slice(1))
+    if (d && d.tagName === 'DETAILS') { d.open = true; d.scrollIntoView({ block: 'start' }) }
+  }
+  window.addEventListener('hashchange', openHash)
+  openHash()
+})()
+</script>
+</body>
+</html>

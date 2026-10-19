@@ -14,44 +14,26 @@
 // WHATS_NEW.version must match the VERSION file (stamp-sw-version.mjs
 // checks it). Set `popup` to the new version when `latest` changes.
 export const WHATS_NEW = {
-  version: '0.5.14.z',
+  version: '0.5.15.a',
   // The release whose `latest` text this is. The popup shows once per value,
   // so small fixes that don't change `latest` don't bring it back.
-  popup: '0.5.14.v',
+  popup: '0.5.15.a',
   title: "What's new in Chirp",
   latest: {
-    intro: 'A rating for every bird, room for owls on the spectrogram, and easier getting around.',
+    intro: 'Help when something goes wrong, and recordings on your wrist.',
     sections: [
       {
-        heading: '✨ AI Second Opinion, bird by bird',
-        body: 'Each detected bird gets its own row with its photo and where it sits on the scale from Likely wrong to Likely right; the full read is under More.',
+        heading: '🛟 Troubleshooting page',
+        body: 'About 50 fixes for the app, notifications, stations, sound and detections, with search. Find it under Support or at ourchirp.com/troubleshooting.html.',
       },
       {
-        heading: '🦉 Low pitch view',
-        body: 'Recordings with owls and other low callers open with low notes stretched so their calls are easy to see. The Low pitch button switches any recording.',
-      },
-      {
-        heading: '↩️ Back and Forward',
-        body: 'Arrows next to the logo take you back up to five pages and forward again.',
+        heading: '⌚ Recent recordings on Apple Watch',
+        body: 'The watch app (in testing) lists your five newest recordings and plays them.',
       },
     ],
   },
   recent: [
-    { version: '0.5.14.y', summary: 'Back returns Recordings to the same page, filters and scroll; opening it fresh starts on page 1.' },
-    { version: '0.5.14.u', summary: 'Low pitch view for owls and other low callers.' },
-    { version: '0.5.14.t', summary: 'Profile photos on notes.' },
-    { version: '0.5.14.s', summary: 'Uploaded profile photos show.' },
-    { version: '0.5.14.r', summary: 'Maps without the “API key required” watermark.' },
-    { version: '0.5.14.p', summary: 'Notifications come only from the server the app shows.' },
-    { version: '0.5.14.n', summary: 'AI Second Opinion rates each bird.' },
-    { version: '0.5.14.m', summary: 'Changelog history restored; Changelog → Device shows each station’s version.' },
-    { version: '0.5.14.k', summary: 'Back and Forward buttons; BirdNET v3 removes station night callers it doesn’t confirm.' },
-    { version: '0.5.14.j', summary: 'AI Second Opinion rating shown on a scale.' },
-    { version: '0.5.14.g', summary: 'AI Second Opinion’s audio check hears short calls like chips and “pik”s.' },
-    { version: '0.5.14.f', summary: 'Station detections below the BirdNET v3 minimum are removed; tidier color picker.' },
-    { version: '0.5.14.e', summary: 'AI Second Opinion gives one overall rating.' },
-    { version: '0.5.14.c', summary: 'Clearer detection model settings.' },
-    { version: '0.5.14.a', summary: 'BirdNET v3 by default, saved recordings, time-of-day filter, one Enhance control, Night Calls by week and month.' },
+    { version: '0.5.15.a', summary: 'Troubleshooting page; recent recordings on Apple Watch.' },
   ],
 }
 
@@ -65,7 +47,8 @@ export const ERA_SUMMARIES = {
 }
 
 export const GROUP_SUMMARIES = {
-  '0.5.14': 'BirdNET v3 by default with owl checks, AI Features and Bats tabs, saved recordings, time-of-day filter, one Enhance control.',
+  '0.5.15': 'Troubleshooting page and recent recordings on Apple Watch.',
+  '0.5.14': 'BirdNET v3 by default, per-bird AI ratings, Low pitch view, Back and Forward, station hum filter, saved recordings and a tidier Recordings list.',
   '0.5.13': 'BirdNET v3 and Nighthawk night flight calls, station offline alerts, clearer Settings text.',
   '0.5.12': 'Notifications tools, same-day digest, reorganized Settings, fewer false owls, hosted sites, invite codes and station-offline alerts.',
   '0.5.11': 'Notifications tab, iPhone push alerts, read-only viewers, privacy page, first TestFlight builds.',

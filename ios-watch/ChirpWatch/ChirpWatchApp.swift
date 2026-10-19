@@ -7,12 +7,14 @@ import SwiftUI
 struct ChirpWatchApp: App {
     @StateObject private var account = Account.shared
     @StateObject private var live = LiveSession()
+    @StateObject private var recent = RecentRecordings()
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(account)
                 .environmentObject(live)
+                .environmentObject(recent)
         }
     }
 }

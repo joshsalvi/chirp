@@ -3,10 +3,15 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var account: Account
     @EnvironmentObject var live: LiveSession
+    @EnvironmentObject var recent: RecentRecordings
 
     var body: some View {
         NavigationStack {
+            #if DEBUG
+            if Screenshots.showsRecent { RecentView() } else if account.signedIn { listenView } else { signInView }
+            #else
             if account.signedIn { listenView } else { signInView }
+            #endif
         }
     }
 
@@ -32,7 +37,7 @@ struct ContentView: View {
         List {
             Section {
                 VStack(spacing: 6) {
-                    Button(action: live.toggle) {
+                    Button(action: { recent.stop(); live.toggle() }) {
                         ZStack {
                             Circle()
                                 .fill(live.listening ? Color.red : Color.green)
@@ -67,6 +72,14 @@ struct ContentView: View {
                     }
                 }
                 .listRowBackground(Color.clear)
+            }
+
+            Section {
+                NavigationLink {
+                    RecentView()
+                } label: {
+                    Label("Recent recordings", systemImage: "waveform")
+                }
             }
 
             if !live.heard.isEmpty {

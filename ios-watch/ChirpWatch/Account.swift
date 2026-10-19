@@ -21,6 +21,13 @@ final class Account: NSObject, ObservableObject, WCSessionDelegate {
         server = defaults.string(forKey: "server").flatMap(URL.init(string:))
         site = defaults.string(forKey: "site") ?? ""
         token = Keychain.get("token")
+        #if DEBUG
+        if Screenshots.scene != nil {
+            server = URL(string: "https://www.ourchirp.com")
+            site = "Natick Birds"
+            return
+        }
+        #endif
         if WCSession.isSupported() {
             WCSession.default.delegate = self
             WCSession.default.activate()

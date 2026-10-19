@@ -45,6 +45,7 @@ from .api import push as push_router
 from .api import notifications as notifications_router
 from .api import techdocs as techdocs_router
 from .api import live_detect as live_detect_router
+from .api import watch as watch_router
 from .api import near_misses as near_misses_router
 from .services import log_buffer
 from .cache import settings_cache, user_token_cache
@@ -683,8 +684,9 @@ def viewer_may_write(method: str, path: str) -> bool:
     return method in ("GET", "HEAD", "OPTIONS") or bool(_VIEWER_WRITE_OK.match(path))
 
 
-# Apple Watch sign-ins (POST /auth/watch-token) only run Live Detect.
-_WATCH_OK = re.compile(r"^/api/v1/(live-detect/(analyze|save-session)|auth/me)$")
+# Apple Watch sign-ins (POST /auth/watch-token) only run Live Detect and
+# play recent recordings (api/watch.py).
+_WATCH_OK = re.compile(r"^/api/v1/(live-detect/(analyze|save-session)|auth/me|watch/recent|watch/audio/[0-9A-Za-z-]+)$")
 
 
 def watch_may_use(path: str) -> bool:
@@ -892,6 +894,7 @@ from .api import moderation as moderation_router
 app.include_router(moderation_router.router, prefix="/api/v1/moderation", tags=["moderation"])
 app.include_router(techdocs_router.router, prefix="/api/v1/techdocs", tags=["techdocs"])
 app.include_router(live_detect_router.router, prefix="/api/v1/live-detect", tags=["live-detect"])
+app.include_router(watch_router.router, prefix="/api/v1/watch", tags=["watch"])
 app.include_router(near_misses_router.router, prefix="/api/v1/near-misses", tags=["near-misses"])
 from .api import support as support_router
 app.include_router(support_router.router, prefix="/api/v1/support", tags=["support"])

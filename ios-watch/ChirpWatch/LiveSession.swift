@@ -55,6 +55,12 @@ final class LiveSession: NSObject, ObservableObject, CLLocationManagerDelegate {
         super.init()
         locator.delegate = self
         locator.desiredAccuracy = kCLLocationAccuracyHundredMeters
+        #if DEBUG
+        if let scene = Screenshots.scene {
+            heard = Screenshots.heard()
+            if scene == "listening" { state = .listening; clipsSent = 38; level = 0.45 }
+        }
+        #endif
     }
 
     var listening: Bool { state == .listening || state == .starting }

@@ -1,3 +1,9 @@
+## 0.5.15.a — 2026-10-19 — FEATURE — Troubleshooting page; recent recordings on Apple Watch
+
+- New troubleshooting page (ourchirp.com/troubleshooting.html): about 50 fixes across the app, notifications, Apple Watch, stations, sound, detections and running your own server, with search and topics.
+- Apple Watch (beta): Recent recordings lists the site's five newest and plays them on the watch (server: GET /watch/recent and /watch/audio/{id}).
+- The home page no longer scrolls sideways on phones.
+
 ## 0.5.14.z — 2026-10-19 — DEVELOPER — Docker Hub build fixed
 
 - The Docker Hub build failed on arm64 (no tensorflow-cpu for ARM); ARM now uses tensorflow, and the chirp image is built for amd64 only until arm64 is tested.
