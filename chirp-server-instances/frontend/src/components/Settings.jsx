@@ -5278,6 +5278,10 @@ Applies the retention setting now. It also runs every hour.
         <div className="rounded-2xl p-4 md:p-5 space-y-5"
              style={{ background: 'var(--bg-card)', border: '1px solid var(--border-default)' }}>
 
+          <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+            Something not working? The <a href="/troubleshooting.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>troubleshooting guide ↗</a> covers common problems with the app, stations, sound and detections.
+          </p>
+
           {/* Run controls */}
           <div className="space-y-3">
             {/* Mode selector */}

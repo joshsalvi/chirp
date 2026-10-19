@@ -2,7 +2,8 @@
 import Foundation
 
 /// App Store screenshots in the simulator (Debug builds only). Launch with
-/// `-ChirpScreenshots <scene>`: listen, listening, recent or playing.
+/// `-ChirpScreenshots <scene>`: listen, listening, heard (scrolled to the
+/// birds heard), recent or playing.
 /// Shows sample birds and recordings instead of signing in.
 enum Screenshots {
     static let scene: String? = {

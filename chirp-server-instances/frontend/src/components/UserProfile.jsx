@@ -356,7 +356,8 @@ function FeedbackSection() {
       </div>
       <p className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
         Sent with your username so we can reply. See also the <a href="/guide.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>user guide ↗</a>,{' '}
-        <a href="/setup.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>setup guide ↗</a> and{' '}
+        <a href="/setup.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>setup guide ↗</a>,{' '}
+        <a href="/troubleshooting.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>troubleshooting ↗</a> and{' '}
         <a href="/support.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>support page ↗</a>.
       </p>
     </Section>

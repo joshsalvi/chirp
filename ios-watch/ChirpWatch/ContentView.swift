@@ -34,6 +34,7 @@ struct ContentView: View {
     }
 
     private var listenView: some View {
+        ScrollViewReader { proxy in
         List {
             Section {
                 VStack(spacing: 6) {
@@ -93,6 +94,7 @@ struct ContentView: View {
                         }
                     }
                 }
+                .id("heard")
                 if !live.listening {
                     Button("Clear", role: .destructive) { live.clear() }
                 }
@@ -102,6 +104,15 @@ struct ContentView: View {
             ToolbarItem(placement: .topBarLeading) {
                 ChirpMark(height: 22, animate: live.state == .listening)
             }
+        }
+        #if DEBUG
+        .task {
+            if Screenshots.scene == "heard" {
+                try? await Task.sleep(nanoseconds: 300_000_000)
+                proxy.scrollTo("heard", anchor: .top)
+            }
+        }
+        #endif
         }
     }
 

@@ -1,3 +1,8 @@
+## 0.5.15.b — 2026-10-19 — UX — Troubleshooting links
+
+- Settings → Diagnostics and the feedback form link to the troubleshooting page.
+- Long commands and addresses on the help pages wrap on phones instead of running off the screen.
+
 ## 0.5.15.a — 2026-10-19 — FEATURE — Troubleshooting page; recent recordings on Apple Watch
 
 - New troubleshooting page (ourchirp.com/troubleshooting.html): about 50 fixes across the app, notifications, Apple Watch, stations, sound, detections and running your own server, with search and topics.
