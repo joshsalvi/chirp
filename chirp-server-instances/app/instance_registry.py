@@ -387,7 +387,7 @@ def _resolve_token_state(request: Request) -> tuple:
     if not token:
         return False, None
     try:
-        from jose import jwt
+        import jwt
         from .config import settings
         payload = jwt.decode(token, settings.secret_key, algorithms=["HS256"])
         return True, payload.get("active_instance_id")

@@ -1,3 +1,9 @@
+## 0.5.15.c — 2026-10-20 — CRITICAL — Docker image security fixes
+
+- Sign-in and Apple push tokens use PyJWT instead of python-jose (unmaintained, unpatched critical CVE); existing sign-ins keep working.
+- The container drops to the chirp user with setpriv instead of gosu (built with Go 1.19).
+- Compilers are removed from the image after the build, and setuptools is updated.
+
 ## 0.5.15.b — 2026-10-19 — UX — Troubleshooting links
 
 - Settings → Diagnostics and the feedback form link to the troubleshooting page.

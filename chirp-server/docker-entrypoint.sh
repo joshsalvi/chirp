@@ -13,7 +13,7 @@
 # Runs as root (this script is the ENTRYPOINT, invoked before Dockerfile's
 # USER directive would otherwise apply — see the Dockerfile's own comment
 # on why USER chirp was removed in favor of this), then drops to the real
-# unprivileged chirp user via gosu before ever executing the actual app —
+# unprivileged chirp user via setpriv (util-linux) before ever executing the actual app —
 # the app itself never runs with root privileges, only this narrow
 # ownership-fixing step does.
 #
@@ -29,4 +29,5 @@ if [ "$(stat -c '%u' /app/data 2>/dev/null)" != "1000" ]; then
     chown chirp:chirp /app/data
 fi
 
-exec gosu chirp "$@"
+export HOME=/home/chirp USER=chirp LOGNAME=chirp
+exec setpriv --reuid=chirp --regid=chirp --init-groups "$@"

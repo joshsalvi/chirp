@@ -37,7 +37,7 @@ FROM python:3.11-slim-bookworm AS backend
 
 # System dependencies for audio processing + Playwright Chromium
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libsndfile1 ffmpeg curl gcc g++ openssh-client sshpass gosu \
+    libsndfile1 ffmpeg curl gcc g++ openssh-client sshpass \
     # Playwright/Chromium runtime deps
     libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 \
     libxcomposite1 libxdamage1 libxrandr2 libgbm1 libpango-1.0-0 \
@@ -69,6 +69,15 @@ RUN python -c "from tensorflow import lite; import birdnetlib.analyzer; print('t
 # Its wheel says Python 3.10 only; on 3.11 it gives the same detections.
 RUN pip install --no-cache-dir --no-deps --ignore-requires-python nighthawk==0.3.1 && \
     python -c "import nighthawk.detector, onnxruntime, pandas; print('nighthawk + onnxruntime OK')"
+# Security-scan cleanup: newer setuptools (its bundled wheel and
+# jaraco.context had CVEs), then drop the compilers, which were only
+# needed to build wheels above. Runtime libraries the compilers pulled in
+# (libgomp1, libstdc++6 ...) are kept so numpy/scipy/onnxruntime still load.
+RUN pip install --no-cache-dir --upgrade "setuptools>=83" "wheel>=0.46.2" && \
+    apt-mark manual libgomp1 libstdc++6 libgcc-s1 libquadmath0 libgfortran5 libatomic1 2>/dev/null; \
+    apt-get purge -y gcc g++ gcc-12 g++-12 cpp cpp-12 libgcc-12-dev libstdc++-12-dev && \
+    apt-get autoremove -y && rm -rf /var/lib/apt/lists/* && \
+    python -c "import numpy, scipy, librosa, onnxruntime, sklearn; from tensorflow import lite; import birdnetlib.analyzer, jwt; print('runtime imports OK after compiler removal')"
 
 # Make Chromium accessible to all users
 ENV PLAYWRIGHT_BROWSERS_PATH=/app/.playwright-browsers
@@ -114,7 +123,7 @@ RUN mkdir -p /app/data/recordings \
              /app/data/clips
 
 # Non-root user for security — actual privilege drop now happens in
-# docker-entrypoint.sh via gosu, AFTER it's had a chance (running as
+# docker-entrypoint.sh via setpriv, AFTER it's had a chance (running as
 # root, this container's actual starting user now) to fix ownership of
 # whatever's mounted at /app/data. See that script's own comment for
 # the real, confirmed bug this fixes — a container that stayed

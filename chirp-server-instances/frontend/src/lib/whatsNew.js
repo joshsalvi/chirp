@@ -14,7 +14,7 @@
 // WHATS_NEW.version must match the VERSION file (stamp-sw-version.mjs
 // checks it). Set `popup` to the new version when `latest` changes.
 export const WHATS_NEW = {
-  version: '0.5.15.b',
+  version: '0.5.15.c',
   // The release whose `latest` text this is. The popup shows once per value,
   // so small fixes that don't change `latest` don't bring it back.
   popup: '0.5.15.a',
@@ -33,6 +33,7 @@ export const WHATS_NEW = {
     ],
   },
   recent: [
+    { version: '0.5.15.c', summary: 'Security fixes in the Docker image.' },
     { version: '0.5.15.b', summary: 'Troubleshooting links in Diagnostics and Feedback.' },
     { version: '0.5.15.a', summary: 'Troubleshooting page; recent recordings on Apple Watch.' },
   ],

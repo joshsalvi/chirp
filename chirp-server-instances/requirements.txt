@@ -47,7 +47,7 @@ python-dateutil>=2.8.2
 pydantic>=2.0.0
 pydantic-settings>=2.0.0
 PyYAML>=6.0
-python-jose[cryptography]>=3.3.0
+PyJWT[crypto]>=2.8.0
 passlib>=1.7.4
 bcrypt>=4.0.0            # app/api/auth.py imports this directly (bypassing passlib's own
                          # bcrypt backend, which has real version-compatibility issues with

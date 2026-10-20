@@ -110,7 +110,7 @@ def test_apns_tries_other_environment(client, monkeypatch):
 def test_apns_token_is_es256_with_installed_libraries():
     from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.asymmetric import ec
-    from jose import jwt
+    import jwt
     from app.services import apns_push
     apns_push._jwt_cache.clear()
     k = ec.generate_private_key(ec.SECP256R1())

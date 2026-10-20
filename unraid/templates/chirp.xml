@@ -8,9 +8,9 @@
   <Privileged>false</Privileged>
   <Support>https://ourchirp.com/support.html</Support>
   <Project>https://github.com/joshsalvi/chirp</Project>
-  <Overview>Chirp: bird and bat call detection for your yard. Raspberry Pi stations listen and identify birds with BirdNET; this server keeps the recordings, spectrograms, life list, alerts and the web app (also the Chirp iPhone app's server). Runs one site or many, each with its own users and database.</Overview>
+  <Overview>Bird and bat call detection for your yard. Raspberry Pi stations listen and identify birds with BirdNET; this server keeps the recordings, spectrograms, life list, alerts and the web app (also the Chirp iPhone app's server). Runs one site or many, each with its own users and database.</Overview>
   <Description>Chirp server. Pair Raspberry Pi stations running chirp-device, then open the web app. Night flight calls (Nighthawk), BirdNET v3, AI features and bat detection are optional, under Settings. Host network so stations can find it on the LAN and Tailscale works. For a single home site this one container is all you need; Chirp Headscale and Chirp Caddy are only for hosting remote stations or a public multi-user hub. BirdNET models: CC BY-NC-SA 4.0; Nighthawk: CC BY-NC 4.0 (non-commercial).</Description>
-  <Category>HomeAutomation: MediaServer:Other Tools:Utilities</Category>
+  <Category>HomeAutomation: Tools:Utilities</Category>
   <WebUI>http://[IP]:[PORT:8768]/</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/joshsalvi/unraid-templates/main/templates/chirp.xml</TemplateURL>
   <Icon>https://raw.githubusercontent.com/joshsalvi/unraid-templates/main/icon.png</Icon>

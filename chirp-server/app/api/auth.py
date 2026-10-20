@@ -24,7 +24,7 @@ router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 
-# ── Lazy imports (jose/passlib only loaded if auth is enabled) ────────────────
+# ── Lazy imports (PyJWT/passlib only loaded if auth is enabled) ────────────────
 import bcrypt as _bcrypt_lib
 
 class _BcryptWrapper:
@@ -46,8 +46,14 @@ def _get_crypt():
 
 
 def _get_jwt():
-    from jose import jwt, JWTError
-    return jwt, JWTError
+    # PyJWT (python-jose is unmaintained and has an unpatched critical CVE).
+    # Tokens are plain HS256 either way, so ones issued before the switch
+    # still verify. PyJWT warns when CHIRP_SECRET_KEY is under 32 bytes;
+    # that warning would repeat on every request, so it's silenced here.
+    import warnings
+    import jwt
+    warnings.filterwarnings("ignore", message="The HMAC key is")
+    return jwt, jwt.PyJWTError
 
 
 def create_access_token(data: dict, expires_minutes: int = 720) -> str:

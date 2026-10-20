@@ -22,9 +22,8 @@ import logging
 import time
 
 import httpx
-# python-jose (already used for sign-in tokens) signs ES256; PyJWT, which this
-# imported before, isn't installed, so every native push failed on import.
-from jose import jwt as jose_jwt
+# PyJWT signs ES256 (via cryptography); it also signs Chirp's sign-in tokens.
+import jwt as pyjwt
 
 logger = logging.getLogger("chirp.apns_push")
 
@@ -44,7 +43,7 @@ def _get_apns_jwt(team_id: str, key_id: str, auth_key_pem: str) -> str:
     if cached and (time.time() - cached[1]) < _JWT_MAX_AGE_S:
         return cached[0]
 
-    token = jose_jwt.encode(
+    token = pyjwt.encode(
         {"iss": team_id, "iat": int(time.time())},
         auth_key_pem.strip(),
         algorithm="ES256",
