@@ -1,5 +1,5 @@
 # Chirp Server — Python Dependencies
-fastapi>=0.111.0,<0.144     # 0.16x routes included routers lazily; admin subpaths 404ed on the server
+fastapi>=0.111.0,<0.144     # tested with 0.143; newer releases change how routers are included
 starlette>=0.46,<1.7       # the tested pair (fastapi 0.143, starlette 1.6)
 uvicorn[standard]>=0.29.0
 python-multipart>=0.0.9

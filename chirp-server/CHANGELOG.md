@@ -1,6 +1,6 @@
-## 0.5.18.b — 2026-10-29 — BUGFIX — Admin pages after a FastAPI update
+## 0.5.18.b — 2026-10-29 — DEVELOPER — Pinned web framework versions
 
-- The image picked up FastAPI 0.162, whose new router handling answered Global Admin and admin-support addresses with 404 on the running server; FastAPI and Starlette are pinned to the tested versions.
+- FastAPI and Starlette are pinned to the tested versions (0.143, 1.6); the 0.5.18.a image had picked up untested FastAPI 0.162.
 
 ## 0.5.18.a — 2026-10-29 — FEATURE — Security headers, reachability and security events, faster builds
 

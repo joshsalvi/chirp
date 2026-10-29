@@ -41,7 +41,7 @@ export const WHATS_NEW = {
     ],
   },
   recent: [
-    { version: '0.5.18.b', summary: 'Global Admin pages work again after a library update.' },
+    { version: '0.5.18.b', summary: 'Web framework pinned to the tested versions.' },
     { version: '0.5.18.a', summary: 'Security headers, sign-in limits and faster builds; ourchirp.com admins get reachability and security events.' },
   ],
 }
