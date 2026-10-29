@@ -1,3 +1,196 @@
+## 0.5.17.g — 2026-10-29 — BUGFIX — ChirpPi Live Detect without repeats
+
+- Live Detect through a ChirpPi: the first clip no longer plays twice; playback runs on one timeline and the saved session matches the listening time.
+- Live Detect through a ChirpPi: checks every 1.5 s, like the phone mic, so the same call isn't counted again and again.
+
+## 0.5.17.f — 2026-10-28 — ENHANCEMENT — Optional Ollama API key
+
+- Settings → AI Features → Ollama: optional API key, for a server behind a proxy that checks one; sent as a Bearer token, masked like other keys.
+
+## 0.5.17.e — 2026-10-28 — BUGFIX — What's New saved to the account, Requests tab on phones
+
+- What's New: the app read the signed-in account wrongly (a raw reply instead of its contents), so dismissals were never saved to anyone's account and the popup came back on each device. Fixed; the dashboard style setting had the same problem.
+- Global Admin → Requests: long email addresses and links wrap instead of widening the page on phones.
+
+## 0.5.17.d — 2026-10-28 — ENHANCEMENT — App diagnostics in Settings, steadier Chirp Live saving
+
+- iPhone and iPad app: Settings → Diagnostics → Export app diagnostics (for everyone in the app; admins also keep the server tools there).
+- Live Detect: a session sent again after it was saved (the phone missed the reply) returns the saved recording instead of an error, so nothing is saved twice.
+- Chirp Live (TestFlight): friendly session names (Morning walk, Dawn chorus, Owl prowl…) from the time, how far you walked, the place and the birds, and rename any session; bird picture toggles for keeping the pack up to date and fetching pictures of new birds; unsent sessions are saved to the site when the app opens; the site's own address (with port) is shown.
+
+## 0.5.17.c — 2026-10-28 — ENHANCEMENT — Bird picture packs for Chirp Live
+
+- ourchirp.com serves Chirp Live a one-time pack of bird photos for the phone's area (the app sends bird names, not its location), with each photographer's credit and eBird codes for links. Photos are iNaturalist photos with shareable licenses, cached on the server.
+- Chirp Live (TestFlight): bird pictures on the Listen screen, in summaries and on a new bird page with links to eBird, All About Birds (North America), Macaulay Library and Wikipedia; Settings → Bird pictures downloads, updates or removes the pack.
+
+## 0.5.17.b — 2026-10-28 — BUGFIX — What's New shows once per account
+
+- Signed-in people on hosted sites now have the dismissed What's New saved to their account, so it no longer comes back on each phone, browser and at both ourchirp.com and www.ourchirp.com.
+
+## 0.5.17.a — 2026-10-28 — FEATURE — BirdWeather, app diagnostics, TestFlight page
+
+- Settings → Integrations → BirdWeather: brings in a BirdWeather station's sound (PUC, BirdNET-Pi, BirdNET-Go) every 15 minutes with its station token; Chirp's own BirdNET analyses it like an upload, with spectrograms and playback. The station shows under Devices.
+- My Profile → Help & Feedback: export an app diagnostics file, or add it to a message (app, device, sign-in, notifications, offline copy, recent errors; no passwords or tokens).
+- The app keeps a log of when What's New showed and why, included in the diagnostics.
+- Chirp Live (next TestFlight build): Settings → Export diagnostics, with permissions, audio route, recent sessions and recent problems.
+- Global Admin on Docker Hub and Unraid builds: no Requests (hosted-site requests, push relay servers) or Traffic tab; a Messages tab shows Help & feedback messages.
+- Those builds leave out the code too: hosted-site requests, the push relay service and traffic counting (app/website, src/website); traffic isn't counted there.
+- ourchirp.com keeps everything (CHIRP_WEBSITE=1).
+- TestFlight sign-up has its own page (testflight.html), linked from Support and About; Chirp Live is one of the choices.
+- Global Admin → Traffic: long page addresses and site names are cut short on phones instead of widening the page.
+
+## 0.5.16.y — 2026-10-27 — ENHANCEMENT — Website pages only on ourchirp.com
+
+- Docker Hub, Unraid and other servers are built without the website pages (About, guides, Support, Privacy); their links open ourchirp.com.
+- Old addresses of those pages on other servers redirect to ourchirp.com.
+- Hosted-site and push relay requests are taken on ourchirp.com only.
+- ourchirp.com keeps the pages with CHIRP_WEBSITE=1 in its .env (build argument and setting).
+
+## 0.5.16.x — 2026-10-27 — ENHANCEMENT — Site traffic
+
+- Global Admin → Traffic: visitors, page loads, API calls, top pages, linking sites, countries and clients by day (multi-site server).
+- Counts only: no cookies, no stored addresses, a daily visitor code that can't be linked across days; kept about 13 months.
+- Privacy policy describes the traffic counts.
+
+## 0.5.16.w — 2026-10-27 — BUGFIX — Support page choices
+
+- Support page: the message-type and TestFlight app choices show as round and square check marks on iPhone, not black boxes.
+
+## 0.5.16.v — 2026-10-27 — CRITICAL — Viewer accounts read-only on hosted sites
+
+- Viewer accounts can't change or delete recordings on multi-site servers (the role wasn't checked on ourchirp.com).
+- Viewers can save Live Detect sessions and sign in to Apple Watch and Chirp Live (previously blocked since 0.5.11.a).
+- Privacy policy covers Chirp Live.
+
+## 0.5.16.u — 2026-10-27 — CRITICAL — Scoped sign-ins enforced on hosted sites
+
+- Apple TV, Apple Watch and Chirp Live sign-ins are limited to their own pages on multi-site servers too (they weren't on ourchirp.com).
+
+## 0.5.16.t — 2026-10-27 — ENHANCEMENT — Chirp Live support
+
+- Recording page: phone recordings show where they were made (Place) and their GPS coordinates.
+- Live Detect: a clip sent from an app can be credited to a station (`source=device` with a file), and phone clips and sessions keep a place name.
+- Chirp Live and Apple Watch sign-ins can list stations and listen through them.
+
+## 0.5.16.s — 2026-10-27 — ENHANCEMENT — TestFlight sign-up, steadier What's New
+
+- Support page: a form to request a TestFlight invite for the iPhone, iPad and Apple TV apps; requests arrive with other support messages.
+- What's New pops up only when its text changes, and an older copy of the app (a cached page, another device) no longer brings it back.
+- Changelog: the Device tab is now Listening device.
+- Station software 1.4.5 installed on the home station.
+
+## 0.5.16.r — 2026-10-27 — ENHANCEMENT — App icon stays put
+
+- Settings → Appearance → App Icon: "Choose an icon" is the default, so changing the theme leaves the Home Screen icon alone. "Match my theme" still follows the theme.
+
+## 0.5.16.q — 2026-10-27 — ENHANCEMENT — Night call filters and search
+
+- Night Flight Calls: search by species, scientific name, family or sound-alike group.
+- Filter by how far each call was identified (species, sound-alike group, family, not narrowed down) and by confidence (50, 75 or 90% and up).
+- Level and confidence choices are kept on each device; level chips show how many calls each has.
+- API: /night-calls takes levels, min_prob and q, and returns by_level counts.
+
+## 0.5.16.p — 2026-10-26 — BUGFIX — Troubleshooting sidebar
+
+- Troubleshooting: sidebar links work while a topic or search is filtering the page; the filter goes back to All.
+
+## 0.5.16.o — 2026-10-26 — BUGFIX — App icon settings and app versions
+
+- Settings → Appearance → App Icon shows in the iPhone app again (the 0.5.1614 build left out the icon switcher).
+- An icon change asked for while the app is opening waits until it's open.
+- Changelog → iPhone App: one row per app version, with the newest test build listed.
+
+## 0.5.16.n — 2026-10-26 — ENHANCEMENT — Theme app icons
+
+- Settings → Appearance → App Icon (iPhone and iPad app): the Home Screen icon follows your theme, or pick any of the 31 theme icons. Needs the next app build.
+- Themes with their own logo (Cornell Lab, Terminal, Plate and others) get an icon drawn from that logo.
+
+## 0.5.16.m — 2026-10-26 — ENHANCEMENT — Ready for iPad
+
+- On an iPad, messages say "iPad" instead of "iPhone" (Settings app paths, push alerts, the app version line).
+- Live Detect no longer stretches across wide screens.
+- Website pages always load the newest site script, so the Apple TV badge shows without a hard refresh.
+- Apple Watch Live Detect sends clips about five times smaller and shows what it's doing (in the next app build).
+
+## 0.5.16.l — 2026-10-25 — DEVELOPER — Home page headlines
+
+- Home page: punchier section headlines are back, with "every bird" highlighted in the main one.
+
+## 0.5.16.k — 2026-10-25 — DEVELOPER — Home page wording
+
+- Home page: friendlier wording for people new to Chirp, and feature titles no longer repeat the label above them.
+
+## 0.5.16.j — 2026-10-25 — DEVELOPER — Plainer wording
+
+- Website, setup guide, user guide, support, troubleshooting and the in-app tutorial: slogan headings became plain sentences, filler words are gone, and the tutorial is shorter and up to date.
+- Tech docs and READMEs: filler words removed.
+
+## 0.5.16.i — 2026-10-24 — BUGFIX — Life List stops at 24
+
+- Life List and Field Guide: the next species load reliably as you scroll, and a Show more button at the end loads them if scrolling doesn't.
+
+## 0.5.16.h — 2026-10-24 — ENHANCEMENT — App Store badges
+
+- Website: App Store badges for iPhone, Apple Watch and Apple TV. The iPhone and Watch badges say "Coming soon" until the iPhone app is approved.
+- My Profile → iPhone App shows the App Store badge with "Coming soon".
+
+## 0.5.16.g — 2026-10-24 — ENHANCEMENT — Apple TV on the App Store
+
+- Website: new Apps section, plus App Store badges for Apple TV on the home page, setup, support and user guides.
+- My Profile: Apple TV badge, and an iPhone App section that says "coming soon" until the iPhone app is approved.
+- The /tv page links to the Apple TV app.
+
+## 0.5.16.f — 2026-10-22 — ENHANCEMENT — iNaturalist link
+
+- iNaturalist: observation descriptions and comments posted from Chirp end with a link to ourchirp.com (added once).
+
+## 0.5.16.e — 2026-10-22 — BUGFIX — Dashboard Live card, What's New popup
+
+- Dashboard: the Live card and "Last detection" use the newest finished recording with a bird in it. Live Detect clips and recordings the server removes after reanalysis no longer show as "Unidentified" or link to a missing recording.
+- The What's New popup shows again after this update, covering 0.5.16 (it had been stuck on 0.5.15.a); from now on every update brings it up.
+
+## 0.5.16.d — 2026-10-22 — DEVELOPER — Changelog and guides
+
+- Changelog: iPhone App lists the 0.5.1502 and 0.5.1602 builds, and its tab now comes after Device.
+- Device guide: the Argon ONE case and its screen are marked optional; any Pi 5 case with cooling works.
+- Guides: server setup describes any Docker host, with Unraid as one example.
+
+## 1.4.5 (chirp-device) — 2026-10-22 — ENHANCEMENT — Screen optional
+
+- Without an OLED screen the station logs "No OLED display found" once, instead of a warning that wrongly blamed I2C permissions.
+- The installer says the Argon ONE case is optional.
+
+## 0.5.16.c — 2026-10-21 — ENHANCEMENT — Faster, smoother app
+
+- Life List opens sorted by detections, most first.
+- Statistics: charts draw as you scroll to them and don't animate on phones; the page loads about a third faster.
+- Species streaks load up to 6 times faster; Yard Pulse on the Dashboard stays ready in the background.
+- Loading placeholders no longer make lists stutter while thumbnails load.
+- Long lists skip drawing rows that are off screen.
+- Apple TV: the journal scrolls with the remote, and the Activity by hour card no longer cuts off its text.
+
+## 0.5.16.b — 2026-10-21 — ENHANCEMENT — Home page dashboard
+
+- Home page opens with the live dashboard; the daily digest moves to the gallery.
+- The scrolling Statistics screenshot shows a scroll hint until you scroll it.
+- Apple TV app: tidier species cards and journal times.
+
+## 0.5.16.a — 2026-10-21 — FEATURE — Apple TV app (testing)
+
+- Apple TV app (TestFlight testing): today's birds, recent recordings with spectrogram and sound, Live Detect through a station, and the journal.
+- Sign in on the TV with a code: enter it in My Profile → Apple TV or at /tv on your phone.
+- Server: TV sign-in by code (GET-only TV token, 180 days) and TV routes for stations, station audio and recent recordings.
+
+## 0.5.15.e — 2026-10-21 — BUGFIX — Field Guide likelihood
+
+- Field Guide likelihood uses birds seen near your site each month (iNaturalist), not worldwide data scaled per species; strays like Shiny Cowbird no longer show as Very Likely. Each site's list refreshes on its next visit.
+- Statistics: Life List Growth dates no longer overlap, and the heatmap title fits on phones.
+- Home page: See the song shows the spectrogram; AI second opinion has its own section.
+
+## 0.5.15.d — 2026-10-21 — DEVELOPER — New screenshots on the website
+
+- Home page and user guide use current screenshots: daily digest, AI second opinion for several birds, Live Detect, Night Calls, journal and the full Statistics page.
+
 ## 0.5.15.c — 2026-10-20 — CRITICAL — Docker image security fixes
 
 - Sign-in and Apple push tokens use PyJWT instead of python-jose (unmaintained, unpatched critical CVE); existing sign-ins keep working.

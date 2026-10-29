@@ -28,7 +28,7 @@ def offline_after(db) -> timedelta:
 
 
 def _virtual(d) -> bool:
-    return d.platform in ("Haikubox", "Bird Buddy") or d.birdnet_backend in ("haikubox", "bird_buddy")
+    return d.platform in ("Haikubox", "Bird Buddy", "BirdWeather") or d.birdnet_backend in ("haikubox", "bird_buddy", "birdweather")
 
 
 def _wants(col):

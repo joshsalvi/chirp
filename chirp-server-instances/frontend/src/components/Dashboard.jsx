@@ -928,11 +928,16 @@ function LiveDetectionCard({ recordingId }) {
     setImgError(false)
     if (!recordingId) { setDetail(null); return }
     let cancelled = false
-    api.recordings.get(recordingId).then(d => { if (!cancelled) setDetail(d) }).catch(() => {})
+    // A recording deleted since the Dashboard loaded (a Live Detect clip that
+    // held nothing, or one removed after reanalysis) hides the card instead of
+    // showing "Unidentified" and linking to a missing page.
+    api.recordings.get(recordingId)
+      .then(d => { if (!cancelled) setDetail(d) })
+      .catch(() => { if (!cancelled) setDetail({ missing: true }) })
     return () => { cancelled = true }
   }, [recordingId])
 
-  if (!recordingId) return null
+  if (!recordingId || detail?.missing) return null
 
   const topDetection = detail?.detections?.[0]
   const confidence = Math.round((detail?.max_confidence || topDetection?.confidence || 0) * 100)

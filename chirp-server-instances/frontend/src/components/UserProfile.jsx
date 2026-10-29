@@ -1,12 +1,15 @@
 import { useEffect, useState, useRef } from 'react'
-import { User, Lock, Bell, Check, AlertCircle, Eye, EyeOff, Save, Shield, Feather, Leaf, RefreshCw, LogOut, Camera, Trash2, UserX, Server, MessageSquare, Watch } from 'lucide-react'
+import { User, Lock, Bell, Check, AlertCircle, Eye, EyeOff, Save, Shield, Feather, Leaf, RefreshCw, LogOut, Camera, Trash2, UserX, Server, MessageSquare, Watch, Tv, Smartphone } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { api, mediaUrl } from '../lib/api'
 import { format } from 'date-fns'
 import UnifiedCard from './UnifiedCard'
 import { InatRefreshInline } from './Settings'
-import { hasServerPicker, openServerPicker, native } from '../native'
+import { hasServerPicker, openServerPicker, native, isApp } from '../native'
 import { tokenStore } from '../lib/api'
+import { TVLinkForm } from './TVLink'
+import StoreBadge from './StoreBadge'
+import { IPHONE_APP_STORE_URL } from '../lib/appStore'
 
 // ── Field wrapper ─────────────────────────────────────────────────────────────
 function Field({ label, hint, error, children }) {
@@ -313,6 +316,38 @@ function WatchSection() {
   )
 }
 
+// ── Apple TV ──────────────────────────────────────────────────────────────────
+function TVSection() {
+  return (
+    <Section id="me:tv" fallbackOpen={false} icon={Tv} title="Apple TV" color="#a78bfa">
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+        <p className="text-xs min-w-0 flex-1" style={{ color: 'var(--text-secondary)' }}>
+          Get Chirp from the App Store on your Apple TV, open it, and enter the code it shows.
+        </p>
+        <StoreBadge kind="tv"/>
+      </div>
+      <TVLinkForm/>
+    </Section>
+  )
+}
+
+// ── iPhone app (in a browser only) ────────────────────────────────────────────
+function IPhoneAppSection() {
+  if (isApp()) return null
+  return (
+    <Section id="me:iphone" fallbackOpen={false} icon={Smartphone} title="iPhone App" color="#38bdf8">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <p className="text-xs min-w-0 flex-1" style={{ color: 'var(--text-secondary)' }}>
+          {IPHONE_APP_STORE_URL
+            ? 'Alerts, Live Detect and your recordings on your iPhone, with an Apple Watch app included.'
+            : 'Alerts, Live Detect and your recordings on your iPhone, with an Apple Watch app included. Until it’s out, open this site in Safari and choose Share → Add to Home Screen.'}
+        </p>
+        <StoreBadge kind="iphone"/>
+      </div>
+    </Section>
+  )
+}
+
 // ── Help & feedback ───────────────────────────────────────────────────────────
 // Questions, problems and feature ideas go to the server's admins
 // (api/support.py), signed with this account.
@@ -325,13 +360,28 @@ function FeedbackSection() {
   const [kind, setKind] = useState('feature')
   const [message, setMessage] = useState('')
   const [state, setState] = useState(null)   // null | 'sending' | 'sent' | error text
+  const [withDiag, setWithDiag] = useState(false)
+  const [diagState, setDiagState] = useState(null)
   const send = async () => {
     if (message.trim().length < 5) { setState('Write a few words first.'); return }
     setState('sending')
     try {
-      await api.support.send({ kind, message: message.trim(), page: 'app' })
+      let text = message.trim()
+      if (withDiag) {
+        const { buildReport } = await import('../lib/appDiagnostics')
+        text = (text + '\n\n--- App diagnostics ---\n' + await buildReport()).slice(0, 4000)
+      }
+      await api.support.send({ kind, message: text, page: 'app' })
       setMessage(''); setState('sent')
     } catch (e) { setState(e.message || 'Couldn\u2019t send. Try again.') }
+  }
+  const exportDiag = async () => {
+    setDiagState('Collecting…')
+    try {
+      const [{ buildReport }, { saveText }] = await Promise.all([import('../lib/appDiagnostics'), import('../lib/download')])
+      await saveText(await buildReport(), `chirp-app-diagnostics-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.txt`)
+      setDiagState(null)
+    } catch (e) { setDiagState(e.message || 'Couldn\u2019t export.') }
   }
   return (
     <Section id="me:feedback" fallbackOpen={false} icon={MessageSquare} title="Help & Feedback" color="#fbbf24">
@@ -351,15 +401,27 @@ function FeedbackSection() {
         <button onClick={send} disabled={state === 'sending'} className="btn-primary text-sm px-4 py-2">
           {state === 'sending' ? 'Sending…' : 'Send'}
         </button>
+        <label className="flex items-center gap-1.5 text-xs cursor-pointer" style={{ color: 'var(--text-tertiary)' }}>
+          <input type="checkbox" checked={withDiag} onChange={e => setWithDiag(e.target.checked)} className="w-3.5 h-3.5 accent-chirp-500"/>
+          Include app diagnostics
+        </label>
         {state === 'sent' && <span className="text-xs" style={{ color: 'var(--pastel-green)' }}>Thanks! It's on its way.</span>}
         {state && state !== 'sent' && state !== 'sending' && <span className="text-xs" style={{ color: 'var(--pastel-red)' }}>{state}</span>}
       </div>
       <p className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
-        Sent with your username so we can reply. See also the <a href="/guide.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>user guide ↗</a>,{' '}
-        <a href="/setup.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>setup guide ↗</a>,{' '}
-        <a href="/troubleshooting.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>troubleshooting ↗</a> and{' '}
-        <a href="/support.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>support page ↗</a>.
+        Sent with your username so we can reply. See also the <a href="https://ourchirp.com/guide.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>user guide ↗</a>,{' '}
+        <a href="https://ourchirp.com/setup.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>setup guide ↗</a>,{' '}
+        <a href="https://ourchirp.com/troubleshooting.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>troubleshooting ↗</a> and{' '}
+        <a href="https://ourchirp.com/support.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>support page ↗</a>.
       </p>
+      <div className="flex items-center gap-3 mt-3 flex-wrap">
+        <button onClick={exportDiag} disabled={diagState === 'Collecting…'} className="btn-secondary text-xs px-3 py-1.5">
+          Export app diagnostics
+        </button>
+        <span className="text-xs" style={{ color: diagState && diagState !== 'Collecting…' ? 'var(--pastel-red)' : 'var(--text-tertiary)' }}>
+          {diagState || 'A text file about this app and device for troubleshooting. No passwords or sign-in tokens.'}
+        </span>
+      </div>
     </Section>
   )
 }
@@ -806,7 +868,9 @@ export default function UserProfile() {
       </button>
 
       {hasServerPicker() && <ServerSection/>}
+      <IPhoneAppSection/>
       <WatchSection/>
+      <TVSection/>
       <FeedbackSection/>
       <BlockedPeopleSection/>
       <DeleteAccountSection/>

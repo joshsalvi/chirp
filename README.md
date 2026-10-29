@@ -5,7 +5,7 @@ identification, and archival. It runs entirely on your own hardware — no cloud
 subscriptions, no data sharing.
 
 **Author:** Joshua Salvi — josh.salvi@gmail.com  
-**Version:** 0.5.15.c  
+**Version:** 0.5.12.p  
 **Status:** Active development · [ourchirp.com/about](https://ourchirp.com/about)
 
 ---
@@ -132,7 +132,7 @@ for this README so far. If you'd like to contribute some, a PR adding
 | **[docs/REMOTE_DEVICES.md](docs/REMOTE_DEVICES.md)** | Managing a device that isn't on the server's LAN — self-hosted Tailscale/Headscale mesh, bundled in chirp-server-instances |
 | **[chirp-server/MULTI_INSTANCE.md](chirp-server/MULTI_INSTANCE.md)** | Multiple locations/tenants — one real chirp-server instance per location, the current recommended approach |
 | **[docs/MULTI_SERVER_DEVICE.md](docs/MULTI_SERVER_DEVICE.md)** | Sending one chirp-device's data to more than one server at once (e.g. two different chirp-server instances) |
-| **[docs/CLOUDFLARE_TUNNEL.md](docs/CLOUDFLARE_TUNNEL.md)** | HTTPS setup — the default for both projects. No port forwarding, no open ports. Genuinely required for Web Push and native APNs push to work at all, not optional hardening. |
+| **[docs/CLOUDFLARE_TUNNEL.md](docs/CLOUDFLARE_TUNNEL.md)** | HTTPS setup — the default for both projects. No port forwarding, no open ports. Required for Web Push and native APNs push to work at all, not optional hardening. |
 | **[Setup guide](https://ourchirp.com/setup.html)** | Station, server and app, step by step (also `chirp-server-instances/frontend/public/setup.html`) |
 | **[User guide](https://ourchirp.com/guide.html)** | Every page and setting in the app |
 | **[chirp-server/README.md](chirp-server/README.md)** | The older single-site server (deprecated) |
@@ -178,7 +178,7 @@ changelog when X changes.
 
 **Minor `Y`** — Increments when a new user-visible feature is added. New pages,
 new integrations (e.g. iNaturalist submission, SSH terminal, eBird export), new
-hardware support. The system still works the same way, just has more capabilities.
+hardware support. The system works the same way and has more capabilities.
 
 **Patch `Z`** — A letter (`a`, `b`, `c`, `d` …) that resets to `a` whenever
 Y increments. Patch releases contain only fixes and small improvements within
@@ -230,7 +230,7 @@ version="0.X.Y.Z"
 
 ## ⚡ Quick Setup
 
-### 1. Server (Unraid / any Docker host)
+### 1. Server (any Docker host, e.g. Unraid)
 ```bash
 cd chirp-server
 cp .env.example .env
@@ -305,7 +305,7 @@ Enhanced and Rumble Removed can be combined; AI Enhance always replaces both whe
 
 ### Setting up Ollama
 
-**1. Install** (bare-metal or Docker — if you're running the rest of Chirp on Unraid, Docker is the natural fit):
+**1. Install** (bare-metal or Docker — if the rest of Chirp already runs in Docker, Docker is the natural fit):
 ```bash
 # Bare-metal (Linux):
 curl -fsSL https://ollama.ai/install.sh | sh
@@ -314,7 +314,7 @@ curl -fsSL https://ollama.ai/install.sh | sh
 docker run -d --gpus=all -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
 ```
 
-**2. Give the container your GPU.** Docker doesn't expose a GPU to a container by default, even with working host drivers — this is the single most common reason Ollama silently runs on CPU with no error. On Unraid: install the **Nvidia-Driver** plugin (Community Applications) first, then make sure the container actually requests the GPU. In docker-compose:
+**2. Give the container your GPU.** Docker doesn't expose a GPU to a container by default, even with working host drivers — this is the single most common reason Ollama silently runs on CPU with no error. On Linux, install the NVIDIA Container Toolkit; on Unraid, the **Nvidia-Driver** plugin (Community Applications). Then make sure the container requests the GPU. In docker-compose:
 ```yaml
 services:
   ollama:
@@ -334,7 +334,7 @@ volumes:
   ollama:
 ```
 
-**3. Pull a model** (see the table below), then confirm it's actually on the GPU:
+**3. Pull a model** (see the table below), then confirm it's on the GPU:
 ```bash
 ollama pull <model>
 ollama ps          # PROCESSOR column should show 100% GPU, not CPU
@@ -349,7 +349,7 @@ Model names, sizes, and exact VRAM figures shift often — always double-check c
 
 | Model | Type | Approx. VRAM | Pros | Cons |
 |---|---|---|---|---|
-| `gemma4:e2b` | Vision + text | ~2–4 GB | Runs on almost anything; genuinely multimodal, not a bolted-on vision head | Weakest reasoning of the family — fine for short summaries, shakier on nuanced spectrogram judgment |
+| `gemma4:e2b` | Vision + text | ~2–4 GB | Runs on almost anything; multimodal, not a bolted-on vision head | Weakest reasoning of the family — fine for short summaries, shakier on nuanced spectrogram judgment |
 | `gemma4:e4b` | Vision + text | ~6–8 GB | Best quality-per-GB tradeoff for a modest GPU; still fast | Meaningfully behind the larger tiers on fine visual detail |
 | `gemma4:26b` (MoE, ~4B active) | Vision + text | ~16–20 GB | Strong quality while staying fast (MoE only activates a fraction of params per token) | Needs a real GPU; larger download |
 | `gemma4:31b` | Vision + text | ~20–24 GB+ | Best quality in the family; dense model, no MoE inconsistency | Needs a high-end GPU; slower per-token than the MoE tier |
@@ -358,7 +358,7 @@ Model names, sizes, and exact VRAM figures shift often — always double-check c
 | `llama3.3:8b` | Text only | ~6–8 GB | Fast, well-rounded, best all-around *text* choice if you're going with Strategy B | No vision — can't be used for Call Re-analysis at all |
 | Qwen2.5-VL (7B) | Vision + text | ~6–8 GB | Strong document/chart understanding | Newer Qwen 3.5/3.6 vision variants are **currently broken in Ollama specifically** (the text half loads fine, but the vision sidecar isn't wired up) — stick to Qwen2.5-VL or Qwen3-VL if going this route, not 3.5/3.6 |
 
-**Our recommendation:** given you already have GPU passthrough working, `gemma4:e4b` (Strategy A, one model for everything) is the best starting point — genuinely multimodal, fast, and modest on VRAM. If Call Re-analysis's judgment calls matter to you and you have the VRAM to spare, `gemma4:26b` is a meaningful step up for that feature specifically. If you'd rather keep Call Re-analysis on a hosted provider and just want Ollama for the two text features (Strategy B), `llama3.3:8b` is the better dedicated pick — it won't be doing double duty as a vision model it doesn't need to be.
+**Our recommendation:** given you already have GPU passthrough working, `gemma4:e4b` (Strategy A, one model for everything) is the best starting point — multimodal, fast, and modest on VRAM. If Call Re-analysis's judgment calls matter to you and you have the VRAM to spare, `gemma4:26b` is a meaningful step up for that feature specifically. If you'd rather keep Call Re-analysis on a hosted provider and only want Ollama for the two text features (Strategy B), `llama3.3:8b` is the better dedicated pick — it won't be doing double duty as a vision model it doesn't need to be.
 
 ---
 
@@ -372,7 +372,7 @@ Raspberry Pi 5 (chirp-device)
   ├── BirdNET TFLite — 2-stage detection (energy filter → neural classifier)
   └── → uploads WAV + JSON metadata → chirp-server
 
-Unraid Docker (chirp-server, port 8765)
+Docker host, e.g. a NAS, Unraid or a mini PC (chirp-server, port 8765)
   ├── FastAPI backend  /app/app/api/
   │   ├── recordings.py    — upload, analysis, statistics
   │   ├── birds.py         — profiles, life list, eBird export
@@ -395,7 +395,7 @@ a self-noise figure — it's a digital MEMS array with on-chip DSP (AEC/AGC/
 beamforming/noise suppression), so its numbers aren't measured the same way as
 a plain analog capsule's. Several fields below aren't published by the
 manufacturer in a directly comparable form (marked accordingly) rather than
-guessed at, and "effective range" genuinely isn't a standardized spec across
+guessed at, and "effective range" isn't a standardized spec across
 this category — it depends on the sound source's own loudness/directivity and
 whether a reflector is involved.
 
@@ -406,7 +406,7 @@ whether a reflector is involved.
 | **Primo EM272Z1** *(Clippy/Pluggy)* | ~$100–150 | 2-wire plug-in-power (mini) or XLR w/ phantom power (Pluggy) | Omnidirectional | **14 dBA** | 80 dB @ 1kHz | Close-range/clip-on; extends well with a parabolic reflector | Best noise-per-dollar in field recording; tiny 10mm capsule; widely used DIY/semi-pro standard |
 | **Sennheiser MKH 8020** | ~$1,500+ | XLR, needs 48V phantom power | Omnidirectional (cardioid/supercardioid modules also available in the 8000 series) | **10 dBA** (DIN, A-weighted) | Not published as one number — excellent dynamic range instead | Long — flat response and low noise hold up at distance in quiet settings | RF condenser design (immune to humidity noise other condensers get); 10Hz–60kHz response; modular capsule system |
 | **Wildlife Acoustics Song Meter SM4** | ~$700–900 | Standalone recorder — 2 built-in mics + 2 cabled mic/hydrophone ports | Omnidirectional (built-in); cabled mic optional for distant placement | Not published separately from SNR | **80 dB typ. @ 1kHz** (1 Pa, A-weighted) | Every +6dB of SNR roughly doubles usable detection distance (WA's own rule of thumb) | Fully standalone (no Pi needed) — weatherproof, D-cell battery (up to 650hrs), dual SD failover, scheduled recording |
-| **Dodotronic Ultramic 192K** | ~$250–280 | USB (Audio Class, plug-and-play) | Omnidirectional | "Low noise" (no dB figure published) | Not published | Short-range point-source ultrasonic detection (bats, insects, rodents) | Purpose-built ultrasonic USB mic, 192kHz sampling, 16-bit — a genuine drop-in upgrade over AudioMoth for the bat pipeline specifically |
+| **Dodotronic Ultramic 192K** | ~$250–280 | USB (Audio Class, plug-and-play) | Omnidirectional | "Low noise" (no dB figure published) | Not published | Short-range point-source ultrasonic detection (bats, insects, rodents) | Purpose-built ultrasonic USB mic, 192kHz sampling, 16-bit, and a drop-in upgrade over AudioMoth for the bat pipeline specifically |
 
 **Bottom line:** for the birds pipeline, the EM272Z1-based mics are the
 standout value — a fraction of the MKH 8020's price for self-noise within
@@ -431,6 +431,7 @@ industry-standard standalone option.
 | 🗺️ Range maps | Three sources — All About Birds, iNat Geomodel, BirdLife — with per-source toggle |
 | 📍 Location-aware | eBird regional species with monthly frequency data |
 | 🔔 Live notifications | WebSocket push + email for new species / daily digest |
+| 🔗 Integrations | BirdWeather stations' sound (PUC, BirdNET-Pi, BirdNET-Go), Bird Buddy feeders, Haikubox sightings |
 | 🌿 iNaturalist submit | One-click sound observation upload |
 | 📤 eBird export | Download life list as importable CSV |
 | 💾 Backup & restore | One-click database backup / restore |

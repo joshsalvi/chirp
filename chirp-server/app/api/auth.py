@@ -19,6 +19,18 @@ from ..models import User, ActivityLog
 from ..services.activity_log import log_activity
 
 logger = logging.getLogger("chirp.auth")
+
+def _version_key(v: str) -> tuple:
+    """"0.5.16.r" -> (0, 5, 16, 18); letters count like a, b, ... z, aa."""
+    import re as _re
+    m = _re.match(r"^(\d+)\.(\d+)\.(\d+)(?:\.([a-z]+))?$", (v or "").strip())
+    if not m:
+        return (-1,)
+    n = 0
+    for ch in m.group(4) or "":
+        n = n * 26 + (ord(ch) - 96)
+    return (int(m.group(1)), int(m.group(2)), int(m.group(3)), n)
+
 router = APIRouter()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
@@ -641,7 +653,11 @@ def update_my_profile(body: ProfileUpdateRequest, request: Request, db: Session 
             raise HTTPException(status_code=400, detail="dashboard_mode must be 'simplified' or 'detailed'")
         user.dashboard_mode = body.dashboard_mode
     if body.last_seen_whats_new_version is not None:
-        user.last_seen_whats_new_version = body.last_seen_whats_new_version
+        # Never backwards: an older copy of the web app (cached page, another
+        # device) would otherwise make the newer popup show again.
+        cur = user.last_seen_whats_new_version
+        if not cur or _version_key(body.last_seen_whats_new_version) >= _version_key(cur):
+            user.last_seen_whats_new_version = body.last_seen_whats_new_version
 
     # Per-user iNaturalist token (submitters and admins)
     if body.inat_api_token is not None:

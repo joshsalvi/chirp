@@ -1,4 +1,5 @@
 // Chirp API client
+import { note } from './diagLog'
 import { saveUrl } from './download'
 import { hapticEvent } from './haptics'
 const BASE = '/api/v1'
@@ -97,6 +98,16 @@ async function request(path, options = {}) {
 }
 
 async function sendRequest(path, options = {}) {
+  try {
+    return await sendRequestOnce(path, options)
+  } catch (e) {
+    // Kept for the diagnostics export (lib/diagLog.js); path only, no body.
+    if (e?.message !== 'Not authenticated') note('api', `${(options.method || 'GET').toUpperCase()} ${path.split('?')[0]}: ${e?.status ? `HTTP ${e.status} ` : ''}${e?.message || e}`)
+    throw e
+  }
+}
+
+async function sendRequestOnce(path, options = {}) {
   const token = tokenStore.get()
   const headers = { 'Content-Type': 'application/json', ...options.headers }
   if (token) headers['Authorization'] = 'Bearer ' + token
@@ -577,6 +588,10 @@ export const api = {
       status: () => request('/settings/haikubox/status'),
       sync:   () => request('/settings/haikubox/sync', { method: 'POST' }),
     },
+    birdWeather: {
+      test: () => request('/settings/birdweather/test', { method: 'POST' }),
+      sync: () => request('/settings/birdweather/sync-now', { method: 'POST' }),
+    },
     birdBuddy: {
       feeders: () => request('/settings/bird-buddy/feeders'),
       sync:    () => request('/settings/bird-buddy/sync-now', { method: 'POST' }),
@@ -586,8 +601,9 @@ export const api = {
       test: () => request('/settings/inat/test', { method: 'POST' }),
     },
     testAiKey: (body) => request('/settings/ai/test', { method: 'POST', body: JSON.stringify(body) }),
-    ollamaModels: (baseUrl) => request(`/settings/ai/ollama/models${baseUrl ? `?base_url=${encodeURIComponent(baseUrl)}` : ''}`),
-    ollamaPull: (model, baseUrl) => request('/settings/ai/ollama/pull', { method: 'POST', body: JSON.stringify({ model, base_url: baseUrl || undefined }) }),
+    // apiKey: the optional Ollama proxy key, typed but not saved yet (sent in the body, never the URL)
+    ollamaModels: (baseUrl, apiKey) => request('/settings/ai/ollama/models', { method: 'POST', body: JSON.stringify({ base_url: baseUrl || undefined, api_key: apiKey || undefined }) }),
+    ollamaPull: (model, baseUrl, apiKey) => request('/settings/ai/ollama/pull', { method: 'POST', body: JSON.stringify({ model, base_url: baseUrl || undefined, api_key: apiKey || undefined }) }),
     getAiUsage: () => request('/settings/ai/usage'),
   },
 
@@ -709,7 +725,14 @@ export const api = {
     downloadBirdnet3: () => request('/night-calls/birdnet3/download', { method: 'POST' }),
     nights: (limit = 60) => request(`/night-calls/nights?limit=${limit}`),
     list: (night, includeUnnarrowed = false) => request(`/night-calls?night=${encodeURIComponent(night)}${includeUnnarrowed ? '&include_unnarrowed=true' : ''}`),
-    range: (start, end, includeUnnarrowed = false, limit = 500) => request(`/night-calls?start=${start}&end=${end}&limit=${limit}${includeUnnarrowed ? '&include_unnarrowed=true' : ''}`),
+    // opts: levels (array of species/group/family/order), minProb (0-1), q, limit
+    range: (start, end, { levels, minProb = 0, q = '', limit = 500 } = {}) => {
+      const p = new URLSearchParams({ start, end, limit: String(limit) })
+      if (levels) p.set('levels', levels.join(','))
+      if (minProb > 0) p.set('min_prob', String(minProb))
+      if (q.trim()) p.set('q', q.trim())
+      return request(`/night-calls?${p}`)
+    },
     get: (id) => request(`/night-calls/${id}`),
     spectrogramUrl: (id, large = false) => mediaUrl(`${BASE}/night-calls/${id}/spectrogram${large ? '?large=true' : ''}`),
     audioUrl: (id) => mediaUrl(`${BASE}/night-calls/${id}/audio`),
@@ -722,6 +745,10 @@ export const api = {
     audioEnhancedUrl: (id) => `${BASE}/bat-activity/${id}/audio/enhanced`,
   },
 
+  tv: {
+    // Approve an Apple TV's sign-in code (api/tv.py)
+    approve: (code) => request('/tv/pair/approve', { method: 'POST', body: JSON.stringify({ code }) }),
+  },
   auth: {
     // Live Detect-only sign-in for the Apple Watch app (30 days)
     watchToken: () => request('/auth/watch-token', { method: 'POST' }),
@@ -738,11 +765,17 @@ export const api = {
       if (data.username) localStorage.setItem('chirp_user', data.username)
       return data
     },
+    // The raw Response (App.jsx needs the status); whoami() for the profile.
     me: () => {
       const token = tokenStore.get()
       return fetch(`${BASE}/auth/me`, {
         headers: token ? { Authorization: 'Bearer ' + token } : {}
       })
+    },
+    whoami: async () => {
+      const token = tokenStore.get()
+      const r = await fetch(`${BASE}/auth/me`, { headers: token ? { Authorization: 'Bearer ' + token } : {} })
+      return r.ok ? r.json() : null
     },
     logout: () => tokenStore.clear(),
     updateNotificationPrefs: (prefs) => request('/auth/me/notification-prefs', {

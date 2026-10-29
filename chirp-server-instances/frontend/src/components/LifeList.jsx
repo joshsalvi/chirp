@@ -4,6 +4,7 @@ import { useTz } from '../lib/time'
 import { Search, ExternalLink, Award, Calendar, TrendingUp, X, Download, ChevronDown } from 'lucide-react'
 import { BirdIcon, BatIcon } from './BirdBatIcons'
 import { api, mediaUrl } from '../lib/api'
+import { useRevealMore } from '../lib/useRevealMore'
 
 const MONTHS_FULL  = ['January','February','March','April','May','June',
                       'July','August','September','October','November','December']
@@ -58,8 +59,8 @@ export default function LifeList() {
   const [search, setSearch] = useState('')
   const [filterMonth, setFilterMonth]   = useState(null)   // null = all months
   const [filterSeason, setFilterSeason] = useState(null)   // season id or null
-  const [sortBy, setSortBy]             = useState('first') // 'count' | 'name' | 'first'
-  const [sortDir, setSortDir]           = useState('desc')  // 'asc' | 'desc' — default: most recently seen first
+  const [sortBy, setSortBy]             = useState('count') // 'count' | 'name' | 'first'
+  const [sortDir, setSortDir]           = useState('desc')  // 'asc' | 'desc' — default: most detections first
   const [downloadOpen, setDownloadOpen] = useState(false)
   const [exportError, setExportError] = useState(null)
   const downloadRef = useRef(null)
@@ -189,7 +190,6 @@ export default function LifeList() {
   // (Recordings' 6/12/24/48 options).
   const CHUNK = 24
   const [visibleCount, setVisibleCount] = useState(CHUNK)
-  const sentinelRef = useRef(null)
 
   // Reset back to the first chunk whenever the result set changes shape —
   // otherwise a stale high visibleCount from a previous broad view would
@@ -197,20 +197,8 @@ export default function LifeList() {
   // page load.
   useEffect(() => { setVisibleCount(CHUNK) }, [search, activeMonths, sortBy, sortDir])
 
-  useEffect(() => {
-    const el = sentinelRef.current
-    if (!el) return
-    const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisibleCount(c => Math.min(c + CHUNK, filtered.length))
-        }
-      },
-      { rootMargin: '400px' }  // start revealing the next chunk well before the sentinel is actually on-screen
-    )
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [filtered.length])
+  // Next chunk as the end of the list nears the screen (lib/useRevealMore).
+  const sentinelRef = useRevealMore(() => setVisibleCount(c => Math.min(c + CHUNK, filtered.length)))
 
   const toggleSort = (key) => {
     if (sortBy === key) setSortDir(d => d === 'desc' ? 'asc' : 'desc')
@@ -451,7 +439,7 @@ export default function LifeList() {
               <Link key={bird.common_name}
                 to={profileTo}
                 state={{ from: '/library' }}
-                className="card-hover flex items-center gap-3 p-3 group">
+                className="card-hover cv-row flex items-center gap-3 p-3 group">
 
                 {/* Number — top 3 BY ACTUAL DETECTION COUNT get a medal
                     tint, looked up by identity (detectionRankMap) rather
@@ -515,7 +503,15 @@ export default function LifeList() {
               </Link>
             )
           })}
-          {visibleCount < filtered.length && <div ref={sentinelRef} style={{ height: 1 }}/>}
+          {visibleCount < filtered.length && (
+            // Loads the next chunk on its own as it nears the screen; the
+            // button is there in case the observer never fires.
+            <button key={visibleCount} ref={sentinelRef} type="button"
+                    onClick={() => setVisibleCount(c => Math.min(c + CHUNK, filtered.length))}
+                    className="btn-secondary w-full justify-center text-sm py-2.5 mt-2">
+              Show more · {filtered.length - visibleCount} more species
+            </button>
+          )}
         </div>
       )}
     </div>

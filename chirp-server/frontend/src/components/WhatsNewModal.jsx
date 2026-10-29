@@ -3,20 +3,38 @@ import { Link } from 'react-router-dom'
 import { X, Sparkles, ChevronDown, GitBranch, BookOpen } from 'lucide-react'
 import { api } from '../lib/api'
 import { WHATS_NEW } from '../lib/whatsNew'
-import { useAppInfo } from '../lib/appVersion'
+import { useAppInfo, versionKey } from '../lib/appVersion'
+import { deviceName } from '../native'
+import { noteWhatsNew } from '../lib/diagLog'
 
 const ANON_STORAGE_KEY = 'chirp_whats_new_seen_version'
 const POPUP = WHATS_NEW.popup || WHATS_NEW.version
 
+// Shown only when POPUP is newer than what was last dismissed. An equality
+// check made the popup come back whenever an older copy of the app (a
+// cached page, another tab or device) wrote its older version back, and
+// then the newer copy showed it again.
+const VALID = /^\d+\.\d+\.\d+(\.[a-z]+)?$/
+function newer(a, b) {
+  const x = versionKey(a), y = versionKey(b)
+  for (let i = 0; i < 4; i++) if (x[i] !== y[i]) return x[i] > y[i]
+  return false
+}
+function needsPopup(...seen) {
+  const valid = seen.filter(v => v && VALID.test(v))
+  return !valid.length || valid.every(v => newer(POPUP, v))
+}
+function localSeen() { try { return localStorage.getItem(ANON_STORAGE_KEY) } catch { return null } }
+
 /**
- * Shows once per version, per user (or per browser, for an anon/no-auth
+ * Shows once per popup version (WHATS_NEW.popup), per user (or per browser, for an anon/no-auth
  * install). Real per-user tracking goes through User.last_seen_whats_new_version
  * (see api/auth.py) when a real authenticated user exists; falls back to
  * localStorage for anon/no-auth mode, since there's no real user row to
  * persist the field on there.
  *
  * Deliberately its own fully self-contained component doing its own
- * api.auth.me() fetch, rather than reading App.jsx's currentUser state —
+ * api.auth.whoami() fetch, rather than reading App.jsx's currentUser state —
  * that state only ever carries {username, role}, not the full profile
  * fields this needs (same reason Dashboard.jsx's own mode-picker logic
  * does its own independent fetch instead of relying on it).
@@ -32,28 +50,37 @@ export default function WhatsNewModal() {
   const [showHistory, setShowHistory] = useState(false)
 
   useEffect(() => {
-    api.auth.me().then(u => {
+    api.auth.whoami().then(u => {
       if (!u) return
-      if (u.username && u.auth_required !== false) {
-        // Real authenticated user — use the per-account field
+      if (u.username) {
+        // Signed in: use the per-account field, so a dismissal counts on
+        // every device and address. (Hosted sites report auth_required
+        // false because sign-in is checked per site; checking it here kept
+        // them on this browser's copy only, so the popup came back on each
+        // device, and at both ourchirp.com and www.ourchirp.com.)
         setMode('user')
-        if (u.last_seen_whats_new_version !== POPUP) setVisible(true)
+        if (needsPopup(u.last_seen_whats_new_version, localSeen())) {
+          noteWhatsNew({ popup: POPUP, server: u.last_seen_whats_new_version, local: localSeen(), app: WHATS_NEW.version })
+          setVisible(true)
+        }
       } else {
         // Anon / auth disabled — no real user row to persist to, fall back
         // to a browser-local marker instead
         setMode('anon')
-        const seen = localStorage.getItem(ANON_STORAGE_KEY)
-        if (seen !== POPUP) setVisible(true)
+        if (needsPopup(localSeen())) {
+          noteWhatsNew({ popup: POPUP, local: localSeen(), app: WHATS_NEW.version })
+          setVisible(true)
+        }
       }
     }).catch(() => {})
   }, [])
 
   const dismiss = async () => {
     setVisible(false)
+    // Also kept on this device, so a failed save doesn't bring it back here.
+    try { localStorage.setItem(ANON_STORAGE_KEY, POPUP) } catch { /* private mode */ }
     if (mode === 'user') {
       try { await api.auth.updateProfile({ last_seen_whats_new_version: POPUP }) } catch (e) { /* worst case it shows again next load — not worth blocking dismissal on this */ }
-    } else {
-      localStorage.setItem(ANON_STORAGE_KEY, POPUP)
     }
   }
 
@@ -78,7 +105,7 @@ export default function WhatsNewModal() {
           </h2>
         </div>
         <p className="text-xs mb-4" style={{ color: 'var(--text-tertiary)' }}>
-          Version {WHATS_NEW.version}{appInfo ? ` · iPhone app ${appInfo.version}` : ''}
+          Version {WHATS_NEW.version}{appInfo ? ` · ${deviceName()} app ${appInfo.version}` : ''}
         </p>
 
         {latest.intro && (

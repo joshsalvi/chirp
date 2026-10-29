@@ -1,0 +1,35 @@
+{
+  "_comment": "Chirp Live's App Store listing, pushed with: BUNDLE_ID=com.joshuasalvimd.chirplive python3 scripts/asc.py listing docs/app-store-metadata-live.json docs/screenshots/live. Notes for the parts the API can't set: docs/CHIRP_LIVE_LISTING.md.",
+  "app_info": {
+    "name": "Chirp Live: Bird Sound ID",
+    "subtitle": "Name birds by their song",
+    "privacy_policy_url": "https://ourchirp.com/privacy.html",
+    "primary_category": "REFERENCE",
+    "secondary_category": "EDUCATION"
+  },
+  "version": {
+    "copyright": "2026 Joshua Salvi"
+  },
+  "localization": {
+    "locale": "en-US",
+    "description": "Chirp Live names the birds singing around you. Tap the microphone and it listens: every few seconds it checks the last three seconds of sound and shows which birds it hears, and how sure it is.\n\nIt works on your iPhone, with no account and no signal needed. Identification uses BirdNET, from the K. Lisa Yang Center for Conservation Bioacoustics at the Cornell Lab of Ornithology and Chemnitz University of Technology, which knows over 6,000 species. If you allow location, Chirp Live narrows the list to birds found where you are at that time of year.\n\nWHAT YOU GET\n• A live list of the birds you hear, with the one singing now at the top\n• A summary after each walk: species, calls, which birds are new to you, and the best clip of each to play back\n• Every session saved on your iPhone with its sound, the place and the GPS coordinates\n• Share a session's bird list\n• Choose how sure it should be before a bird counts\n\nWITH A CHIRP SITE (OPTIONAL)\nIf you already use Chirp, the home bird-monitoring system, sign in to your site. Sessions are saved there too, your site gives a second opinion on each bird, and you can listen through your Chirp stations from anywhere: you hear the yard while your iPhone names the birds.\n\nPRIVACY\nSound is analyzed on your iPhone. Nothing you record is sent anywhere unless you sign in to a Chirp site. No ads, no tracking, and no account needed.",
+    "promotional_text": "Hold up your iPhone and see which birds are singing. It works without signal or an account, and keeps each walk with its sounds.",
+    "keywords": "bird,birding,birdsong,bird call,identify,birdnet,song,sound,nature,walk,hike,wildlife,audio,owl",
+    "support_url": "https://ourchirp.com/support.html",
+    "marketing_url": "https://ourchirp.com/about"
+  },
+  "review": {
+    "demo_account_name": "appreview",
+    "demo_account_required": false,
+    "notes": "Chirp Live identifies birds from sound on the iPhone, using the BirdNET model. No account is needed and nothing has to be set up.\n\nTo try it: tap Start listening on the first screen and allow the microphone (location is optional). Play bird song near the iPhone, for example a recording from allaboutbirds.org or xeno-canto.org on another device; birds appear within a few seconds. Tap the red button to stop and see the session summary, with each bird's clip to play. Past sessions are in the Sessions tab.\n\nSigning in is optional and only for people who already have an account on a Chirp site (Chirp is a home bird-monitoring system; ourchirp.com hosts sites). Chirp Live doesn't create or delete accounts; accounts are made and deleted on the Chirp site. To look at the signed-in features: Settings → Sign in to a Chirp site, site ourchirp.com, user appreview with the password in the review information. Signed in, sessions are also saved to the site, and the Listen tab offers \"Listen with\" a station, which plays a listening station's microphone in Natick, Massachusetts while the iPhone names the birds.\n\nThe app has no purchases, ads, tracking or user-generated content shared with others. Bird identification: BirdNET (K. Lisa Yang Center for Conservation Bioacoustics, Cornell Lab of Ornithology, and Chemnitz University of Technology), CC BY-NC-SA 4.0; the app is free."
+  },
+  "screenshots": {
+    "APP_IPHONE_67": [
+      "1-listen.png",
+      "2-summary.png",
+      "3-sessions.png",
+      "4-station.png",
+      "5-welcome.png"
+    ]
+  }
+}

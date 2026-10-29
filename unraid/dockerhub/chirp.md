@@ -4,6 +4,7 @@ Bird and bat call detection for your yard. Raspberry Pi stations listen and iden
 
 - **Web app:** recordings with spectrograms, a bird library, life list, statistics, notes, alerts and a daily journal
 - **Detection:** BirdNET v3 (default) or 2.4 on the server, Nighthawk night flight calls, bat echolocation
+- **Integrations:** brings in sound from BirdWeather stations (PUC, BirdNET-Pi, BirdNET-Go) and Bird Buddy feeders and sightings from Haikubox; submits to iNaturalist; eBird for the Field Guide
 - **AI (optional):** second opinions on calls, journals and summaries with your own Anthropic, OpenAI, Gemini or local Ollama key
 - **Many sites:** one server can host several sites, each with its own users and database
 

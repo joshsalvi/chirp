@@ -22,12 +22,12 @@ range-map lookups, or long-term storage — all of that is the server's job.
   input devices are supported.
 - **Coral EdgeTPU (optional)** — a USB neural network accelerator. If
   present, on-device classification runs meaningfully faster; if absent,
-  the same classifier still runs on CPU, just slower. This is a hardware
+  the same classifier still runs on CPU, only slower. This is a hardware
   optimization, not a hard requirement.
 - **Dual-Path Audio Subsystem** — the audio from all connected
   microphones is used in two different ways simultaneously: one path
   feeds the detection pipeline (see [Detection Pipeline](detection-pipeline.md)
-  for why this path deliberately does *not* just use every device),
+  for why this path deliberately does *not* use every device),
   and a separate path produces the audio that gets saved to disk,
   merged across all devices weighted by signal quality so the best
   microphone at any given moment dominates the recorded mix without
@@ -88,7 +88,7 @@ record, upload — nothing else) means it can run reliably on modest,
 inexpensive hardware with no persistent internet dependency for its core
 job: if the network is briefly unreachable, recordings queue locally and
 upload once connectivity returns, rather than failing outright. All the
-genuinely heavier work — enrichment, range maps, long-term storage, the
+heavier work — enrichment, range maps, long-term storage, the
 dashboard itself — lives on the server, where it can be upgraded,
 restarted, or scaled independently of whatever's physically deployed
 outdoors.
@@ -137,7 +137,7 @@ for the full reasoning.
 | `chirp-cloudflared` | Cloudflare Tunnel client — the default HTTPS path for this project (see `docs/CLOUDFLARE_TUNNEL.md` at the repo root), a purely outbound connection so nothing needs a firewall port opened |
 | `chirp-launcher` | A single static page (port 8760) for running **multiple independent chirp-server containers side by side** — one per location/tenant, each fully isolated with its own database and login, rather than one shared multi-tenant app. Lists every configured instance with a one-click link to its own subdomain/port; auto-updates its own `launcher/instances.json` when a new instance is created via `scripts/new-instance.sh`, nothing to hand-edit for the common case. See `chirp-server/MULTI_INSTANCE.md` for the full setup and the reasoning behind this approach versus `chirp-server-instances`' shared-app alternative. |
 
-Two more, genuinely optional and unrelated to the two above — a
+Two more, optional and unrelated to the two above — a
 separate, opt-in remote-device mesh, not bundled into the main
 `docker-compose.yml` at all (brought up with `docker compose -f
 docker-compose.yml -f docker-compose.headscale.yml up -d`, see that

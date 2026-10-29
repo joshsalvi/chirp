@@ -332,6 +332,7 @@ def _migrate_columns():
             ("label",            "TEXT"),
             ("bird_buddy_media_id", "VARCHAR"),
             ("bird_buddy_video_path", "VARCHAR"),
+            ("birdweather_soundscape_id", "VARCHAR"),
             ("notes",            "TEXT"),
             ("device_id",        "VARCHAR"),
             ("processing_error", "TEXT"),
@@ -355,6 +356,8 @@ def _migrate_columns():
             # Added for the SNR quality signal — see Recording.snr_db's
             # own comment in models.py for the full reasoning.
             ("snr_db", "REAL"),
+            # Live Detect from a phone (Chirp Live): the place it was made.
+            ("place_name", "VARCHAR"),
         ],
         "bird_profiles": [
             ("notes",                   "TEXT"),
@@ -441,6 +444,11 @@ def _migrate_columns():
             ("bird_buddy_selected_feeders", "JSON"),
             ("bird_buddy_last_sync_at",     "DATETIME"),
             ("bird_buddy_last_sync_error",  "VARCHAR"),
+            ("birdweather_enabled",         "BOOLEAN"),
+            ("birdweather_token",           "VARCHAR"),
+            ("birdweather_cursor_at",       "DATETIME"),
+            ("birdweather_last_sync_at",    "DATETIME"),
+            ("birdweather_last_sync_error", "VARCHAR"),
             ("inat_username",                "VARCHAR"),
             ("inat_password",                "VARCHAR"),
             ("inat_oauth_client_id",         "VARCHAR"),
@@ -453,6 +461,7 @@ def _migrate_columns():
             ("gemini_api_key",              "VARCHAR"),
             ("ollama_base_url",             "VARCHAR"),
             ("ollama_model",                "VARCHAR"),
+            ("ollama_api_key",              "VARCHAR"),
             ("vapid_public_key",            "VARCHAR"),
             ("vapid_private_key",           "VARCHAR"),
             ("apns_team_id",                "VARCHAR"),

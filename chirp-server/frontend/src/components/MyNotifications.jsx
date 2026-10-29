@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Bell, Bird, Mail, Plus, Smartphone, Trash2, Check, AlertCircle, Radio } from 'lucide-react'
 import { api } from '../lib/api'
-import { native, isApp } from '../native'
+import { native, isApp, deviceName } from '../native'
 import { PushNotificationSection } from './UserProfile'
 
 // "Every day at 9 PM, covering that day" — the site's digest hour (local).
@@ -69,8 +69,8 @@ function ThisDevice() {
   return (
     <Card icon={Smartphone} title="This iPhone">
       <p className="text-xs mb-3" style={{ color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-        {state === 'granted' ? 'Push alerts are on for this iPhone.'
-          : state === 'denied' ? 'Push alerts are off. Turn them on in the iPhone Settings app → Chirp → Notifications.'
+        {state === 'granted' ? `Push alerts are on for this ${deviceName()}.`
+          : state === 'denied' ? `Push alerts are off. Turn them on in the ${deviceName()} Settings app → Chirp → Notifications.`
           : 'Allow push alerts so the choices above reach this phone.'}
       </p>
       <div className="flex gap-2 flex-wrap">

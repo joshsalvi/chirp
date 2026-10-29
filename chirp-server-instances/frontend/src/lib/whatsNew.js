@@ -3,8 +3,8 @@
 // Keep it short:
 // - latest: what changed for people since the last popup. An intro of one
 //   sentence and at most three items, each one or two sentences.
-// - recent: the current minor version (X.Y.Z), one short line per release
-//   people would notice. Server-only and developer releases are left out.
+// - recent: the current minor version (X.Y.Z), one short line per release.
+//   Every server release gets a line, developer and server-only ones too.
 // - GROUP_SUMMARIES: one line per minor version (0.5.12, 1.3…), shown on
 //   the collapsed Changelog card. Add the new minor's line when it starts;
 //   when it ends, rewrite it to cover the whole minor and empty `recent`.
@@ -12,30 +12,42 @@
 //   collapsed era card.
 //
 // WHATS_NEW.version must match the VERSION file (stamp-sw-version.mjs
-// checks it). Set `popup` to the new version when `latest` changes.
+// checks it). Every server release adds its `recent` line. `popup` changes
+// only when `latest` does (set it to that release's version): the popup
+// shows once per `popup`, so a fix that leaves `latest` alone doesn't bring
+// it back with the same text. WhatsNewModal shows it only when `popup` is
+// newer than the version last dismissed.
 export const WHATS_NEW = {
-  version: '0.5.15.c',
+  version: '0.5.17.g',
   // The release whose `latest` text this is. The popup shows once per value,
   // so small fixes that don't change `latest` don't bring it back.
-  popup: '0.5.15.a',
+  popup: '0.5.17.a',
   title: "What's new in Chirp",
   latest: {
-    intro: 'Help when something goes wrong, and recordings on your wrist.',
+    intro: 'BirdWeather stations, an app diagnostics file for problem reports, and a page for testing the apps early.',
     sections: [
       {
-        heading: '🛟 Troubleshooting page',
-        body: 'About 50 fixes for the app, notifications, stations, sound and detections, with search. Find it under Support or at ourchirp.com/troubleshooting.html.',
+        heading: '🌦️ BirdWeather',
+        body: 'Admins can bring in the sound from a BirdWeather station (PUC, BirdNET-Pi or BirdNET-Go) in Settings → Integrations. Chirp runs it through BirdNET like an upload, with spectrograms and playback.',
       },
       {
-        heading: '⌚ Recent recordings on Apple Watch',
-        body: 'The watch app (in testing) lists your five newest recordings and plays them.',
+        heading: '🩺 App diagnostics',
+        body: 'My Profile → Help & Feedback can export a text file about this app and device, or add it to your message, to help sort out problems.',
+      },
+      {
+        heading: '📱 Test the apps early',
+        body: 'Request a TestFlight invite for the iPhone, iPad, Apple TV or Chirp Live app at ourchirp.com/testflight.html.',
       },
     ],
   },
   recent: [
-    { version: '0.5.15.c', summary: 'Security fixes in the Docker image.' },
-    { version: '0.5.15.b', summary: 'Troubleshooting links in Diagnostics and Feedback.' },
-    { version: '0.5.15.a', summary: 'Troubleshooting page; recent recordings on Apple Watch.' },
+    { version: '0.5.17.g', summary: 'Live Detect through a ChirpPi plays smoothly, without repeats.' },
+    { version: '0.5.17.f', summary: 'Optional API key for an Ollama server that asks for one.' },
+    { version: '0.5.17.e', summary: 'What\'s New is remembered by your account; Requests tab fits phones.' },
+    { version: '0.5.17.d', summary: 'App diagnostics under Settings → Diagnostics in the app.' },
+    { version: '0.5.17.c', summary: 'Bird picture packs for Chirp Live from ourchirp.com.' },
+    { version: '0.5.17.b', summary: 'What\'s New shows once per account, not once per device.' },
+    { version: '0.5.17.a', summary: 'BirdWeather stations, app diagnostics export, TestFlight page.' },
   ],
 }
 
@@ -49,6 +61,8 @@ export const ERA_SUMMARIES = {
 }
 
 export const GROUP_SUMMARIES = {
+  '0.5.17': 'BirdWeather stations, app diagnostics export and a TestFlight sign-up page.',
+  '0.5.16': 'Apple TV app, iPad support, theme-matched app icon, night flight call filters, TestFlight sign-up, site traffic, safer hosted sites and the website moved to ourchirp.com only.',
   '0.5.15': 'Troubleshooting page and recent recordings on Apple Watch.',
   '0.5.14': 'BirdNET v3 by default, per-bird AI ratings, Low pitch view, Back and Forward, station hum filter, saved recordings and a tidier Recordings list.',
   '0.5.13': 'BirdNET v3 and Nighthawk night flight calls, station offline alerts, clearer Settings text.',

@@ -18,6 +18,7 @@ import AppPermissions from './components/AppPermissions'
 import AppNative from './components/AppNative'
 import { WHATS_NEW } from './lib/whatsNew'
 import ScrollToTop from './components/ScrollToTop'
+import TVLinkPage from './components/TVLink'
 // lazy() that can be loaded ahead of time: once preload() has finished, the
 // page renders straight away instead of flashing the Suspense fallback.
 function lazyPage(factory) {
@@ -843,6 +844,7 @@ export default function App() {
                 <Route path="/users"          element={<UserManagement/>}/>
                 <Route path="/global-admin"   element={<GlobalAdmin/>}/>
                 <Route path="/profile"        element={<UserProfile/>}/>
+                <Route path="/tv"             element={<TVLinkPage/>}/>
                 <Route path="/notes"          element={<AllNotes/>}/>
                 <Route path="/notifications"  element={<Notifications/>}/>
                 <Route path="/journal"        element={<Journal/>}/>

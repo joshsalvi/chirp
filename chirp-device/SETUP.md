@@ -1,6 +1,8 @@
 # Chirp Device — Hardware & Software Setup Guide
 
-**Raspberry Pi 5 · Argon ONE v5 Industria · Google Coral M.2 · USB Microphones · Zigbee (optional)**
+**Raspberry Pi 5 · USB Microphones · optional: Argon ONE v5 Industria case, Google Coral, Zigbee**
+
+Any Pi 5 case with active cooling works. The Argon ONE sections below are for the reference build; skip them with another case. Without its screen the station runs headless.
 
 ---
 
@@ -8,8 +10,8 @@
 
 1. [Hardware Overview](#hardware-overview)
 2. [Raspberry Pi 5 — Initial OS Setup](#raspberry-pi-5--initial-os-setup)
-3. [Argon ONE v5 Case Assembly](#argon-one-v5-case-assembly)
-4. [Argon ONE v5 Fan & Power Controller](#argon-one-v5-fan--power-controller)
+3. [Argon ONE v5 Case Assembly](#argon-one-v5-case-assembly-optional)
+4. [Argon ONE v5 Fan & Power Controller](#argon-one-v5-fan--power-controller-optional)
 5. [Google Coral M.2 B+M Accelerator](#google-coral-m2-bm-accelerator)
 6. [OLED Display (Industria Panel)](#oled-display-industria-panel)
 7. [USB Microphones](#usb-microphones)
@@ -107,7 +109,7 @@ sudo reboot
 
 ---
 
-## Argon ONE v5 Case Assembly
+## Argon ONE v5 Case Assembly (optional)
 
 The **Argon ONE v5** is an aluminium Pi 5 case with passive+active cooling, OLED top panel, M.2 slot on the underside, and an integrated power/fan controller.
 
@@ -146,7 +148,7 @@ If `0x3C` is missing, check the flat-flex OLED cable connection inside the case.
 
 ---
 
-## Argon ONE v5 Fan & Power Controller
+## Argon ONE v5 Fan & Power Controller (optional)
 
 The Argon ONE v5 includes a power management and fan controller on I²C `0x1A`.  
 Install the official Argon ONE script for fan curve control and safe shutdown button support:
@@ -590,7 +592,7 @@ sudo systemctl restart chirp-device
 The Chirp device runs as a systemd service for auto-start on boot.
 
 ```bash
-# Installed automatically by install.sh — just start it:
+# Installed automatically by install.sh — start it:
 sudo systemctl start chirp-device
 sudo systemctl status chirp-device
 ```

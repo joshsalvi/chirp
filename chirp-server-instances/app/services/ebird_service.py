@@ -296,13 +296,8 @@ def _parse_bar_chart_tsv(text: str) -> Dict[str, List[float]]:
             chunk = freq_vals[start:end]
             monthly.append(round(sum(chunk) / len(chunk), 4) if chunk else 0.0)
 
-        # Normalize relative to peak (so most-common species = 1.0)
-        # NOTE: eBird already provides 0-1 checklist frequency, which is
-        # the preferred metric. We preserve the raw values for accurate
-        # seasonal shape but normalize so the chart shows relative peaks.
-        peak = max(monthly)
-        if peak > 0:
-            monthly = [round(v / peak, 4) for v in monthly]
+        # Keep eBird's raw checklist frequency. Scaling each species to its
+        # own peak made a one-off rarity look as likely as a Blue Jay.
 
         key = species_code or common_name
         if key:
@@ -405,6 +400,54 @@ def fetch_taxonomy_for_codes(
     return result
 
 
+# ── iNaturalist regional seasonality ─────────────────────────────────────────
+
+INAT_SPECIES_COUNTS = "https://api.inaturalist.org/v1/observations/species_counts"
+
+
+def fetch_inat_regional_monthly(lat: float, lon: float, radius_km: int = 50) -> Dict[str, List[float]]:
+    """
+    Month-by-month bird observations within radius_km, from iNaturalist
+    research-grade records: 12 calls, one per month.
+
+    Returns {scientific name (lower case): [jan..dec]}, each value the
+    species' count that month divided by the most-observed species' count
+    that month (so 1.0 = the commonest bird around then, a one-off stray is
+    close to 0). Comparable across species, unlike per-species peaks.
+    """
+    counts: Dict[str, List[int]] = defaultdict(lambda: [0] * 12)
+    top = [0] * 12
+    for m in range(12):
+        for page in (1, 2, 3):
+            try:
+                r = httpx.get(INAT_SPECIES_COUNTS, params={
+                    "lat": lat, "lng": lon, "radius": radius_km, "month": m + 1,
+                    "taxon_id": 3, "quality_grade": "research", "rank": "species",
+                    "per_page": 500, "page": page,
+                }, headers={"User-Agent": UA}, timeout=30)
+                if r.status_code != 200:
+                    logger.warning("iNat species_counts month %d → HTTP %d", m + 1, r.status_code)
+                    break
+                data = r.json()
+            except Exception as e:
+                logger.warning("iNat species_counts month %d error: %s", m + 1, e)
+                break
+            results = data.get("results") or []
+            for row in results:
+                name = ((row.get("taxon") or {}).get("name") or "").strip().lower()
+                n = int(row.get("count") or 0)
+                if name and n:
+                    counts[name][m] += n
+                    top[m] = max(top[m], counts[name][m])
+            time.sleep(1.0)  # iNat asks for about one request a second
+            if page * 500 >= int(data.get("total_results") or 0):
+                break
+    out = {name: [round(v / top[i], 4) if top[i] else 0.0 for i, v in enumerate(vals)]
+           for name, vals in counts.items()}
+    logger.info("iNat regional seasonality: %d species within %d km", len(out), radius_km)
+    return out
+
+
 # ── Main entry point ──────────────────────────────────────────────────────────
 
 def fetch_regional_species_with_monthly_frequency(
@@ -445,6 +488,13 @@ def fetch_regional_species_with_monthly_frequency(
     if region_code and api_key:
         bar_chart_data = fetch_bar_chart_data(region_code, api_key)
         logger.info("Bar chart: %d species for region %s", len(bar_chart_data), region_code)
+
+    # ── Step 4b: regional seasonality from iNaturalist ───────────────────────
+    # The bar chart needs an eBird web login and is usually empty; without
+    # this, frequencies came from worldwide data and rarities ranked high.
+    inat_monthly: Dict[str, List[float]] = {}
+    if not bar_chart_data:
+        inat_monthly = fetch_inat_regional_monthly(lat, lon, radius_km)
 
     # ── Step 5: geo/recent for recency + abundance ranking ────────────────────
     # Only 30 days, but gives obs_count / days_seen for sorting.
@@ -514,6 +564,7 @@ def fetch_regional_species_with_monthly_frequency(
         monthly = (
             bar_chart_data.get(code)
             or bar_chart_data.get(name)
+            or inat_monthly.get((info.get("scientific_name") or "").strip().lower())
         )
         if not monthly or not any(v > 0 for v in monthly):
             obs = info.get("obs_count", 0)

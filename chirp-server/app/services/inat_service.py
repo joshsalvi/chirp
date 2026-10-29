@@ -55,6 +55,7 @@ def submit_observation(
     description = notes or (
         f"Automated detection by Chirp bird monitoring system. Species: {common_name}."
     )
+    description = with_chirp_link(description)
     # Clamp observed date to today — iNaturalist rejects future dates with
     # a 422 "date observed can't be in the future" error. This can happen
     # if the recording timestamp is UTC while the local date is behind, or
@@ -265,6 +266,18 @@ def attach_photo_background(
         logger.warning("iNat bg: spectrogram attach exception: %s", e)
 
 
+CHIRP_LINK = "https://ourchirp.com"
+
+
+def with_chirp_link(text: str) -> str:
+    """Append the Chirp link to text posted to iNaturalist, once."""
+    text = (text or "").rstrip()
+    if "ourchirp.com" in text.lower():
+        return text
+    line = f"Recorded with Chirp: {CHIRP_LINK}"
+    return f"{text}\n\n{line}" if text else line
+
+
 def post_comment(token: str, obs_id, body: str) -> dict:
     """
     Post a real comment on an existing iNaturalist observation, using
@@ -292,7 +305,7 @@ def post_comment(token: str, obs_id, body: str) -> dict:
 
     payload = {
         "comment": {
-            "body": body.strip(),
+            "body": with_chirp_link(body.strip()),
             "parent_type": "Observation",
             "parent_id": int(obs_id) if str(obs_id).isdigit() else obs_id,
         }

@@ -7,7 +7,7 @@
  */
 import { useEffect, useState } from 'react'
 import { Bell, Mic, X } from 'lucide-react'
-import { native, isApp } from '../native'
+import { native, isApp, deviceName } from '../native'
 import { api } from '../lib/api'
 
 const DONE_KEY = 'chirp_app_permissions_v1'
@@ -94,10 +94,10 @@ export default function AppPermissions() {
         <div className="flex items-start justify-between gap-3 mb-2">
           <div>
             <h2 id="app-perm-title" className="font-display text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-              Set up Chirp on this iPhone
+              Set up Chirp on this {deviceName()}
             </h2>
             <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-              Your iPhone will ask about each one now. You can change them later in Settings → Chirp.
+              Your {deviceName()} will ask about each one now. You can change them later in Settings → Chirp.
             </p>
           </div>
           <button aria-label="Close" onClick={finish} className="p-1 -m-1" style={{ color: 'var(--text-tertiary)' }}>

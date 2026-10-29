@@ -34,3 +34,13 @@ def test_support_form(monkeypatch):
     assert mine["kind"] == "feature" and not mine["done"] and "ip" not in mine
     assert c.patch(f"/api/v1/admin/support/{mine['id']}", json={"done": True}).json()["done"] is True
     assert c.delete(f"/api/v1/admin/support/{mine['id']}").status_code == 204
+
+    # TestFlight requests: same inbox, need an email for the invite.
+    support._recent.clear()
+    assert c.post("/api/v1/support", json={"kind": "testflight", "message": "TestFlight request for: iPad"}).status_code == 400
+    r = c.post("/api/v1/support", json={"kind": "testflight", "name": "Bo", "email": "bo@example.com",
+                                        "message": "TestFlight request for: iPhone and Apple Watch, Apple TV"})
+    assert r.status_code == 201 and "testflight request" in mails[-1][1]
+    tf = [m for m in c.get("/api/v1/admin/support").json() if m["email"] == "bo@example.com"][0]
+    assert tf["kind"] == "testflight"
+    assert c.delete(f"/api/v1/admin/support/{tf['id']}").status_code == 204

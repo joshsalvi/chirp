@@ -1,13 +1,23 @@
 # Device Setup Guide
 
 A full walkthrough for building a chirp-device edge node from bare hardware:
-Raspberry Pi 5, Argon ONE v5 Industria case, Google Coral M.2 accelerator,
-USB microphones, and an optional Zigbee coordinator. For the concepts
+a Raspberry Pi 5 and USB microphones, plus optional extras: the Argon ONE v5
+Industria case (with its small screen), a Google Coral accelerator and a
+Zigbee coordinator. For the concepts
 behind each piece (why this hardware, how the software handles it), see
 [Hardware & Edge Device](hardware.md) and [Microphones](microphones.md);
 this page is the procedural companion to those.
 
+!!! note "The case is your choice"
+    Any Raspberry Pi 5 case with active cooling works, for example the
+    official Pi 5 case or a Pi 5 Active Cooler. This guide uses the Argon
+    ONE v5 Industria case as its reference build; skip the Argon sections
+    if you use something else. Without its screen the station runs
+    headless and logs "No OLED display found" once at startup.
+
 ## Hardware overview
+
+The diagram shows the reference build; the Argon ONE parts are optional.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -35,7 +45,7 @@ this page is the procedural companion to those.
 Use the **Raspberry Pi Imager** tool (raspberrypi.com/software) on your PC/Mac.
 
 - **OS:** Raspberry Pi OS Lite (64-bit, Bookworm or newer) — no desktop needed
-- **Storage:** MicroSD 32 GB+ Class 10, or USB SSD in the Argon ONE v5's M.2 slot
+- **Storage:** MicroSD 32 GB+ Class 10, or an SSD (USB, or an M.2 slot such as the Argon ONE v5's)
 
 In Imager settings (⚙️ icon) before flashing:
 
@@ -51,7 +61,7 @@ The username above is a placeholder — any username works, and every
 `pi@`/`/home/pi/...` path in this guide is that placeholder's stand-in,
 not a hard requirement. Substitute your actual username throughout;
 `config.yaml`, the systemd unit, and every install script all key off
-wherever the repo actually lives, not a specific username.
+wherever the repo is, not a specific username.
 
 ### 2. First boot
 
@@ -78,7 +88,7 @@ sudo raspi-config
 
 Navigate to **Interface Options** and enable:
 
-- **I2C** — required for the OLED display and Argon ONE controller
+- **I2C** — needed only for the optional OLED display and Argon ONE controller
 - **PCIe / PCIe Gen 2** — required for the Coral M.2 (see below)
 
 Or add directly to `/boot/firmware/config.txt`:
@@ -97,9 +107,9 @@ dtparam=pciex1
 sudo reboot
 ```
 
-## Argon ONE v5 case assembly
+## Argon ONE v5 case assembly (optional)
 
-The Argon ONE v5 is an aluminum Pi 5 case with passive+active cooling, an
+Skip this section if you use another case. The Argon ONE v5 is an aluminum Pi 5 case with passive+active cooling, an
 OLED top panel, an M.2 slot on the underside, and an integrated
 power/fan controller.
 
@@ -138,13 +148,17 @@ Expected addresses:
 
 | Address | Device |
 |---|---|
-| `0x1A` | Argon ONE fan/power controller |
-| `0x3C` | SSD1306 OLED display (Industria panel) |
+| `0x1A` | Argon ONE fan/power controller (Argon case only) |
+| `0x3C` | SSD1306 OLED display (Industria panel, or any SSD1306 you add) |
+
+Without the Argon case and a screen, neither address appears; that's fine.
 
 If `0x3C` is missing, check the flat-flex OLED cable connection inside
 the case.
 
-## Argon ONE v5 fan & power controller
+## Argon ONE v5 fan & power controller (optional)
+
+Argon ONE case only.
 
 The Argon ONE v5 includes a power management and fan controller on I²C
 `0x1A`. Install the official Argon ONE script for fan-curve control and
@@ -178,7 +192,7 @@ Recommended settings for a continuous detection workload:
     Chirp's OLED display reads CPU temperature directly from sysfs and
     doesn't conflict with the Argon ONE fan/power controller itself. It
     **does** conflict with the Argon ONE's own OLED daemon — see
-    "Argon ONE OLED daemon conflict" under [OLED display](#oled-display-industria-panel)
+    "Argon ONE OLED daemon conflict" under [OLED display](#oled-display-industria-panel-optional)
     below.
 
 ## Google Coral M.2 B+M accelerator
@@ -189,8 +203,12 @@ not `libedgetpu` alone.
 
 ### Hardware installation
 
+The M.2 card needs an M.2 slot that takes B+M (or A+E) cards, such as the
+Argon ONE v5's base. Without one, use the **Coral USB Accelerator**
+instead: plug it into a blue USB 3 port and skip to the software step.
+
 1. Power off the Pi completely.
-2. Remove the Argon ONE case bottom.
+2. Open the case or HAT that holds the M.2 slot (on the Argon ONE, remove the case bottom).
 3. Insert the Coral M.2 card into the M.2 B+M slot at a 30° angle, press
    down, and secure with the M.2 screw.
 4. Reassemble the case.
@@ -280,9 +298,9 @@ python main.py --test-detection
 The Coral allows real-time continuous processing without audio gaps.
 Supports USB Accelerator, M.2 A+E, M.2 B+M, and PCIe form factors.
 
-## OLED display (Industria panel)
+## OLED display (Industria panel, optional)
 
-The Argon ONE v5 Industria edition includes a 128×32 SSD1306 OLED in the
+Optional. The Argon ONE v5 Industria edition includes a 128×32 SSD1306 OLED in the
 top panel, connected via I²C on address `0x3C`.
 
 ### Install display dependencies
@@ -617,7 +635,7 @@ that enables.
 chirp-device runs as a systemd service for auto-start on boot.
 
 ```bash
-# Installed automatically by install.sh — just start it:
+# Installed automatically by install.sh — start it:
 sudo systemctl start chirp-device
 sudo systemctl status chirp-device
 ```
@@ -748,7 +766,7 @@ journalctl -u chirp-device | grep -i "zigbee\|mqtt"
 | Item | Approx. cost |
 |---|---|
 | Raspberry Pi 5 — 8GB | $80 |
-| Argon ONE v5 Industria case | $45 |
+| Pi 5 case with active cooling (reference: Argon ONE v5 Industria, $45) | $10–$45 |
 | Google Coral M.2 B+M Accelerator | $25 |
 | MicroSD 64 GB (Class 10 / A2) | $12 |
 | 5V / 5A USB-C power supply | $12 |
@@ -756,7 +774,7 @@ journalctl -u chirp-device | grep -i "zigbee\|mqtt"
 | ConBee II Zigbee dongle (optional) | $35 |
 | Short USB 2.0 extension, 15 cm (Zigbee RF isolation) | $3 |
 | M.2 SSD (optional, for storage) | $15–$30 |
-| **Total (without optional items)** | **~$210** |
+| **Total (Argon case and Coral included, other optional items left out)** | **~$210** |
 
 See also: [Hardware & Edge Device](hardware.md) ·
 [Microphones](microphones.md) · [Server Deployment](deployment.md)

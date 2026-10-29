@@ -1,4 +1,5 @@
 """Chirp Server — FastAPI Application"""
+import time
 import asyncio, json, logging, os, re
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -46,6 +47,7 @@ from .api import notifications as notifications_router
 from .api import techdocs as techdocs_router
 from .api import live_detect as live_detect_router
 from .api import watch as watch_router
+from .api import tv as tv_router
 from .api import near_misses as near_misses_router
 from .services import log_buffer
 from .cache import settings_cache, user_token_cache
@@ -605,6 +607,11 @@ async def lifespan(app: FastAPI):
     _bb_sync = _get_bb_sync()
     _bb_sync.start()
 
+    # BirdWeather sync — imports a BirdWeather station's sound every 15 min if enabled
+    from .services.birdweather_sync import get_sync_service as _get_bw_sync
+    _bw_sync = _get_bw_sync()
+    _bw_sync.start()
+
     # iNaturalist token auto-refresh — keeps inat_api_token fresh if enabled + credentials configured
     from .services.inat_auth import get_service as _get_inat_auth
     _inat_auth = _get_inat_auth()
@@ -614,6 +621,7 @@ async def lifespan(app: FastAPI):
     _stop_digest.set()
     _hb_sync.stop()
     _bb_sync.stop()
+    _bw_sync.stop()
     _inat_auth.stop()
     storage_mgr.stop()
     tailscale_mgr.stop()
@@ -628,6 +636,8 @@ UNPROTECTED = {
     "/api/v1/health",
     "/api/v1/changelog",     # readable by all users, auth or not
     "/api/v1/map-config",    # map tile key (CHIRP_CARTO_KEY), public like the tiles themselves
+    "/api/v1/tv/pair/start",  # Apple TV sign-in by code (api/tv.py); rate-limited
+    "/api/v1/tv/pair/poll",
     "/api/v1/ios-resign/event",   # X-API-Key (stack device key), see api/ios_resign.py
     "/api/v1/support",            # support / feature form (rate-limited), see api/support.py
 }
@@ -675,7 +685,8 @@ _VIEWER_WRITE_OK = re.compile(
     r"|recordings/ai-warm"
     r"|recordings/[^/]+/(comments(/[^/]+)?|share)"
     r"|birds/([^/]+/comments(/[^/]+)?|ensure/.*)"
-    r"|live-detect/analyze"
+    r"|live-detect/(analyze|save-session)"
+    r"|auth/watch-token"
     r")$"
 )
 
@@ -684,13 +695,60 @@ def viewer_may_write(method: str, path: str) -> bool:
     return method in ("GET", "HEAD", "OPTIONS") or bool(_VIEWER_WRITE_OK.match(path))
 
 
-# Apple Watch sign-ins (POST /auth/watch-token) only run Live Detect and
-# play recent recordings (api/watch.py).
-_WATCH_OK = re.compile(r"^/api/v1/(live-detect/(analyze|save-session)|auth/me|watch/recent|watch/audio/[0-9A-Za-z-]+)$")
+# Apple Watch and Chirp Live sign-ins (POST /auth/watch-token) only run Live
+# Detect, play recent recordings (api/watch.py) and listen through a
+# station (api/tv.py's station list and audio).
+_WATCH_OK = re.compile(r"^/api/v1/(live-detect/(analyze|save-session)|auth/me|watch/recent|watch/audio/[0-9A-Za-z-]+"
+                       r"|tv/stations|tv/listen/[0-9A-Za-z-]+)$")
 
 
 def watch_may_use(path: str) -> bool:
     return bool(_WATCH_OK.match(path))
+
+
+# Apple TV sign-ins (api/tv.py) read the digest, journal and recent
+# recordings, play them, and run Live Detect through a station.
+_TV_GET_OK = re.compile(
+    r"^/api/v1/(auth/me|tv/(stations|recent|listen/[0-9A-Za-z-]+)"
+    r"|recordings/statistics/(digest|daily-journal|weekly-journal)"
+    r"|watch/audio/[0-9A-Za-z-]+|recordings/[0-9A-Za-z-]+)$")
+_TV_POST_OK = re.compile(r"^/api/v1/live-detect/analyze$")
+
+
+def tv_may_use(method: str, path: str) -> bool:
+    if method in ("GET", "HEAD"):
+        return bool(_TV_GET_OK.match(path))
+    return method == "POST" and bool(_TV_POST_OK.match(path))
+
+
+_site_roles: dict = {}
+
+
+def _site_role(claims: dict):
+    """The person's role on the site their sign-in is for, on a multi-site
+    server (registry Membership); None on a single-site server or without a
+    site. Cached for a minute."""
+    gid, iid = claims.get("global_user_id"), claims.get("active_instance_id")
+    if not gid or not iid:
+        return None
+    hit = _site_roles.get((gid, iid))
+    if hit and hit[1] > time.time():
+        return hit[0]
+    try:
+        from .registry_db import RegistrySessionLocal
+        from .registry_models import Membership
+    except ImportError:
+        return None
+    reg = RegistrySessionLocal()
+    try:
+        m = reg.query(Membership).filter(Membership.user_id == gid, Membership.instance_id == iid).first()
+        role = m.role if m else None
+    except Exception:
+        role = None
+    finally:
+        reg.close()
+    _site_roles[(gid, iid)] = (role, time.time() + 60)
+    return role
 
 
 class AuthMiddleware(BaseHTTPMiddleware):
@@ -715,6 +773,27 @@ class AuthMiddleware(BaseHTTPMiddleware):
             except Exception:
                 cached_auth = settings.auth_enabled
             settings_cache.set("auth_enabled", cached_auth)
+
+        # Scoped sign-ins (Apple TV, Apple Watch, Chirp Live) stay limited even
+        # where sign-in isn't otherwise checked here: a multi-site server
+        # checks sign-ins per site, so cached_auth is off on it.
+        bearer = request.headers.get("Authorization", "")
+        if bearer.startswith("Bearer "):
+            from .api.auth import verify_token
+            claims = verify_token(bearer[7:]) or {}
+            scope = claims.get("scope")
+            if scope == "tv" and not tv_may_use(request.method, path):
+                return JSONResponse({"detail": "The Apple TV sign-in can't do that."}, status_code=403)
+            if scope == "watch" and not watch_may_use(path):
+                return JSONResponse({"detail": "The watch sign-in only works for Live Detect."}, status_code=403)
+            # View-only members of a site on a multi-site server: their role
+            # there comes from the registry (sites, sign-ins and global admin
+            # pages are per person, not per site, so they're left alone).
+            if (not cached_auth and not path.startswith(("/api/v1/instances/", "/api/v1/admin/"))
+                    and not viewer_may_write(request.method, path)
+                    and _site_role(claims) == "viewer"):
+                return JSONResponse({"detail": "This account is view-only. Ask an admin for submitter access."},
+                                    status_code=403)
 
         if not cached_auth:
             return await call_next(request)
@@ -748,6 +827,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
             user_token_cache.set(token, cached_user)
         elif not cached_user.get("active"):
             return JSONResponse({"detail": "User not found"}, status_code=401)
+
+        if cached_user.get("scope") == "tv" and not tv_may_use(request.method, path):
+            return JSONResponse({"detail": "The Apple TV sign-in can't do that."}, status_code=403)
 
         if cached_user.get("scope") == "watch" and not watch_may_use(path):
             return JSONResponse({"detail": "The watch sign-in only works for Live Detect."}, status_code=403)
@@ -874,6 +956,21 @@ async def _retired_host_redirect(request, call_next):
     return await call_next(request)
 
 
+from . import website as _website
+
+
+@app.middleware("http")
+async def _website_elsewhere(request, call_next):
+    # The website (about, guides, support, privacy) lives on ourchirp.com;
+    # other servers send old links and bookmarks there.
+    p = request.url.path
+    if not _website.HOSTS_WEBSITE and request.method in ("GET", "HEAD") and _website.website_page(p):
+        from fastapi.responses import RedirectResponse
+        q = f"?{request.url.query}" if request.url.query else ""
+        return RedirectResponse(f"{_website.WEBSITE_URL}/{p.strip('/')}{q}", status_code=302)
+    return await call_next(request)
+
+
 _REVALIDATE_PATHS = {"/manifest.json", "/favicon.ico", "/favicon.svg", "/icon-192.png",
                      "/icon-512.png", "/apple-touch-icon.png", "/logo.svg"}
 
@@ -895,6 +992,7 @@ app.include_router(moderation_router.router, prefix="/api/v1/moderation", tags=[
 app.include_router(techdocs_router.router, prefix="/api/v1/techdocs", tags=["techdocs"])
 app.include_router(live_detect_router.router, prefix="/api/v1/live-detect", tags=["live-detect"])
 app.include_router(watch_router.router, prefix="/api/v1/watch", tags=["watch"])
+app.include_router(tv_router.router, prefix="/api/v1/tv", tags=["tv"])
 app.include_router(near_misses_router.router, prefix="/api/v1/near-misses", tags=["near-misses"])
 from .api import support as support_router
 app.include_router(support_router.router, prefix="/api/v1/support", tags=["support"])

@@ -28,7 +28,7 @@ class _Resp:
 
 
 def _fake_post(answers, calls):
-    def post(url, json=None, timeout=None):
+    def post(url, json=None, timeout=None, headers=None):
         calls.append(json)
         return _Resp(answers.pop(0))
     return post
@@ -67,7 +67,7 @@ def test_vision_old_ollama_without_think_option(monkeypatch):
 
     seq = [_Bad({}), _Resp({"message": {"content": "UNCERTAIN\n\n**Overall:** can't tell."}})]
 
-    def post(url, json=None, timeout=None):
+    def post(url, json=None, timeout=None, headers=None):
         calls.append(dict(json))
         return seq.pop(0)
     monkeypatch.setattr(ai_providers.httpx, "post", post)
@@ -79,11 +79,11 @@ def test_warm_ollama(monkeypatch):
     class _Ps(_Resp):
         pass
     monkeypatch.setattr(ai_providers.httpx, "get",
-                        lambda url, timeout=None: _Ps({"models": [{"name": "gemma4:12b"}]}))
+                        lambda url, timeout=None, headers=None: _Ps({"models": [{"name": "gemma4:12b"}]}))
     assert ai_providers.warm_ollama(json.loads(CFG)) == "loaded"
     posted = []
-    monkeypatch.setattr(ai_providers.httpx, "get", lambda url, timeout=None: _Ps({"models": []}))
-    monkeypatch.setattr(ai_providers.httpx, "post", lambda url, json=None, timeout=None: posted.append(json))
+    monkeypatch.setattr(ai_providers.httpx, "get", lambda url, timeout=None, headers=None: _Ps({"models": []}))
+    monkeypatch.setattr(ai_providers.httpx, "post", lambda url, json=None, timeout=None, headers=None: posted.append(json))
     assert ai_providers.warm_ollama(json.loads(CFG)) == "loading"
     import time
     for _ in range(50):

@@ -1,7 +1,7 @@
 # Remote Access (Tailscale / Headscale)
 
 Lets the server, any device, and your own laptop/phone reach each other
-directly and securely from anywhere — not just on the same home network —
+directly and securely from anywhere — not only on the same home network —
 without exposing anything else to the internet. This is the same underlying
 technology whether you use Tailscale's own cloud service or a self-hosted
 Headscale instance; the client software and the day-to-day experience are
@@ -22,7 +22,7 @@ identical either way.
   Docker Compose file from the bundled one above — see "Standalone
   Headscale + DERP setup (chirp-server only)" further down this page.
   Pick whichever already exists or fits better; there's no wrong
-  choice, just two genuinely different levels of setup effort.
+  choice, only two different levels of setup effort.
 - **chirp-device** connects the same way, via `tailscale:` in its own
   `config.yaml`.
 
@@ -37,7 +37,7 @@ alongside chirp-server explicitly:
 docker compose -f docker-compose.yml -f docker-compose.headscale.yml up -d
 ```
 
-Two services, both genuinely optional and independent of chirp-server's
+Two services, both optional and independent of chirp-server's
 core function:
 
 | Service | What it does |
@@ -66,7 +66,7 @@ knowing before choosing this path:**
   DERP servers as the direct-connection fallback instead.
 
 If either of chirp-server-instances' gaps above (manual setup, no TLS)
-matters to you, running a full chirp-server-instances deployment just
+matters to you, running a full chirp-server-instances deployment only
 for its bundled Headscale — even with only one location's worth of
 actual multi-tenant data — is a real, simpler alternative to closing
 those gaps by hand on this standalone path.
@@ -92,14 +92,14 @@ those gaps by hand on this standalone path.
    proxying (Tunnel or otherwise) cannot carry Tailscale's protocol at
    all — see [Cloudflare cannot be used in front of Headscale](#cloudflare-cannot-be-used-in-front-of-headscale-at-all) below.
 3. **`.env`**: set `CF_API_TOKEN` to a Cloudflare API token scoped to
-   `Zone:DNS:Edit` for just that domain (not your account's global API
+   `Zone:DNS:Edit` for that domain only (not your account's global API
    key) — generate one at `dash.cloudflare.com/profile/api-tokens`,
    "Edit zone DNS" template. Used by both `caddy` (to prove domain
    ownership for its certificate) and `cloudflare-ddns` (to keep the
    record current).
 4. **Router port forward**: external **TCP 443** → this host's port
-   **8443** (not 443 — that's Unraid's own management UI on most
-   setups). One rule, nothing else.
+   **8443** (not 443, which the host's own web UI often uses, e.g.
+   Unraid's). One rule, nothing else.
 5. Deploy: `docker compose up -d --build`.
 
 That's the whole one-time list. After this, nothing needs ongoing
@@ -205,7 +205,7 @@ not work as Cloudflare does not support WebSocket POSTs as required by
 the Tailscale protocol." Tailscale's handshake upgrades an HTTP **POST**
 request via an `Upgrade` header — Cloudflare Tunnel has a confirmed,
 still-open bug where it strips that header specifically on POST requests.
-This is true of Cloudflare's regular (non-Tunnel) proxying too, not just
+This is true of Cloudflare's regular (non-Tunnel) proxying too, not only
 Tunnel — the DNS record for the Headscale domain must be **DNS only**
 (grey cloud), never proxied, no matter which Cloudflare product is
 involved. The fix is a dedicated reverse proxy (Caddy, bundled — see
@@ -220,12 +220,13 @@ the host has no real IPv6 route — common even when IPv6 is nominally
 enabled at the OS level but the network doesn't route it. The
 client burns through many doomed IPv6 attempts before ever reaching a
 working IPv4 one, often exhausting the whole 60-second window in the
-process. Fix, on the host (Unraid), not in any Chirp config:
+process. Fix, on the Docker host, not in any Chirp config:
 
 ```bash
 sysctl -w net.ipv6.conf.all.disable_ipv6=1
 ```
 
-Make this persist across reboots via Unraid's own Network Settings (an
-explicit IPv4-only toggle, if present) or a boot script — a live
+Make this persist across reboots in the host's network settings (on
+Unraid: Settings → Network Settings, if it offers IPv4 only) or a boot
+script — a live
 `sysctl` alone reverts on restart.

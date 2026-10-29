@@ -7,7 +7,7 @@ a provider in Settings → Experimental → AI Features, off by default:
 |---|---|---|
 | Daily Journal | Text | A short, personality-driven daily summary of what showed up |
 | Bird Profile Summaries | Text | A presence summary on each species' profile page |
-| Call Re-analysis (**AI Second Opinion** button, in the UI) | Vision | Shows the model a spectrogram image as a second opinion on an uncertain detection — also does a required second pass over the whole image for anything else visible (other bird calls BirdNET didn't flag, with its own species guess; other animal sounds like a chipmunk's chip or an insect chorus). The per-species verdict only ever covers detections actually shown above `min_confidence_display` — the same threshold the spectrogram overlay and detections list use — so it never discusses a species the recording's own detail page never displayed as a flagged detection. The image uses a mel-spaced, labeled frequency axis so low calls (owls, doves) are visible; each species line carries a frequency band measured from the audio, and recordings over 60 s are cropped to the 60 s stretch with the most detections. Each species line also carries measured facts: nothing above the background in its boxes, energy only in the wind/traffic rumble range (below 0.4 kHz, for species that call higher), faint (under 8 dB above background), whether the server's BirdNET pass agreed, and the eBird relative frequency for this month. When any of those count against the primary species, the note ends with an **Audio check for <species>:** paragraph saying so in plain sentences (e.g. "The call is faint, only 6 dB louder than the background."), and a Consistent verdict becomes Uncertain when the boxes hold nothing measurable or only rumble. Non-bird sounds are measured too: short loud broadband bursts (dog barks, other mammals, voices, knocks), with a note on any species whose boxes they fall in, and steady bands above 1.5 kHz (insect chorus, electrical whine, hiss); if the model's **Also visible** paragraph leaves either out, the measured description is added there. It runs in the background (the page polls until the note or an error appears); image requests time out after 120 s on hosted providers and 420 s on Ollama. Requests use temperature 0.2. Ollama requests use a 16k-token context (`CHIRP_OLLAMA_NUM_CTX`) and ask thinking models to answer directly (`think: false`; set `CHIRP_OLLAMA_THINK=1` to let them reason first, at several times the wait). Opening a recording page loads the Ollama model in the background (`POST /recordings/ai-warm`), and the model stays loaded for 30 min. The spectrogram goes as a JPEG, 1024 px wide for Ollama and 1344 px for hosted providers; Anthropic requests cache the instructions. |
+| Call Re-analysis (**AI Second Opinion** button, in the UI) | Vision | Shows the model a spectrogram image as a second opinion on an uncertain detection — also does a required second pass over the whole image for anything else visible (other bird calls BirdNET didn't flag, with its own species guess; other animal sounds like a chipmunk's chip or an insect chorus). The per-species verdict only ever covers detections shown above `min_confidence_display` — the same threshold the spectrogram overlay and detections list use — so it never discusses a species the recording's own detail page never displayed as a flagged detection. The image uses a mel-spaced, labeled frequency axis so low calls (owls, doves) are visible; each species line carries a frequency band measured from the audio, and recordings over 60 s are cropped to the 60 s stretch with the most detections. Each species line also carries measured facts: nothing above the background in its boxes, energy only in the wind/traffic rumble range (below 0.4 kHz, for species that call higher), faint (under 8 dB above background), whether the server's BirdNET pass agreed, and the eBird relative frequency for this month. When any of those count against the primary species, the note ends with an **Audio check for <species>:** paragraph saying so in plain sentences (e.g. "The call is faint, only 6 dB louder than the background."), and a Consistent verdict becomes Uncertain when the boxes hold nothing measurable or only rumble. Non-bird sounds are measured too: short loud broadband bursts (dog barks, other mammals, voices, knocks), with a note on any species whose boxes they fall in, and steady bands above 1.5 kHz (insect chorus, electrical whine, hiss); if the model's **Also visible** paragraph leaves either out, the measured description is added there. It runs in the background (the page polls until the note or an error appears); image requests time out after 120 s on hosted providers and 420 s on Ollama. Requests use temperature 0.2. Ollama requests use a 16k-token context (`CHIRP_OLLAMA_NUM_CTX`) and ask thinking models to answer directly (`think: false`; set `CHIRP_OLLAMA_THINK=1` to let them reason first, at several times the wait). Opening a recording page loads the Ollama model in the background (`POST /recordings/ai-warm`), and the model stays loaded for 30 min. The spectrogram goes as a JPEG, 1024 px wide for Ollama and 1344 px for hosted providers; Anthropic requests cache the instructions. |
 
 Supported providers: Anthropic, OpenAI, Gemini, and Ollama — configured
 independently per feature.
@@ -36,8 +36,8 @@ is the fully self-hosted/zero-cost pick.
 
 ## Setting up Ollama
 
-**1. Install** (bare-metal or Docker — if you're running the rest of
-Chirp on Unraid, Docker is the natural fit):
+**1. Install** (bare-metal or Docker — if the rest of Chirp already runs
+in Docker, Docker is the natural fit):
 
 ```bash
 # Bare-metal (Linux):
@@ -50,8 +50,8 @@ docker run -d --gpus=all -v ollama:/root/.ollama -p 11434:11434 --name ollama ol
 **2. Give the container your GPU.** Docker doesn't expose a GPU to a
 container by default, even with working host drivers — this is the
 single most common reason Ollama silently runs on CPU with no error. On
-Unraid: install the Nvidia-Driver plugin (Community Applications) first,
-then make sure the container actually requests the GPU. In
+Linux, install the NVIDIA Container Toolkit; on Unraid, the Nvidia-Driver plugin (Community Applications).
+Then make sure the container requests the GPU. In
 docker-compose:
 
 ```yaml
@@ -73,7 +73,7 @@ volumes:
   ollama:
 ```
 
-**3. Pull a model** (see the table below), then confirm it's actually on
+**3. Pull a model** (see the table below), then confirm it's on
 the GPU:
 
 ```bash
@@ -87,6 +87,12 @@ URL (e.g. `http://192.168.1.X:11434` — use the host's LAN IP, not
 `localhost`, if Ollama runs in a separate container from chirp-server)
 and model name, then assign whichever features you want to it.
 
+**Reaching Ollama over the internet:** Ollama has no sign-in, so don't
+expose port 11434 directly. Put a proxy in front that requires a key
+(e.g. Caddy matching `Authorization: Bearer <key>`), and enter that key
+in the optional API key field. Chirp sends it on every Ollama request;
+it's masked like the other keys. Leave it blank for a LAN-only server.
+
 ## Which Ollama model should you use?
 
 Model names, sizes, and exact VRAM figures shift often — always
@@ -97,7 +103,7 @@ than exact:
 
 | Model | Type | Approx. VRAM | Pros | Cons |
 |---|---|---|---|---|
-| `gemma4:e2b` | Vision + text | ~2–4 GB | Runs on almost anything; genuinely multimodal, not a bolted-on vision head | Weakest reasoning of the family — fine for short summaries, shakier on nuanced spectrogram judgment |
+| `gemma4:e2b` | Vision + text | ~2–4 GB | Runs on almost anything; multimodal, not a bolted-on vision head | Weakest reasoning of the family — fine for short summaries, shakier on nuanced spectrogram judgment |
 | `gemma4:e4b` | Vision + text | ~6–8 GB | Best quality-per-GB tradeoff for a modest GPU; still fast | Meaningfully behind the larger tiers on fine visual detail |
 | `gemma4:26b` (MoE, ~4B active) | Vision + text | ~16–20 GB | Strong quality while staying fast (MoE only activates a fraction of params per token) | Needs a real GPU; larger download |
 | `gemma4:31b` | Vision + text | ~20–24 GB+ | Best quality in the family; dense model, no MoE inconsistency | Needs a high-end GPU; slower per-token than the MoE tier |
@@ -108,7 +114,7 @@ than exact:
 
 **Recommendation:** given working GPU passthrough, `gemma4:e4b`
 (Strategy A, one model for everything) is the best starting point —
-genuinely multimodal, fast, and modest on VRAM. If Call Re-analysis's
+multimodal, fast, and modest on VRAM. If Call Re-analysis's
 judgment calls matter and there's VRAM to spare, `gemma4:26b` is a
 meaningful step up for that feature specifically. To keep Call
 Re-analysis on a hosted provider and use Ollama only for the two text

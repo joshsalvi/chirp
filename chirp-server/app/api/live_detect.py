@@ -127,12 +127,13 @@ def device_location(db, device_id):
 @router.post("/analyze")
 async def live_detect_analyze(
     background_tasks: BackgroundTasks,
-    file: UploadFile = File(None, description="Short audio clip from the browser's own microphone — required when source='phone'"),
+    file: UploadFile = File(None, description="Short audio clip: required when source='phone'; with source='device', station audio the app already fetched"),
     source: str = Form("phone", description="'phone' (uploaded clip) or 'device' (pull live from a chirp-device mic)"),
     device_id: Optional[str] = Form(None, description="Required when source='device'"),
     mic_name: Optional[str] = Form(None, description="Required when source='device' — exact mic name as shown in mic check"),
     latitude: Optional[float] = Form(None),
     longitude: Optional[float] = Form(None),
+    place_name: Optional[str] = Form(None, description="Where the phone is, e.g. a park or town (Chirp Live)"),
     min_confidence: Optional[float] = Form(None, description="Overrides the server's own BirdNET confidence threshold for this clip only — used by Live Detect's sensitivity slider, never persisted, never affects regular recordings"),
     db: Session = Depends(get_db),
 ):
@@ -143,7 +144,17 @@ async def live_detect_analyze(
     its detections are returned immediately. If it finds nothing, nothing
     is kept — the response just says so.
     """
-    if source == "device":
+    if source == "device" and file is not None:
+        # Station audio an app already fetched and played (Chirp Live): the
+        # clip comes with the request, credited to the station.
+        if not device_id:
+            raise HTTPException(400, "device_id is required when source='device'")
+        from ..models import Device
+        if not db.query(Device).filter(Device.id == device_id).first():
+            raise HTTPException(404, "Station not found")
+        audio_bytes = await file.read()
+        hint_ext = os.path.splitext(file.filename or "")[1].lower() or ".wav"
+    elif source == "device":
         if not device_id or not mic_name:
             raise HTTPException(400, "device_id and mic_name are both required when source='device'")
         audio_bytes = await _fetch_device_listen_clip(device_id, mic_name, db)
@@ -163,11 +174,17 @@ async def live_detect_analyze(
     # clip doesn't stall every other request (session saves included).
     return await run_in_threadpool(
         _analyze_clip, background_tasks, audio_bytes, hint_ext, source,
-        device_id, latitude, longitude, min_confidence, db)
+        device_id, latitude, longitude, min_confidence, db, place_name)
+
+
+def _clean_place(name):
+    """A place name from a phone, one short line."""
+    name = " ".join((name or "").split())[:120]
+    return name or None
 
 
 def _analyze_clip(background_tasks, audio_bytes, hint_ext, source, device_id,
-                  latitude, longitude, min_confidence, db):
+                  latitude, longitude, min_confidence, db, place_name=None):
     rec_dir = Path(settings.recordings_dir)
     rec_dir.mkdir(parents=True, exist_ok=True)
     rec_id = str(uuid.uuid4())
@@ -202,6 +219,7 @@ def _analyze_clip(background_tasks, audio_bytes, hint_ext, source, device_id,
         processing_status="pending",
         latitude=latitude,
         longitude=longitude,
+        place_name=_clean_place(place_name),
         is_bat=False,
         is_live_detect_clip=True,
     )
@@ -365,6 +383,7 @@ def save_session(
     device_id: Optional[str] = Form(None),
     latitude: Optional[float] = Form(None, description="Phone location when Live Detect started, if the person allowed it"),
     longitude: Optional[float] = Form(None),
+    place_name: Optional[str] = Form(None, description="Where the phone was, e.g. a park or town (Chirp Live)"),
     db: Session = Depends(get_db),
 ):
     """
@@ -395,15 +414,25 @@ def save_session(
     except ValueError:
         raise HTTPException(400, "session_start must be a valid ISO datetime")
 
+    old_recordings = db.query(Recording).filter(Recording.id.in_(ids)).all()
+    if not old_recordings:
+        # Sent again after it was saved (the phone lost the reply, e.g. it
+        # went to sleep): the clips are gone and the session recording
+        # starting at this moment is the answer.
+        done = (db.query(Recording)
+                .filter(Recording.is_live_session.is_(True), Recording.trigger_timestamp == session_start_dt,
+                        Recording.deleted_at.is_(None))
+                .first())
+        if done:
+            return {"recording_id": done.id, "duration_seconds": done.duration_seconds,
+                    "detections_moved": 0, "already_saved": True}
+        raise HTTPException(404, "None of the given recording_ids were found")
+
     # Plain def (worker thread): the ffmpeg decode and file deletes below
     # are blocking.
     audio_bytes = file.file.read()
     if not audio_bytes:
         raise HTTPException(400, "No audio data received")
-
-    old_recordings = db.query(Recording).filter(Recording.id.in_(ids)).all()
-    if not old_recordings:
-        raise HTTPException(404, "None of the given recording_ids were found")
 
     rec_dir = Path(settings.recordings_dir)
     rec_dir.mkdir(parents=True, exist_ok=True)
@@ -439,6 +468,7 @@ def save_session(
         is_live_session=True,
         latitude=latitude,
         longitude=longitude,
+        place_name=_clean_place(place_name) or next((r.place_name for r in old_recordings if getattr(r, "place_name", None)), None),
     )
     db.add(new_recording)
     db.flush()  # new_recording.id needs to exist before detections reference it below

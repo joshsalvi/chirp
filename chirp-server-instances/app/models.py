@@ -81,8 +81,10 @@ class Recording(Base):
     device_id = Column(String, nullable=True, index=True)     # Optional device identifier
     latitude = Column(Float, nullable=True)        # Device GPS lat at time of recording
     longitude = Column(Float, nullable=True)       # Device GPS lon
+    place_name = Column(String, nullable=True)     # where a phone recording was made ("Broadmoor"), from the phone
     haikubox_detection_id = Column(String, nullable=True, index=True)  # Haikubox dedup key (serial:species:timestamp)
     bird_buddy_media_id = Column(String, nullable=True, index=True, unique=True)  # Bird Buddy media id — dedup key
+    birdweather_soundscape_id = Column(String, nullable=True, index=True)  # BirdWeather soundscape id — dedup key (services/birdweather_sync.py)
     bird_buddy_video_path = Column(String, nullable=True)  # original video, preserved for future photo/video support — not used for playback (wav_path holds the extracted audio)
 
     # Bat echolocation activity (see chirp-device/chirp/bat_detector.py).
@@ -538,6 +540,14 @@ class AppSettings(Base):
     bird_buddy_last_sync_at = Column(DateTime, nullable=True)
     bird_buddy_last_sync_error = Column(String, nullable=True)
 
+    # BirdWeather station (services/birdweather_sync.py): its sound is
+    # imported and analysed like an upload. The token is masked in the API.
+    birdweather_enabled = Column(Boolean, default=False)
+    birdweather_token = Column(String, nullable=True)
+    birdweather_cursor_at = Column(DateTime, nullable=True)   # newest soundscape imported (UTC)
+    birdweather_last_sync_at = Column(DateTime, nullable=True)
+    birdweather_last_sync_error = Column(String, nullable=True)
+
     # Experimental: bat echolocation detection (see chirp-device/chirp/bat_detector.py)
     bat_detection_enabled = Column(Boolean, default=False)
     bat_detection_device_name = Column(String, nullable=True)  # substring to match ultrasonic mic name
@@ -579,12 +589,15 @@ class AppSettings(Base):
     anthropic_api_key = Column(String, nullable=True)
     openai_api_key = Column(String, nullable=True)
     gemini_api_key = Column(String, nullable=True)
-    # Ollama — self-hosted, no API key. A base URL (e.g. http://localhost:11434 or
+    # Ollama — self-hosted. A base URL (e.g. http://localhost:11434 or
     # a LAN address if it's running on a different machine) and a model name
     # (whatever the user has actually pulled locally — there's no single
-    # right default the way there is for a hosted API).
+    # right default the way there is for a hosted API). The API key is
+    # optional: Ollama has no sign-in, so it's only for a server behind a
+    # proxy that checks it; it's sent as "Authorization: Bearer <key>".
     ollama_base_url = Column(String, nullable=True)
     ollama_model = Column(String, nullable=True)
+    ollama_api_key = Column(String, nullable=True)
     # Per-feature AI provider assignment — {"photo_id": "anthropic", "call_reanalysis": "anthropic",
     # "daily_summary": null, "profile_summary": null}. A feature key mapped to null/missing means
     # disabled — its corresponding UI (card, section, button) doesn't render at all, not an error
@@ -1226,7 +1239,7 @@ class Device(Base):
             return False
         now = datetime.utcnow()
         delta = (now - self.last_seen).total_seconds()
-        if self.platform in ("Haikubox", "Bird Buddy") or self.birdnet_backend in ("haikubox", "bird_buddy"):
+        if self.platform in ("Haikubox", "Bird Buddy", "BirdWeather") or self.birdnet_backend in ("haikubox", "bird_buddy", "birdweather"):
             # 15-minute sync interval — allow roughly 2 missed cycles
             # (30 min) before considering it actually offline, the same
             # ~4x-the-interval grace period a real Pi's 120s/30s ratio

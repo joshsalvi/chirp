@@ -24,9 +24,14 @@
 #                                  picker (ios-launcher/) instead of opening
 #                                  ourchirp.com; named "Chirp β", uploaded but
 #                                  never handed to external testers
+#   RELEASE=1 WATCH=1 PICKER=1 ./build-ios.sh --testflight
+#                                  the App Store build with the picker and the
+#                                  Watch app: named "Chirp" and recorded like a
+#                                  normal build (submit it with asc.py)
 #   WATCH=1 PICKER=1 ./build-ios.sh --testflight   also build the Apple Watch
 #                                  app (ios-watch/: Live Detect, recent recordings). Needs
 #                                  the xcodeproj gem and a paid team
+#   ./build-ios.sh --sim-ipad      unsigned build on a 13-inch iPad simulator
 #   PUSH=1 / PUSH=0                force push notifications on/off (default:
 #                                  on for a paid team, off for a free one,
 #                                  which can't sign the push entitlement)
@@ -41,8 +46,9 @@ error()   { echo -e "${RED}[error]${NC} $*" >&2; exit 1; }
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FRONTEND="${FRONTEND:-chirp-server-instances/frontend}"
-ARCHIVE=0; INSTALL=0; TESTFLIGHT=0
+ARCHIVE=0; INSTALL=0; TESTFLIGHT=0; SIM_IPAD=0
 case "${1:-}" in
+  --sim-ipad) SIM_IPAD=1 ;;
   --archive) ARCHIVE=1 ;;
   --install) ARCHIVE=1; INSTALL=1 ;;
   --testflight) ARCHIVE=1; TESTFLIGHT=1 ;;
@@ -137,7 +143,11 @@ if [[ "$PICKER" == "1" ]]; then
   plutil -remove WKAppBoundDomains "$PLIST" 2>/dev/null || true
   plutil -replace NSAppTransportSecurity -json '{"NSAllowsArbitraryLoadsInWebContent":true,"NSAllowsLocalNetworking":true}' "$PLIST"
   plutil -replace NSLocalNetworkUsageDescription -string "Chirp connects to a Chirp server on your home network when you choose one." "$PLIST"
-  plutil -replace CFBundleDisplayName -string "Chirp β" "$PLIST"
+  if [[ "${RELEASE:-0}" == "1" ]]; then
+    plutil -replace CFBundleDisplayName -string "Chirp" "$PLIST"
+  else
+    plutil -replace CFBundleDisplayName -string "Chirp β" "$PLIST"
+  fi
 else
   BOUND="$(node -e 'const c=require("./capacitor.config.json");console.log(JSON.stringify([...new Set([...(c.server.allowNavigation||[]),new URL(c.server.url).hostname,"localhost"])]))')"
   plutil -replace WKAppBoundDomains -json "$BOUND" "$PLIST"
@@ -183,6 +193,10 @@ SWIFT
 fi
 # Only standard HTTPS: answers App Store Connect's export-compliance question.
 plutil -replace ITSAppUsesNonExemptEncryption -bool NO "$PLIST"
+# iPad: every orientation and no full-screen requirement, so Chirp works in
+# Split View and Slide Over (App Review checks both).
+plutil -replace "UISupportedInterfaceOrientations~ipad" -json '["UIInterfaceOrientationPortrait","UIInterfaceOrientationPortraitUpsideDown","UIInterfaceOrientationLandscapeLeft","UIInterfaceOrientationLandscapeRight"]' "$PLIST"
+plutil -remove UIRequiresFullScreen "$PLIST" 2>/dev/null || true
 # Capacitor's push plugin hears about the APNs token through these two
 # AppDelegate callbacks, which the template leaves out. An extension keeps
 # AppDelegate itself untouched.
@@ -215,6 +229,27 @@ if [[ -d "$ICON_DST" ]]; then
 else
   warn "No AppIcon.appiconset found — using Capacitor's default icon"
 fi
+# Theme icons: one AppIcon-<theme> set per theme (ios-icons/themes/), which
+# the app switches to with the ChirpAppIcon plugin (ios-native/).
+ASSETS="ios/App/App/Assets.xcassets"
+rm -rf "$ASSETS"/AppIcon-*.appiconset
+for f in "$ROOT"/ios-icons/themes/*.png; do
+  [[ -e "$f" ]] || continue
+  name="AppIcon-$(basename "$f" .png)"
+  mkdir -p "$ASSETS/$name.appiconset"
+  cp "$f" "$ASSETS/$name.appiconset/icon.png"
+  cat > "$ASSETS/$name.appiconset/Contents.json" <<'JSON'
+{ "images" : [ { "filename" : "icon.png", "idiom" : "universal", "platform" : "ios", "size" : "1024x1024" } ],
+  "info" : { "author" : "xcode", "version" : 1 } }
+JSON
+done
+cp "$ROOT"/ios-native/*.swift ios/App/App/
+sed -i '' 's/customClass="CAPBridgeViewController" customModule="Capacitor"/customClass="ChirpBridgeViewController" customModule="App" customModuleProvider="target"/' \
+  ios/App/App/Base.lproj/Main.storyboard
+command -v ruby &>/dev/null && ruby -e 'require "xcodeproj"' 2>/dev/null \
+  || error "Theme icons need the xcodeproj gem: sudo gem install xcodeproj"
+ruby "$ROOT/ios-native/add-native-files.rb" ios/App/App.xcodeproj || error "Could not add Chirp's native files to the Xcode project"
+success "Theme icons: $(ls -d "$ASSETS"/AppIcon-*.appiconset 2>/dev/null | wc -l | tr -d ' ') alternate icons"
 if [[ -d "$SPLASH_DST" ]]; then
   rm -f "$SPLASH_DST"/*.png
   cp "$ROOT"/ios-splash/*.png "$ROOT/ios-splash/Contents.json" "$SPLASH_DST/"
@@ -241,10 +276,10 @@ if [[ $ARCHIVE -eq 1 ]]; then
     1) PUSH=1 ;; 0) PUSH=0 ;;
     *) [[ "$FREE_TEAM" == "1" ]] && PUSH=0 || PUSH=1 ;;
   esac
-  # iPhone only: the layout is built for phones, and an iPad build would need
-  # its own App Store screenshots. IPHONE_ONLY=0 builds for iPad too.
+  # iPhone and iPad (from 0.5.17). Once an App Store version supports iPad,
+  # later versions can't drop it. IPHONE_ONLY=1 builds for iPhone alone.
   ENTITLEMENTS=()
-  [[ "${IPHONE_ONLY:-1}" == "1" ]] && ENTITLEMENTS+=(TARGETED_DEVICE_FAMILY=1)
+  [[ "${IPHONE_ONLY:-0}" == "1" ]] && ENTITLEMENTS+=(TARGETED_DEVICE_FAMILY=1) || ENTITLEMENTS+=(TARGETED_DEVICE_FAMILY=1,2)
   if [[ $PUSH -eq 1 ]]; then
     # Development here; App Store Connect exports switch it to production.
     cat > ios/App/App/App.entitlements <<'ENT'
@@ -284,12 +319,13 @@ ENT
     info "Adding the Apple Watch app (ios-watch/)"
     command -v ruby &>/dev/null && ruby -e 'require "xcodeproj"' 2>/dev/null \
       || error "WATCH=1 needs the xcodeproj gem: sudo gem install xcodeproj"
-    cp "$ROOT"/ios-watch/phone/*.swift ios/App/App/
+    # Listed by name: a file left over from an older src (unzip never
+    # deletes) must not replace one of ios-native/'s.
+    for f in ChirpWatchPlugin.swift WatchLink.swift ChirpKeychain.swift; do
+      cp "$ROOT/ios-watch/phone/$f" ios/App/App/
+    done
     rm -rf ios/App/ChirpWatch && cp -R "$ROOT/ios-watch/ChirpWatch" ios/App/ChirpWatch
     cp "$ROOT/ios-icons/icon-1024.png" ios/App/ChirpWatch/Assets.xcassets/AppIcon.appiconset/
-    # Main.storyboard's view controller registers the ChirpWatch plugin.
-    sed -i '' 's/customClass="CAPBridgeViewController" customModule="Capacitor"/customClass="ChirpBridgeViewController" customModule="App" customModuleProvider="target"/' \
-      ios/App/App/Base.lproj/Main.storyboard
     ruby "$ROOT/ios-watch/add-watch-target.rb" ios/App/App.xcodeproj "$APP_ID" "$TEAM_ID" "${TARGET_SETTINGS[@]}" \
       || error "Could not add the watch app to the Xcode project"
     TARGET_SETTINGS=()
@@ -297,11 +333,12 @@ ENT
     # An earlier WATCH=1 build left the watch app in ios/; take it out.
     ruby "$ROOT/ios-watch/add-watch-target.rb" ios/App/App.xcodeproj --remove \
       || error "Could not remove the watch app from the Xcode project (delete ios/ and run again)"
-    sed -i '' 's/customClass="ChirpBridgeViewController" customModule="App" customModuleProvider="target"/customClass="CAPBridgeViewController" customModule="Capacitor"/' \
-      ios/App/App/Base.lproj/Main.storyboard
     rm -rf ios/App/ChirpWatch
-    (cd "$ROOT/ios-watch/phone" && for f in *.swift; do rm -f "$OLDPWD/ios/App/App/$f"; done)
+    rm -f ios/App/App/{ChirpWatchPlugin,WatchLink,ChirpKeychain}.swift
   fi
+  for f in "$ROOT"/ios-native/*.swift; do
+    cmp -s "$f" "ios/App/App/$(basename "$f")" || error "ios/App/App/$(basename "$f") isn't ios-native's copy"
+  done
   SOON=$(( $(date +%s) + 3*86400 ))
   mkdir -p "$ROOT/build/old-profiles"
   for PDIR in "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" "$HOME/Library/MobileDevice/Provisioning Profiles"; do
@@ -412,18 +449,18 @@ PLIST
     for f in "$ROOT"/chirp-server*/frontend/src/lib/appReleases.json; do
       [[ -f "$f" ]] || continue
       python3 - "$f" "$VERSION" "$MARKETING_VERSION" "$BUILD_NUMBER" "$PICKER" <<'PY' || warn "Could not record the build in $f"
-import json, sys, datetime
+import json, os, sys, datetime
 path, chirp, ios, build, picker = sys.argv[1:]
 rows = [r for r in json.load(open(path)) if r["build"] != build]
 row = {"chirp": chirp, "ios": ios, "build": build, "date": datetime.date.today().isoformat()}
-if picker == "1":
+if picker == "1" and os.environ.get("RELEASE") != "1":
     row["test"] = True
 rows.insert(0, row)
 with open(path, "w") as fh:
     fh.write("[\n" + ",\n".join("  " + json.dumps(r, ensure_ascii=False) for r in rows) + "\n]\n")
 PY
     done
-    if [[ "$PICKER" == "1" ]]; then
+    if [[ "$PICKER" == "1" && "${RELEASE:-0}" != "1" ]]; then
       # Not recorded for testflight-auto.sh, so it never reaches external testers.
       echo "$BUILD_NUMBER" > "$ROOT/build/last-picker-build"
       success "Picker build $BUILD_NUMBER: internal testers only. Install \"Chirp β\" from TestFlight; it replaces Chirp on that iPhone."
@@ -481,6 +518,19 @@ PY
     echo "  Or: Xcode → Window → Organizer → Chirp $VERSION → Distribute App."
     echo ""
   fi
+elif [[ $SIM_IPAD -eq 1 ]]; then
+  # iPad check: unsigned Debug build on a 13-inch iPad simulator.
+  info "Step 6/6: iPad simulator..."
+  DEV="$(xcrun simctl list devices available | grep 'iPad Pro 13-inch' | grep -oE '[0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12}' | head -1)"
+  [[ -n "$DEV" ]] || DEV="$(xcrun simctl list devices available | grep 'iPad' | grep -oE '[0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12}' | head -1)"
+  [[ -n "$DEV" ]] || error "No iPad simulator (Xcode → Settings → Components)."
+  xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -destination "id=$DEV" \
+    -derivedDataPath "$ROOT/build/ipad-sim" TARGETED_DEVICE_FAMILY=1,2 CODE_SIGNING_ALLOWED=NO build | tail -n 3
+  xcrun simctl boot "$DEV" 2>/dev/null || true
+  open -a Simulator || true
+  xcrun simctl install "$DEV" "$ROOT/build/ipad-sim/Build/Products/Debug-iphonesimulator/App.app"
+  xcrun simctl launch "$DEV" "$(plutil -extract appId raw capacitor.config.json 2>/dev/null || echo com.joshuasalvimd.chirp)"
+  success "Running on the iPad simulator ($DEV)"
 else
   info "Step 6/6: Opening Xcode..."
   echo ""

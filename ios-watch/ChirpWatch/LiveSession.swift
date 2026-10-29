@@ -32,6 +32,14 @@ final class LiveSession: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published private(set) var problem: String?   // shown while listening; clears on the next good reply
     @Published private(set) var level: Float = 0   // 0…1, for the meter
     @Published private(set) var saving: Saving = .none
+    /// Clips on their way to the site or being identified right now.
+    @Published private(set) var inFlight = 0
+    /// When the last answer came back, how long it took, and what it said.
+    @Published private(set) var lastAnswer: Date?
+    @Published private(set) var lastRoundTrip: Double?
+    @Published private(set) var lastFound: [String] = []
+    /// Clips skipped because the connection couldn't keep up.
+    @Published private(set) var skipped = 0
 
     private var recordingIDs: [String] = []
     private var sessionStart = Date()
@@ -46,7 +54,7 @@ final class LiveSession: NSObject, ObservableObject, CLLocationManagerDelegate {
     private let engine = AVAudioEngine()
     private let collector = SampleCollector()
     private var timer: Timer?
-    private var inFlight = 0
+    private var lastSent = Date.distantPast
     private let maxInFlight = 2
     private var location: CLLocation?
     private let locator = CLLocationManager()
@@ -74,6 +82,10 @@ final class LiveSession: NSObject, ObservableObject, CLLocationManagerDelegate {
         guard saving != .saving else { return }
         state = .starting
         problem = nil
+        skipped = 0
+        lastAnswer = nil
+        lastRoundTrip = nil
+        lastFound = []
         discard()
         AVAudioApplication.requestRecordPermission { granted in
             Task { @MainActor in
@@ -108,6 +120,10 @@ final class LiveSession: NSObject, ObservableObject, CLLocationManagerDelegate {
     func clear() {
         heard = []
         clipsSent = 0
+        skipped = 0
+        lastAnswer = nil
+        lastRoundTrip = nil
+        lastFound = []
         discard()
     }
 
@@ -186,32 +202,44 @@ final class LiveSession: NSObject, ObservableObject, CLLocationManagerDelegate {
         WKInterfaceDevice.current().play(.start)
         if locator.authorizationStatus == .notDetermined { locator.requestWhenInUseAuthorization() }
         locator.requestLocation()
-        timer = Timer.scheduledTimer(withTimeInterval: hop, repeats: true) { [weak self] _ in
+        // Checked twice a second: the first clip goes as soon as there's a
+        // full window (about 4 s in, not 6), then one every `hop` seconds.
+        lastSent = .distantPast
+        timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.sendClip() }
         }
     }
 
     private func sendClip() {
         guard state == .listening else { return }
+        guard Date().timeIntervalSince(lastSent) >= hop else { return }
         let samples = collector.snapshot()
         guard samples.count >= Int(window * sampleRate * 0.9) else { return }
+        lastSent = Date()
         // On a slow link, skip a clip rather than fall further behind.
-        guard inFlight < maxInFlight else { return }
+        guard inFlight < maxInFlight else { skipped += 1; return }
         guard let server = Account.shared.server else {
             stop()
             state = .failed("Sign in on your iPhone first.")
             return
         }
-        let wav = WAV.encode(samples, sampleRate: Int(sampleRate))
+        let rate = sampleRate
         let token = Account.shared.token
         let here = location
         inFlight += 1
         Task {
             defer { inFlight -= 1 }
             do {
-                let reply = try await Analyzer.analyze(wav: wav, server: server, token: token, location: here)
+                // Encode off the main thread; fall back to WAV if AAC fails.
+                let aac = await Task.detached(priority: .userInitiated) { AAC.encode(samples, sampleRate: rate) }.value
+                let clip = aac ?? WAV.encode(samples, sampleRate: Int(rate))
+                let sent = Date()
+                let reply = try await Analyzer.analyze(clip: clip, isAAC: aac != nil, server: server, token: token, location: here)
                 clipsSent += 1
                 problem = nil
+                lastAnswer = Date()
+                lastRoundTrip = Date().timeIntervalSince(sent)
+                lastFound = reply.detections.map(\.common_name)
                 if let id = reply.recording_id { recordingIDs.append(id) }
                 record(reply.detections)
             } catch Analyzer.Failure.signedOut {

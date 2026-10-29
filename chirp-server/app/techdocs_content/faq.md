@@ -19,7 +19,7 @@ Two independent lists control this, and it's worth checking both:
 
 - `device_name_hints` — the device's name needs to match one of these
   substrings *or* be picked up by the broader fallback scan over all
-  connected input devices. If it's a genuinely unusual device name, it should
+  connected input devices. If it's a unusual device name, it should
   still be caught by the fallback scan rather than silently ignored.
 - `device_name_excludes` — checked independently, and takes priority.
   If a device's name matches something in this list, it's excluded from
@@ -30,7 +30,7 @@ Two independent lists control this, and it's worth checking both:
 
 The Cornell Lab / All About Birds source sits behind Cloudflare, which
 has occasionally challenged automated requests during a fetch. The
-system distinguishes a genuine Cloudflare block from AAB simply having
+system distinguishes a Cloudflare block from AAB having
 no page for a given species — a block doesn't get permanently cached as
 "no data," so it retries on a future enrichment pass rather than being
 stuck empty forever. If a specific bird's profile seems to be missing

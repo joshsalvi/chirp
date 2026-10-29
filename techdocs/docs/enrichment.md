@@ -16,8 +16,8 @@ The current sequence, in order:
    detailed fetch covering habitat, food, nesting, and behavior tags, a
    set of specific "cool facts," and (a more recent addition) the
    species' measured length range, fetched from AAB's own
-   Identification page rather than its Overview page — a genuinely
-   separate page/tab requiring its own fetch.
+   Identification page rather than its Overview page. That is a
+   separate page that needs its own fetch.
 4. **eBird** — taxonomy and species code, used to cross-reference other
    data sources consistently.
 5. **iNaturalist (sounds)** — reference call/song audio clips for the
@@ -32,7 +32,7 @@ Enrichment pulls from several independent external services, any of
 which can be temporarily unavailable, rate-limited, or blocked (Cornell
 Lab's site in particular sits behind Cloudflare, which has occasionally
 challenged automated requests). Each step is independent: a failure in
-one source doesn't block the others, and a genuinely blocked fetch is
+one source doesn't block the others, and a blocked fetch is
 distinguished from "this source has no data for this species" so it can
 be retried later rather than permanently giving up.
 

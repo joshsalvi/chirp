@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <CommunityApplications>
   <Profile>
-    Chirp: bird and bat call detection for your yard. Raspberry Pi stations identify birds with BirdNET; the Chirp server keeps recordings, spectrograms, a life list and alerts, and serves the web app and the Chirp iPhone app. This repository holds the Chirp server template plus two optional companions (Chirp-Headscale and Chirp-Caddy) for reaching stations away from home. Support: https://ourchirp.com/support.html
+    Chirp: bird and bat call detection for your yard. Raspberry Pi stations identify birds with BirdNET; the Chirp server keeps recordings, spectrograms, a life list and alerts, and serves the web app and the Chirp iPhone app. This repository holds the Chirp server template plus two optional companions (Chirp-Headscale and Chirp-Caddy) for reaching stations away from home. Support: https://forums.unraid.net/topic/201069-support-joshsalvi-chirp-bird-and-bat-call-detection/ (help pages: https://ourchirp.com/support.html)
   </Profile>
   <Icon>https://raw.githubusercontent.com/joshsalvi/unraid-templates/main/icon.png</Icon>
   <WebPage>https://ourchirp.com</WebPage>

@@ -1,6 +1,6 @@
 """
-Questions, problem reports and feature ideas from support.html, the About
-page and the app (My Profile → Help & feedback). Same file in both forks.
+Questions, problem reports, feature ideas and TestFlight requests from
+support.html, the About page and the app (My Profile → Help & feedback). Same file in both forks.
 
   POST /api/v1/support            public, rate-limited per IP; a signed-in
                                   sender is identified from their token
@@ -24,7 +24,8 @@ from pydantic import BaseModel
 logger = logging.getLogger("chirp.support")
 router = APIRouter(tags=["support"])
 
-KINDS = {"question": "Question", "problem": "Problem", "feature": "Feature idea", "other": "Other"}
+KINDS = {"question": "Question", "problem": "Problem", "feature": "Feature idea",
+         "testflight": "TestFlight request", "other": "Other"}
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _RATE_MAX, _RATE_WINDOW_S = 5, 3600
 _recent = defaultdict(deque)
@@ -120,6 +121,8 @@ def submit(body: SupportIn, request: Request):
     name = (body.name or "").strip()[:120] or None
     page = (body.page or "").strip()[:200] or None
     username, site = _sender(request)
+    if kind == "testflight" and not email:
+        raise HTTPException(400, "Add the email of your Apple Account so we can send the TestFlight invite.")
     if not email and not username:
         raise HTTPException(400, "Add your email so we can reply.")
 

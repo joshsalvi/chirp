@@ -2245,7 +2245,8 @@ export default function RecordingDetail({ shared = false }) {
               ['Device', recording.device_name || recording.device_id || `${recording.device_count || 1} mic(s)`],
               ...(recording.is_live_session ? [['Source', 'Live Detect session']] : []),
               ...(recording.deleted_at ? [['Deleted', new Date(recording.deleted_at + (recording.deleted_at.endsWith('Z') ? '' : 'Z')).toLocaleDateString()]] : []),
-              ...(recording.latitude ? [['Location', `${recording.latitude.toFixed(4)}, ${recording.longitude?.toFixed(4)}`]] : []),
+              ...(recording.place_name ? [['Place', recording.place_name]] : []),
+              ...(recording.latitude ? [['GPS', `${recording.latitude.toFixed(4)}, ${recording.longitude?.toFixed(4)}`]] : []),
             ].map(([k, v]) => (
               <div key={k}>
                 <p className="mb-0.5" style={{ color: 'var(--text-tertiary)' }}>{k}</p>

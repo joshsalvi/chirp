@@ -10,6 +10,8 @@ import { BirdIcon, BatIcon } from './BirdBatIcons'
 import { api, mediaUrl } from '../lib/api'
 import UnifiedCard from './UnifiedCard'
 import { isCardOpen, setCardOpen } from '../lib/cardState'
+import { CHART_ANIMATION } from '../lib/motion'
+import InView from './InView'
 
 const METRIC_KEY = 'chirp:stats:metric'
 const EXCLUDE_BATS_KEY = 'chirp:stats:excludeBats'
@@ -41,6 +43,15 @@ const ChirpTooltip = ({ active, payload, label, suffix='' }) => {
       ))}
     </div>
   )
+}
+
+// "2026-07-14" → "Jul 14"; "2026-07" → "Jul 26"
+const _MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+function shortDate(v) {
+  const m = /^(\d{4})-(\d{2})(?:-(\d{2}))?/.exec(String(v || ''))
+  if (!m) return v
+  const mon = _MON[+m[2] - 1]
+  return m[3] ? `${mon} ${+m[3]}` : `${mon} ${m[1].slice(2)}`
 }
 
 function ChartCard({ id, title, icon, color='var(--accent-400)', children, span=1, headerRight, fallbackOpen=true }) {
@@ -340,7 +351,7 @@ export default function Statistics() {
 
         {/* Top species */}
         <ChartCard id="stats:top-species" title={`Top Species by ${metricLabel} (all time)`} icon={Award} color="#f97316" span={2}>
-          <ResponsiveContainer width="100%" height={Math.max(320, (data.top_species?.length||0) * 30)}>
+          <InView height={Math.max(320, (data.top_species?.length||0) * 30)}><ResponsiveContainer width="100%" height={Math.max(320, (data.top_species?.length||0) * 30)}>
             <BarChart data={data.top_species||[]} layout="vertical"
                       margin={{ left:8, right:24, top:0, bottom:0 }}>
               <CartesianGrid horizontal={false} stroke="var(--border-subtle)"/>
@@ -349,17 +360,17 @@ export default function Statistics() {
                      tick={{ fill:'var(--text-secondary)', fontSize:11 }} axisLine={false} tickLine={false}
                      interval={0}/>
               <Tooltip content={<ChirpTooltip/>}/>
-              <Bar dataKey="count" name={metricLabel} radius={[0,4,4,0]} maxBarSize={22}>
+              <Bar isAnimationActive={CHART_ANIMATION} dataKey="count" name={metricLabel} radius={[0,4,4,0]} maxBarSize={22}>
                 {(data.top_species||[]).map((_,i) => <Cell key={i} fill={COLORS[i%COLORS.length]}/>)}
               </Bar>
             </BarChart>
-          </ResponsiveContainer>
+          </ResponsiveContainer></InView>
         </ChartCard>
 
         {/* Monthly + Hour of day */}
         <PairedRow id="stats:row-monthly-hourly" title={`${metricLabel} by Month & Hour of Day`} leftIcon={Calendar} leftColor="#22d3ee">
           <PairedChart title="By month" icon={Calendar} color="#22d3ee">
-            <ResponsiveContainer width="100%" height={220}>
+            <InView height={220}><ResponsiveContainer width="100%" height={220}>
               <AreaChart data={(data.monthly||[]).map((d,i) => ({ ...d, month: MONTHS[i] }))}>
                 <defs>
                   <linearGradient id="monthGrad" x1="0" y1="0" x2="0" y2="1">
@@ -371,9 +382,9 @@ export default function Statistics() {
                 <XAxis dataKey="month" tick={{ fill:'var(--text-tertiary)', fontSize:10 }} axisLine={false} tickLine={false}/>
                 <YAxis tick={{ fill:'var(--text-tertiary)', fontSize:10 }} axisLine={false} tickLine={false} width={35}/>
                 <Tooltip content={<ChirpTooltip/>}/>
-                <Area type="monotone" dataKey="count" name={metricLabel} stroke="#22d3ee" fill="url(#monthGrad)" strokeWidth={2}/>
+                <Area isAnimationActive={CHART_ANIMATION} type="monotone" dataKey="count" name={metricLabel} stroke="#22d3ee" fill="url(#monthGrad)" strokeWidth={2}/>
               </AreaChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer></InView>
           </PairedChart>
 
           <PairedChart title="By hour of day" icon={Clock} color="#a78bfa"
@@ -392,7 +403,7 @@ export default function Statistics() {
                 {hourlyNormalized ? 'Per hour recorded' : 'Raw counts'}
               </button>
             }>
-            <ResponsiveContainer width="100%" height={220}>
+            <InView height={220}><ResponsiveContainer width="100%" height={220}>
               <BarChart data={(data.hourly_normalized || data.hourly || []).map(d => {
                   const h = d.hour
                   const label = h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h-12} PM`
@@ -419,26 +430,26 @@ export default function Statistics() {
                     </div>
                   )
                 }}/>
-                <Bar dataKey={hourlyNormalized ? 'per_hour' : 'count'} name={hourlyNormalized ? `${metricLabel}/hour` : metricLabel} fill="#a78bfa" radius={[3,3,0,0]} maxBarSize={18}/>
+                <Bar isAnimationActive={CHART_ANIMATION} dataKey={hourlyNormalized ? 'per_hour' : 'count'} name={hourlyNormalized ? `${metricLabel}/hour` : metricLabel} fill="#a78bfa" radius={[3,3,0,0]} maxBarSize={18}/>
               </BarChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer></InView>
           </PairedChart>
         </PairedRow>
 
         {/* Seasonal + Day of week */}
         <PairedRow id="stats:row-seasonal-dow" title="Seasonal & Weekly Patterns" leftIcon={Sun} leftColor="#fbbf24">
           <PairedChart title="Seasonal distribution" icon={Sun} color="#fbbf24">
-            <ResponsiveContainer width="100%" height={220}>
+            <InView height={220}><ResponsiveContainer width="100%" height={220}>
               <BarChart data={data.seasonal||[]} barCategoryGap="30%">
                 <CartesianGrid stroke="var(--border-subtle)" strokeDasharray="3 3"/>
                 <XAxis dataKey="season" tick={{ fill:'var(--text-secondary)', fontSize:11 }} axisLine={false} tickLine={false}/>
                 <YAxis tick={{ fill:'var(--text-tertiary)', fontSize:10 }} axisLine={false} tickLine={false} width={40}/>
                 <Tooltip content={<ChirpTooltip/>}/>
-                <Bar dataKey="count" name={metricLabel} radius={[6,6,0,0]} maxBarSize={60}>
+                <Bar isAnimationActive={CHART_ANIMATION} dataKey="count" name={metricLabel} radius={[6,6,0,0]} maxBarSize={60}>
                   {(data.seasonal||[]).map((d,i) => <Cell key={i} fill={SEASON_COLORS[d.season]||'#f97316'}/>)}
                 </Bar>
               </BarChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer></InView>
           </PairedChart>
 
           <PairedChart title="By day of week" icon={Calendar} color="#4ade80"
@@ -457,11 +468,11 @@ export default function Statistics() {
                 {dowNormalized ? 'Per hour recorded' : 'Raw counts'}
               </button>
             }>
-            <ResponsiveContainer width="100%" height={220}>
+            <InView height={220}><ResponsiveContainer width="100%" height={220}>
               <RadarChart data={data.day_of_week_normalized || data.day_of_week || []} cx="50%" cy="50%" outerRadius="70%">
                 <PolarGrid stroke="var(--border-subtle)"/>
                 <PolarAngleAxis dataKey="day" tick={{ fill:'var(--text-secondary)', fontSize:11 }}/>
-                <Radar name={dowNormalized ? `${metricLabel}/hour` : metricLabel}
+                <Radar isAnimationActive={CHART_ANIMATION} name={dowNormalized ? `${metricLabel}/hour` : metricLabel}
                        dataKey={dowNormalized ? 'per_hour' : 'count'}
                        stroke="#4ade80" fill="#4ade80" fillOpacity={0.25}/>
                 <Tooltip content={({ active, payload }) => {
@@ -483,7 +494,7 @@ export default function Statistics() {
                   )
                 }}/>
               </RadarChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer></InView>
           </PairedChart>
         </PairedRow>
 
@@ -512,54 +523,54 @@ export default function Statistics() {
                      }>
             <PairedChart title="Species richness" icon={Leaf} color="#4ade80">
               <p className="text-xs mb-2" style={{ color: 'var(--text-tertiary)' }}>Distinct species detected each month — no theoretical ceiling.</p>
-              <ResponsiveContainer width="100%" height={180}>
+              <InView height={180}><ResponsiveContainer width="100%" height={180}>
                 <AreaChart data={diversityData}>
                   <CartesianGrid stroke="var(--border-subtle)" strokeDasharray="3 3"/>
                   <XAxis dataKey="month" tick={{ fill:'var(--text-secondary)', fontSize:10 }} axisLine={false} tickLine={false}/>
                   <YAxis tick={{ fill:'var(--text-tertiary)', fontSize:10 }} axisLine={false} tickLine={false} width={30}/>
                   <Tooltip content={<ChirpTooltip/>}/>
-                  <Area type="monotone" dataKey="species_richness" name="Species" stroke="#4ade80" fill="#4ade8033" strokeWidth={2}/>
+                  <Area isAnimationActive={CHART_ANIMATION} type="monotone" dataKey="species_richness" name="Species" stroke="#4ade80" fill="#4ade8033" strokeWidth={2}/>
                 </AreaChart>
-              </ResponsiveContainer>
+              </ResponsiveContainer></InView>
             </PairedChart>
 
             <PairedChart title="Shannon diversity (H')" icon={Leaf} color="#22d3ee">
               <p className="text-xs mb-2" style={{ color: 'var(--text-tertiary)' }}>Richness weighted by evenness. Real bird communities typically run 1.5–3.5; rarely above 4.</p>
-              <ResponsiveContainer width="100%" height={180}>
+              <InView height={180}><ResponsiveContainer width="100%" height={180}>
                 <LineChart data={diversityData}>
                   <CartesianGrid stroke="var(--border-subtle)" strokeDasharray="3 3"/>
                   <XAxis dataKey="month" tick={{ fill:'var(--text-secondary)', fontSize:10 }} axisLine={false} tickLine={false}/>
                   <YAxis domain={[0, 4.5]} tick={{ fill:'var(--text-tertiary)', fontSize:10 }} axisLine={false} tickLine={false} width={30}/>
                   <Tooltip content={<ChirpTooltip/>}/>
-                  <Line type="monotone" dataKey="shannon_index" name="Shannon H'" stroke="#22d3ee" strokeWidth={2} dot={{ r:3 }} connectNulls/>
+                  <Line isAnimationActive={CHART_ANIMATION} type="monotone" dataKey="shannon_index" name="Shannon H'" stroke="#22d3ee" strokeWidth={2} dot={{ r:3 }} connectNulls/>
                 </LineChart>
-              </ResponsiveContainer>
+              </ResponsiveContainer></InView>
             </PairedChart>
 
             <PairedChart title="Simpson's diversity (1-D)" icon={Leaf} color="#a78bfa">
               <p className="text-xs mb-2" style={{ color: 'var(--text-tertiary)' }}>Probability two random detections are different species. Bounded 0–1; weighted toward common species.</p>
-              <ResponsiveContainer width="100%" height={180}>
+              <InView height={180}><ResponsiveContainer width="100%" height={180}>
                 <LineChart data={diversityData}>
                   <CartesianGrid stroke="var(--border-subtle)" strokeDasharray="3 3"/>
                   <XAxis dataKey="month" tick={{ fill:'var(--text-secondary)', fontSize:10 }} axisLine={false} tickLine={false}/>
                   <YAxis domain={[0, 1]} tick={{ fill:'var(--text-tertiary)', fontSize:10 }} axisLine={false} tickLine={false} width={30}/>
                   <Tooltip content={<ChirpTooltip/>}/>
-                  <Line type="monotone" dataKey="simpson_index" name="Simpson 1-D" stroke="#a78bfa" strokeWidth={2} dot={{ r:3 }} connectNulls/>
+                  <Line isAnimationActive={CHART_ANIMATION} type="monotone" dataKey="simpson_index" name="Simpson 1-D" stroke="#a78bfa" strokeWidth={2} dot={{ r:3 }} connectNulls/>
                 </LineChart>
-              </ResponsiveContainer>
+              </ResponsiveContainer></InView>
             </PairedChart>
 
             <PairedChart title="Pielou's evenness (J')" icon={Leaf} color="var(--pastel-amber)">
               <p className="text-xs mb-2" style={{ color: 'var(--text-tertiary)' }}>Shannon's evenness component alone, independent of richness. Low + high richness means a few species dominate detections.</p>
-              <ResponsiveContainer width="100%" height={180}>
+              <InView height={180}><ResponsiveContainer width="100%" height={180}>
                 <LineChart data={diversityData}>
                   <CartesianGrid stroke="var(--border-subtle)" strokeDasharray="3 3"/>
                   <XAxis dataKey="month" tick={{ fill:'var(--text-secondary)', fontSize:10 }} axisLine={false} tickLine={false}/>
                   <YAxis domain={[0, 1]} tick={{ fill:'var(--text-tertiary)', fontSize:10 }} axisLine={false} tickLine={false} width={30}/>
                   <Tooltip content={<ChirpTooltip/>}/>
-                  <Line type="monotone" dataKey="evenness" name="Evenness J'" stroke="var(--pastel-amber)" strokeWidth={2} dot={{ r:3 }} connectNulls/>
+                  <Line isAnimationActive={CHART_ANIMATION} type="monotone" dataKey="evenness" name="Evenness J'" stroke="var(--pastel-amber)" strokeWidth={2} dot={{ r:3 }} connectNulls/>
                 </LineChart>
-              </ResponsiveContainer>
+              </ResponsiveContainer></InView>
             </PairedChart>
           </PairedRow>
         )}
@@ -625,20 +636,20 @@ export default function Statistics() {
                              </span>
                            }>
                 {batData.by_night.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={220}>
+                  <InView height={220}><ResponsiveContainer width="100%" height={220}>
                     <BarChart data={batData.by_night}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)"/>
                       <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-tertiary)' }}
                              tickFormatter={d => d.slice(5)}/>
                       <YAxis tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} allowDecimals={false}/>
                       <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 8, fontSize: 12 }}/>
-                      <Bar dataKey="count" fill="#c4b5fd" radius={[4, 4, 0, 0]}/>
+                      <Bar isAnimationActive={CHART_ANIMATION} dataKey="count" fill="#c4b5fd" radius={[4, 4, 0, 0]}/>
                     </BarChart>
-                  </ResponsiveContainer>
+                  </ResponsiveContainer></InView>
                 ) : <p className="text-sm py-8 text-center" style={{ color: 'var(--text-tertiary)' }}>No bat activity yet.</p>}
               </PairedChart>
               <PairedChart title="By hour of night" icon={Clock} color="#a78bfa">
-                <ResponsiveContainer width="100%" height={220}>
+                <InView height={220}><ResponsiveContainer width="100%" height={220}>
                   <BarChart data={batData.by_hour.map((count, hour) => ({ hour, count }))}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)"/>
                     <XAxis dataKey="hour" tick={{ fontSize: 10, fill: 'var(--text-tertiary)' }}
@@ -646,23 +657,23 @@ export default function Statistics() {
                     <YAxis tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} allowDecimals={false}/>
                     <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 8, fontSize: 12 }}
                              labelFormatter={h => `${h}:00`}/>
-                    <Bar dataKey="count" fill="#a78bfa" radius={[4, 4, 0, 0]}/>
+                    <Bar isAnimationActive={CHART_ANIMATION} dataKey="count" fill="#a78bfa" radius={[4, 4, 0, 0]}/>
                   </BarChart>
-                </ResponsiveContainer>
+                </ResponsiveContainer></InView>
               </PairedChart>
             </PairedRow>
 
             <PairedRow id="stats:row-bat-freq-species" title="Bat Call Frequency & Species" leftIcon={Zap} leftColor="#22d3ee">
               <PairedChart title="Peak frequency spread" icon={Zap} color="#22d3ee">
-                <ResponsiveContainer width="100%" height={220}>
+                <InView height={220}><ResponsiveContainer width="100%" height={220}>
                   <BarChart data={Object.entries(batData.peak_freq_buckets).map(([band, count]) => ({ band, count }))} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)"/>
                     <XAxis type="number" tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }} allowDecimals={false}/>
                     <YAxis type="category" dataKey="band" width={70} tick={{ fontSize: 11, fill: 'var(--text-tertiary)' }}/>
                     <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 8, fontSize: 12 }}/>
-                    <Bar dataKey="count" fill="#22d3ee" radius={[0, 4, 4, 0]}/>
+                    <Bar isAnimationActive={CHART_ANIMATION} dataKey="count" fill="#22d3ee" radius={[0, 4, 4, 0]}/>
                   </BarChart>
-                </ResponsiveContainer>
+                </ResponsiveContainer></InView>
               </PairedChart>
               <PairedChart title="Species identified" icon={BatIcon} color="#4ade80">
                 {batData.species_breakdown.length > 0 ? (
@@ -690,17 +701,17 @@ export default function Statistics() {
         {/* Confidence distribution + Activity by time period, grouped under one shared collapsible header */}
         <PairedRow id="stats:row-confidence-timeofday" title="Confidence & Time-of-Day Patterns" leftIcon={Filter} leftColor="#f472b6">
           <PairedChart title="Detection confidence distribution" icon={Filter} color="#f472b6">
-            <ResponsiveContainer width="100%" height={220}>
+            <InView height={220}><ResponsiveContainer width="100%" height={220}>
               <BarChart data={data.confidence||[]}>
                 <CartesianGrid stroke="var(--border-subtle)" strokeDasharray="3 3"/>
                 <XAxis dataKey="bucket" tick={{ fill:'var(--text-tertiary)', fontSize:10 }} axisLine={false} tickLine={false}/>
                 <YAxis tick={{ fill:'var(--text-tertiary)', fontSize:10 }} axisLine={false} tickLine={false} width={40}/>
                 <Tooltip content={<ChirpTooltip/>}/>
-                <Bar dataKey="count" name={metricLabel} radius={[4,4,0,0]} maxBarSize={30}>
+                <Bar isAnimationActive={CHART_ANIMATION} dataKey="count" name={metricLabel} radius={[4,4,0,0]} maxBarSize={30}>
                   {(data.confidence||[]).map((_,i) => <Cell key={i} fill={`hsl(${200+i*16},80%,60%)`}/>)}
                 </Bar>
               </BarChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer></InView>
           </PairedChart>
 
           <PairedChart title="Activity by time of day" icon={Sun} color="#fbbf24">
@@ -739,7 +750,7 @@ export default function Statistics() {
         {/* Life list growth */}
         {(data.cumulative_species?.length||0) > 0 && (
           <ChartCard id="stats:life-list-growth" title="Life List Growth Over Time" icon={TrendingUp} color="#34d399" span={2}>
-            <ResponsiveContainer width="100%" height={220}>
+            <InView height={220}><ResponsiveContainer width="100%" height={220}>
               <AreaChart data={data.cumulative_species} margin={{ left:0, right:8, top:4, bottom:0 }}>
                 <defs>
                   <linearGradient id="growthGrad" x1="0" y1="0" x2="0" y2="1">
@@ -753,7 +764,7 @@ export default function Statistics() {
                     calendar day (or week, for long ranges) with the cumulative total carried
                     forward, so equal spacing here is actually correct — each tick IS a real day. */}
                 <XAxis dataKey="date" tick={{ fill:'var(--text-tertiary)', fontSize:10 }} axisLine={false} tickLine={false}
-                       interval={Math.max(0, Math.floor((data.cumulative_species.length)/8))}/>
+                       interval="preserveStartEnd" minTickGap={28} tickFormatter={shortDate}/>
                 <YAxis tick={{ fill:'var(--text-tertiary)', fontSize:10 }} axisLine={false} tickLine={false} width={35}
                        allowDecimals={false}/>
                 <Tooltip content={({ active, payload }) => {
@@ -768,9 +779,9 @@ export default function Statistics() {
                     </div>
                   )
                 }}/>
-                <Area type="stepAfter" dataKey="total" name="Species" stroke="#34d399" fill="url(#growthGrad)" strokeWidth={2}/>
+                <Area isAnimationActive={CHART_ANIMATION} type="stepAfter" dataKey="total" name="Species" stroke="#34d399" fill="url(#growthGrad)" strokeWidth={2}/>
               </AreaChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer></InView>
           </ChartCard>
         )}
 
@@ -778,7 +789,7 @@ export default function Statistics() {
         {(data.species_confidence?.length||0) > 0 && (
           <ChartCard id="stats:confidence-by-species" title={`Avg. Confidence by Species (${data.species_confidence.length})`} icon={Award} color="#fb7185" span={2}>
             <div style={{ maxHeight: 420, overflowY: 'auto' }}>
-              <ResponsiveContainer width="100%" height={Math.max(260, data.species_confidence.length * 24)}>
+              <InView height={Math.max(260, data.species_confidence.length * 24)}><ResponsiveContainer width="100%" height={Math.max(260, data.species_confidence.length * 24)}>
                 <BarChart data={data.species_confidence} layout="vertical"
                           margin={{ left:8, right:32, top:0, bottom:0 }}>
                   <CartesianGrid horizontal={false} stroke="var(--border-subtle)"/>
@@ -787,19 +798,18 @@ export default function Statistics() {
                          tick={{ fill:'var(--text-secondary)', fontSize:10 }} axisLine={false} tickLine={false}/>
                   <Tooltip content={<ChirpTooltip suffix="%"/>}/>
                   <Legend wrapperStyle={{ fontSize:11, color:'var(--text-tertiary)' }}/>
-                  <Bar dataKey="avg" name="Avg %" fill="#fb7185" radius={[0,3,3,0]} maxBarSize={14}/>
-                  <Bar dataKey="max" name="Max %" fill="#fda4af" radius={[0,3,3,0]} maxBarSize={14} opacity={0.5}/>
+                  <Bar isAnimationActive={CHART_ANIMATION} dataKey="avg" name="Avg %" fill="#fb7185" radius={[0,3,3,0]} maxBarSize={14}/>
+                  <Bar isAnimationActive={CHART_ANIMATION} dataKey="max" name="Max %" fill="#fda4af" radius={[0,3,3,0]} maxBarSize={14} opacity={0.5}/>
                 </BarChart>
-              </ResponsiveContainer>
+              </ResponsiveContainer></InView>
             </div>
           </ChartCard>
         )}
 
         {/* Species × Month heatmap with size selector */}
         {topNames.length > 0 && (
-          <ChartCard id="stats:species-month-heatmap" title={`Species × Month Heatmap (${metricLabel})`} icon={Calendar} color="#f97316" span={2}
-                     headerRight={
-                       <div className="flex items-center gap-1">
+          <ChartCard id="stats:species-month-heatmap" title={`Species by Month (${metricLabel})`} icon={Calendar} color="#f97316" span={2}>
+                       <div className="flex items-center gap-1 flex-wrap mb-3">
                          <span className="text-xs" style={{ color:'var(--text-tertiary)' }}>Top:</span>
                          {HEATMAP_SIZES.map(s => (
                            <button key={s} onClick={() => setHeatmapSize(s)}
@@ -813,7 +823,6 @@ export default function Statistics() {
                            </button>
                          ))}
                        </div>
-                     }>
             <div className="overflow-x-auto -mx-1">
               <div style={{ minWidth: 380 }}>
                 <div className="grid text-xs font-semibold mb-1 sticky top-0"

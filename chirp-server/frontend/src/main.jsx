@@ -6,11 +6,16 @@ import './index.css'
 import './lib/theme'  // apply theme before first render
 import { migrateLegacySettingsCollapse } from './lib/cardState'
 import { installViewportFix } from './lib/viewportFix'
+import { installIconSync } from './lib/appIcon'
+import { getStoredTheme } from './lib/theme'
 import { installExternalLinkGuard } from './native'
+import { installErrorHooks } from './lib/diagLog'
 
 migrateLegacySettingsCollapse()
 installViewportFix()
+installIconSync(getStoredTheme)
 installExternalLinkGuard()
+installErrorHooks()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <BrowserRouter>

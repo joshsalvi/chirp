@@ -21,7 +21,7 @@
 // redeployed. A hard refresh does NOT fix this on its own: it reloads the
 // page, but doesn't bypass an already-active service worker intercepting
 // the asset requests before they'd reach the network.
-const CACHE = 'chirp-v0.5.15.c'
+const CACHE = 'chirp-v0.5.17.g'
 const SHELL = ['/', '/recordings', '/library', '/regional', '/likely', '/settings']
 
 self.addEventListener('install', e => {

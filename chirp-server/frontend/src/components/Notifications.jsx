@@ -4,7 +4,7 @@ import { Bell, Bird, Newspaper, CheckCheck, Trash2, RefreshCw, Settings as Cog, 
 import { api } from '../lib/api'
 import { setUnread } from '../lib/unread'
 import { appPath } from '../lib/appPath'
-import { native, isApp } from '../native'
+import { native, isApp, deviceName } from '../native'
 
 const ICON = { 'new-bird': Bird, 'daily-digest': Newspaper }
 
@@ -118,7 +118,7 @@ export default function Notifications() {
             <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Push alerts are off</p>
             <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)', lineHeight: 1.5 }}>
               {pushState === 'denied'
-                ? 'Turn them on in the iPhone Settings app → Chirp → Notifications. New notifications still collect here.'
+                ? `Turn them on in the ${deviceName()} Settings app → Chirp → Notifications. New notifications still collect here.`
                 : 'Allow notifications to hear about new birds as they are detected. They also collect here.'}
             </p>
           </div>
@@ -146,7 +146,7 @@ export default function Notifications() {
           {items.map(n => {
             const Icon = ICON[n.kind] || Bell
             return (
-              <li key={n.id} className="card flex items-stretch overflow-hidden">
+              <li key={n.id} className="card cv-row flex items-stretch overflow-hidden">
                 <button onClick={() => open(n)} disabled={!n.url && n.kind !== 'daily-digest'}
                         className="flex-1 min-w-0 text-left p-3.5 pr-1 flex items-start gap-3 tactile-press"
                         style={{ cursor: (n.url || n.kind === 'daily-digest') ? 'pointer' : 'default' }}>

@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Shield, Users, Home, Trash2, Plus, X, ChevronDown, Check, RefreshCw, UserPlus, Upload, Radio, Laptop, Inbox, Copy } from 'lucide-react'
+import { Shield, Users, Home, Trash2, Plus, X, ChevronDown, Check, RefreshCw, UserPlus, Upload, Radio, Laptop, Inbox } from 'lucide-react'
 import { api } from '../lib/api'
+import SupportMessagesCard from './SupportMessages'
+// ourchirp.com's own tabs; an empty list in everyone else's build.
+import { websiteTabsFirst, websiteTabsLast } from '../website/WebsiteAdmin'
 
 const ROLE_COLORS = {
   admin:     { bg: 'rgba(167,139,250,.15)', color: '#c4b5fd', border: 'rgba(167,139,250,.3)' },
@@ -491,6 +494,18 @@ function UsersTab() {
   )
 }
 
+function MessagesTab() {
+  return <SupportMessagesCard/>
+}
+
+const TABS = [
+  ...(websiteTabsFirst.length ? websiteTabsFirst : [['messages', 'Messages', Inbox, MessagesTab]]),
+  ['instances', 'Instances', Home, InstancesTab],
+  ['users', 'Users', Users, UsersTab],
+  ['network', 'Network', Radio, NetworkTab],
+  ...websiteTabsLast,
+]
+
 export default function GlobalAdmin() {
   const [tab, setTab] = useState('instances')
   const [overview, setOverview] = useState(null)
@@ -526,7 +541,7 @@ export default function GlobalAdmin() {
       </div>
 
       <div className="flex gap-1 mb-4 p-1 rounded-xl w-fit max-w-full overflow-x-auto" style={{ background: 'var(--bg-raised)' }}>
-        {[['requests', 'Requests', Inbox], ['instances', 'Instances', Home], ['users', 'Users', Users], ['network', 'Network', Radio]].map(([id, label, Icon]) => (
+        {TABS.map(([id, label, Icon]) => (
           <button key={id} onClick={() => setTab(id)}
                   className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all"
                   style={tab === id
@@ -537,7 +552,7 @@ export default function GlobalAdmin() {
         ))}
       </div>
 
-      {tab === 'requests' ? <RequestsTab/> : tab === 'instances' ? <InstancesTab/> : tab === 'users' ? <UsersTab/> : <NetworkTab/>}
+      {(() => { const Tab = (TABS.find(t => t[0] === tab) || TABS[1])[3]; return <Tab/> })()}
     </div>
   )
 }
@@ -818,237 +833,3 @@ function HeadscaleBasicAuthCard() {
 
 const muted = { color: 'var(--text-tertiary)' }
 
-function CopyBox({ text }) {
-  const [copied, setCopied] = useState(false)
-  return (
-    <div className="relative">
-      <pre className="text-xs p-3 rounded-lg whitespace-pre-wrap break-all max-h-64 overflow-auto"
-           style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)' }}>{text}</pre>
-      <button className="absolute top-2 right-2 text-xs px-2 py-1 rounded-md flex items-center gap-1"
-              style={{ background: 'var(--bg-raised)', color: 'var(--text-secondary)' }}
-              onClick={() => navigator.clipboard?.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500) })}>
-        <Copy size={11}/> {copied ? 'Copied' : 'Copy'}
-      </button>
-    </div>
-  )
-}
-
-function RequestCard({ req, onChanged }) {
-  const [busy, setBusy] = useState(false)
-  const [denying, setDenying] = useState(false)
-  const [reason, setReason] = useState('')
-  const [result, setResult] = useState(null)
-  const [error, setError] = useState(null)
-  const hosted = req.kind === 'hosted'
-  const run = async (fn) => {
-    setBusy(true); setError(null)
-    try { const r = await fn(); setResult(r); onChanged(r) } catch (e) { setError(e.message) } finally { setBusy(false) }
-  }
-  const statusStyle = req.status === 'approved' ? { background: 'rgba(34,197,94,.12)', color: 'var(--pastel-green)' }
-    : req.status === 'denied' ? { background: 'rgba(248,113,113,.12)', color: '#f87171' }
-    : { background: 'rgba(251,191,36,.14)', color: 'var(--pastel-amber)' }
-  const facts = hosted
-    ? [['Username', req.username], ['Place', req.location_name],
-       ['Coordinates', req.latitude != null ? `${req.latitude}, ${req.longitude}` : null],
-       ['Time zone', req.timezone], ['Station', req.hardware]]
-    : [['Server', req.server_url]]
-  return (
-    <div className="card px-4 py-3 space-y-2" style={{ border: '1px solid var(--border-subtle)' }}>
-      <div className="flex items-start gap-2 flex-wrap">
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{req.site_name}</p>
-          <p className="text-xs truncate" style={muted}>
-            {req.full_name} · <a href={`mailto:${req.email}`}>{req.email}</a> · {new Date(req.created_at + 'Z').toLocaleString()}
-          </p>
-        </div>
-        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold uppercase"
-              style={{ background: 'var(--bg-raised)', color: 'var(--text-secondary)' }}>{hosted ? 'Hosted site' : 'Push relay'}</span>
-        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold uppercase" style={statusStyle}>{req.status}</span>
-      </div>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
-        {facts.filter(([, v]) => v != null && v !== '').flatMap(([k, v]) => [
-          <dt key={k + 't'} style={muted}>{k}</dt>,
-          <dd key={k} className="break-words" style={{ color: 'var(--text-secondary)' }}>{v}</dd>,
-        ])}
-      </dl>
-      {req.message && <p className="text-xs whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>“{req.message}”</p>}
-      {req.status !== 'pending' && (
-        <p className="text-xs" style={muted}>
-          {req.status === 'approved' ? 'Approved' : 'Denied'} by {req.decided_by} · {req.decided_at && new Date(req.decided_at + 'Z').toLocaleDateString()}
-          {req.status === 'approved' && (req.emailed_at ? ' · instructions emailed' : ' · not emailed')}
-          {req.deny_reason && <> · {req.deny_reason}</>}
-        </p>
-      )}
-      {error && <p className="text-xs" style={{ color: 'var(--pastel-red)' }}>{error}</p>}
-      {result?.instructions && (
-        <div className="space-y-1">
-          <p className="text-xs" style={{ color: result.email_sent ? 'var(--pastel-green)' : 'var(--pastel-amber)' }}>
-            {result.email_sent ? `Emailed to ${req.email}. Copy below if needed; it isn't shown again.`
-              : `Email didn't send (check SMTP). Send these to ${req.email} yourself; they aren't shown again.`}
-          </p>
-          <CopyBox text={result.instructions}/>
-        </div>
-      )}
-      {req.status === 'pending' && !denying && (
-        <div className="flex gap-2 pt-1">
-          <button className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1" disabled={busy}
-                  onClick={() => run(() => api.admin.approveSiteRequest(req.id))}>
-            <Check size={12}/> {busy ? 'Working…' : hosted ? 'Approve and create site' : 'Approve and issue token'}
-          </button>
-          <button className="btn-secondary text-xs px-3 py-1.5" disabled={busy} onClick={() => setDenying(true)}>Deny</button>
-        </div>
-      )}
-      {denying && req.status === 'pending' && (
-        <div className="space-y-2 pt-1">
-          <textarea className="input w-full text-sm" rows={2} placeholder="Reason (optional, included in the email)"
-                    value={reason} onChange={e => setReason(e.target.value)}/>
-          <div className="flex gap-2">
-            <button className="btn-secondary text-xs px-3 py-1.5" disabled={busy}
-                    onClick={() => run(() => api.admin.denySiteRequest(req.id, { reason, notify: true }))}>Deny and email</button>
-            <button className="text-xs px-3 py-1.5" style={muted} onClick={() => setDenying(false)}>Cancel</button>
-          </div>
-        </div>
-      )}
-      {req.status !== 'pending' && (
-        <button className="text-xs flex items-center gap-1" style={muted} disabled={busy}
-                onClick={() => { if (confirm('Remove this request from the list? The site or token stays.')) api.admin.deleteSiteRequest(req.id).then(() => onChanged({ ...req, _deleted: true })) }}>
-          <Trash2 size={11}/> Remove from list
-        </button>
-      )}
-    </div>
-  )
-}
-
-function RelayServersCard() {
-  const [data, setData] = useState(null)
-  const [error, setError] = useState(null)
-  const [name, setName] = useState('')
-  const [made, setMade] = useState(null)
-  const load = () => api.admin.relayServers().then(setData).catch(e => setError(e.message))
-  useEffect(() => { load() }, [])
-  const create = async () => {
-    try { const r = await api.admin.createRelayServer({ name }); setMade(r); setName(''); load() } catch (e) { setError(e.message) }
-  }
-  return (
-    <div className="card px-4 py-3 space-y-3" style={{ border: '1px solid var(--border-subtle)' }}>
-      <div>
-        <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Push relay</p>
-        <p className="text-xs" style={muted}>
-          Self-hosted Chirp servers send iPhone notifications through this server with a relay token.
-        </p>
-      </div>
-      {data && !data.apns_ready && (
-        <p className="text-xs" style={{ color: 'var(--pastel-amber)' }}>
-          No server-wide APNs key: set CHIRP_APNS_TEAM_ID, CHIRP_APNS_KEY_ID, CHIRP_APNS_BUNDLE_ID and CHIRP_APNS_AUTH_KEY_FILE. Relayed pushes fail until then.
-        </p>
-      )}
-      {error && <p className="text-xs" style={{ color: 'var(--pastel-red)' }}>{error}</p>}
-      {data?.servers?.map(r => (
-        <div key={r.id} className="flex items-center gap-3 p-2.5 rounded-lg" style={{ background: 'var(--bg-subtle)', opacity: r.active ? 1 : 0.55 }}>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{r.name}</p>
-            <p className="text-xs truncate" style={muted}>
-              {r.server_url || r.contact_email || 'no address'} · {r.sent_count} sent
-              {r.last_used_at && ` · last ${new Date(r.last_used_at + 'Z').toLocaleDateString()}`}
-            </p>
-          </div>
-          <button className="text-xs px-2.5 py-1 rounded-full" style={{ background: 'var(--bg-raised)', color: 'var(--text-tertiary)' }}
-                  onClick={() => api.admin.updateRelayServer(r.id, { active: !r.active }).then(load)}>
-            {r.active ? 'Revoke' : 'Restore'}
-          </button>
-          <button title="Delete" onClick={() => { if (confirm(`Delete relay token for ${r.name}?`)) api.admin.deleteRelayServer(r.id).then(load) }}>
-            <Trash2 size={13} style={muted}/>
-          </button>
-        </div>
-      ))}
-      {made && (
-        <div className="space-y-1">
-          <p className="text-xs" style={{ color: 'var(--pastel-green)' }}>Token for {made.name}; it isn't shown again.</p>
-          <CopyBox text={made.token}/>
-        </div>
-      )}
-      <div className="flex gap-2">
-        <input className="input flex-1 text-sm" placeholder="Server name" value={name} onChange={e => setName(e.target.value)}/>
-        <button className="btn-secondary text-xs px-3 flex items-center gap-1" disabled={!name.trim()} onClick={create}>
-          <Plus size={12}/> Issue token
-        </button>
-      </div>
-    </div>
-  )
-}
-
-function RequestsTab() {
-  const [rows, setRows] = useState(null)
-  const [filter, setFilter] = useState('pending')
-  const [error, setError] = useState(null)
-  const load = () => { setRows(null); api.admin.siteRequests(filter === 'all' ? '' : filter).then(setRows).catch(e => setError(e.message)) }
-  useEffect(load, [filter])
-  const changed = (r) => setRows(prev => r._deleted ? prev.filter(x => x.id !== r.id) : prev.map(x => x.id === r.id ? { ...x, ...r } : x))
-  return (
-    <div className="space-y-3">
-      <p className="text-xs" style={muted}>
-        Requests from <a href="/about#start" target="_blank" rel="noreferrer">ourchirp.com/about</a>. Approving a hosted site
-        creates the account, the site and a device key, and emails sign-in and setup steps.
-      </p>
-      <div className="flex gap-1.5">
-        {['pending', 'approved', 'denied', 'all'].map(f => (
-          <button key={f} onClick={() => setFilter(f)} className="text-xs px-2.5 py-1 rounded-full capitalize"
-                  style={filter === f ? { background: 'var(--nav-active-bg)', color: 'var(--accent-400)' } : { background: 'var(--bg-raised)', color: 'var(--text-tertiary)' }}>
-            {f}
-          </button>
-        ))}
-      </div>
-      {error && <p className="text-sm" style={{ color: 'var(--pastel-red)' }}>{error}</p>}
-      {!error && rows === null && <div className="skeleton h-24 rounded-xl"/>}
-      {rows?.length === 0 && <p className="text-sm" style={muted}>No {filter === 'all' ? '' : filter} requests.</p>}
-      {rows?.map(r => <RequestCard key={r.id} req={r} onChanged={changed}/>)}
-      <SupportMessagesCard/>
-      <RelayServersCard/>
-    </div>
-  )
-}
-
-const KIND_LABEL = { question: 'Question', problem: 'Problem', feature: 'Feature idea', other: 'Other' }
-
-function SupportMessagesCard() {
-  const [rows, setRows] = useState(null)
-  const [showDone, setShowDone] = useState(false)
-  const [error, setError] = useState(null)
-  useEffect(() => { api.admin.supportMessages().then(setRows).catch(e => setError(e.message)) }, [])
-  const mark = (m, done) => api.admin.markSupportMessage(m.id, done).then(u => setRows(rs => rs.map(x => x.id === u.id ? u : x)))
-  const remove = (m) => api.admin.deleteSupportMessage(m.id).then(() => setRows(rs => rs.filter(x => x.id !== m.id)))
-  const shown = (rows || []).filter(m => showDone || !m.done)
-  const open = (rows || []).filter(m => !m.done).length
-  return (
-    <div className="card px-4 py-3 space-y-3" style={{ border: '1px solid var(--border-subtle)' }}>
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Messages{rows ? ` · ${open} open` : ''}</p>
-          <p className="text-xs" style={muted}>From the support page, the About page and Help &amp; Feedback in the app.</p>
-        </div>
-        <button className="text-xs" style={muted} onClick={() => setShowDone(v => !v)}>{showDone ? 'Hide done' : 'Show done'}</button>
-      </div>
-      {error && <p className="text-xs" style={{ color: 'var(--pastel-red)' }}>{error}</p>}
-      {rows && shown.length === 0 && <p className="text-xs" style={muted}>No {showDone ? '' : 'open '}messages.</p>}
-      {shown.map(m => (
-        <div key={m.id} className="p-2.5 rounded-lg space-y-1" style={{ background: 'var(--bg-subtle)', opacity: m.done ? 0.55 : 1 }}>
-          <div className="flex items-center gap-2 flex-wrap text-xs">
-            <span className="px-1.5 py-0.5 rounded-full font-semibold uppercase text-[10px]"
-                  style={m.kind === 'feature' ? { background: 'rgba(251,191,36,.14)', color: 'var(--pastel-amber)' }
-                       : m.kind === 'problem' ? { background: 'rgba(248,113,113,.12)', color: '#f87171' }
-                       : { background: 'var(--bg-raised)', color: 'var(--text-secondary)' }}>{KIND_LABEL[m.kind] || m.kind}</span>
-            <span style={{ color: 'var(--text-primary)' }}>{m.name || m.username || m.email}</span>
-            {m.email && <a href={`mailto:${m.email}`}>{m.email}</a>}
-            {m.site && <span style={muted}>· {m.site}</span>}
-            <span className="ml-auto" style={muted}>{new Date(m.created_at + 'Z').toLocaleString()}</span>
-          </div>
-          <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{m.message}</p>
-          <div className="flex gap-3 text-xs">
-            <button style={{ color: 'var(--accent-400)' }} onClick={() => mark(m, !m.done)}>{m.done ? 'Reopen' : 'Mark done'}</button>
-            <button style={muted} onClick={() => { if (confirm('Delete this message?')) remove(m) }}>Delete</button>
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}

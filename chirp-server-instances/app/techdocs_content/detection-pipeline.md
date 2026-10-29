@@ -57,7 +57,7 @@ The current values:
 
 Only audio that survives Stage 1 reaches the neural network
 classifier (BirdNET, running as a TFLite model). This is the expensive
-step — full inference, not just a threshold check — so gating it behind
+step — full inference, not only a threshold check — so gating it behind
 Stage 1 is what makes continuous, always-on detection practical on
 modest edge hardware.
 
@@ -65,7 +65,7 @@ If a Coral USB EdgeTPU accelerator is present, inference runs on it
 instead of the CPU — a meaningful speed difference (roughly 20ms vs.
 roughly 300ms per window on CPU), though the EdgeTPU is an optional
 hardware accelerator, not a requirement; the same classifier runs either
-way, just faster with it present.
+way, only faster with it present.
 
 - Analysis window: 3 seconds (BirdNET's expected input length)
 - Minimum confidence: 0.05 by default, configurable per deployment (lowered from an earlier 0.25 default to catch more/quieter detections)
@@ -88,7 +88,7 @@ Recordings upload to the server as a multipart POST with a JSON metadata
 sidecar (device ID, timestamp, detected species, confidence, and so on).
 If the upload fails — network outage, server unreachable — it retries
 with exponential backoff and caches locally in the meantime, so a
-temporary connectivity gap doesn't lose any detections; they just arrive
+temporary connectivity gap doesn't lose any detections; they arrive
 late once the connection recovers.
 
 ## Server BirdNET pass

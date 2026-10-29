@@ -23,6 +23,7 @@ import { Tag, Mail, GitBranch, ChevronDown, ChevronRight } from 'lucide-react'
 
 // One-line summaries per major and minor version live in lib/whatsNew.js.
 import { ERA_SUMMARIES, GROUP_SUMMARIES } from '../lib/whatsNew'
+import { deviceName } from '../native'
 
 // Versioning scheme, shown at the bottom of this page
 
@@ -160,7 +161,7 @@ export default function Changelog() {
 
       {/* Server / Device tabs */}
       <div className="flex gap-2 mb-4">
-        {[['server', 'Server'], ['ios', 'iPhone App'], ['device', 'Device']].map(([id, label]) => (
+        {[['server', 'Server'], ['device', 'Listening device'], ['ios', 'iPhone App']].map(([id, label]) => (
           <button key={id} onClick={() => setTab(id)}
                   className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
                   style={tab === id
@@ -264,9 +265,12 @@ function IosVersions({ groups, appInfo }) {
     }
   }
   const after = (v, base) => atLeast(v, base) && v !== base
-  const rows = APP_RELEASES.map((app, i) => {
+  // One row per app version: a version uploaded twice (a rebuild for
+  // review) keeps its newest build.
+  const versions = APP_RELEASES.filter((r, i) => APP_RELEASES.findIndex(x => x.ios === r.ios) === i)
+  const rows = versions.map((app, i) => {
     // Previous public build: what someone updating to this one had before.
-    const prev = APP_RELEASES.slice(i + 1).find(r => !r.test)?.chirp
+    const prev = versions.slice(i + 1).find(r => !r.test)?.chirp
     const included = prev
       ? releases.filter(r => atLeast(app.chirp, r.chirp) && after(r.chirp, prev))
       : releases.filter(r => r.chirp === app.chirp)
@@ -280,7 +284,7 @@ function IosVersions({ groups, appInfo }) {
       <div className="card p-4">
         {appInfo ? (
           <>
-            <p className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-tertiary)' }}>On this iPhone</p>
+            <p className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-tertiary)' }}>On this {deviceName()}</p>
             <p className="font-mono text-xl font-bold mt-1" style={{ color: 'var(--accent-400)' }}>{appInfo.version}</p>
             <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Build {appInfo.build}</p>
           </>

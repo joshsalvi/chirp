@@ -53,6 +53,8 @@ class SettingsIn(BaseModel):
     bird_buddy_password: Optional[str] = None
     bird_buddy_enabled:  Optional[bool] = None
     bird_buddy_selected_feeders: Optional[list] = None
+    birdweather_enabled: Optional[bool] = None
+    birdweather_token:   Optional[str] = None
     inat_username: Optional[str] = None
     inat_password: Optional[str] = None
     inat_oauth_client_id: Optional[str] = None
@@ -79,6 +81,7 @@ class SettingsIn(BaseModel):
     gemini_api_key: Optional[str] = None
     ollama_base_url: Optional[str] = None
     ollama_model: Optional[str] = None
+    ollama_api_key: Optional[str] = None
     ai_feature_providers: Optional[dict] = None
     daily_summary_schedule_time: Optional[str] = None
     weekly_summary_schedule_day: Optional[int] = None
@@ -191,6 +194,10 @@ class SettingsOut(BaseModel):
     bird_buddy_selected_feeders: Optional[list] = None
     bird_buddy_last_sync_at: Optional[datetime] = None
     bird_buddy_last_sync_error: Optional[str] = None
+    birdweather_enabled: Optional[bool] = False
+    birdweather_token:   Optional[str] = None
+    birdweather_last_sync_at: Optional[datetime] = None
+    birdweather_last_sync_error: Optional[str] = None
     inat_username: Optional[str] = None
     inat_password: Optional[str] = None
     inat_oauth_client_id: Optional[str] = None
@@ -219,6 +226,7 @@ class SettingsOut(BaseModel):
     gemini_api_key: Optional[str] = None
     ollama_base_url: Optional[str] = None
     ollama_model: Optional[str] = None
+    ollama_api_key: Optional[str] = None
     ai_feature_providers: Optional[dict] = None
     daily_summary_schedule_time: Optional[str] = None
     weekly_summary_schedule_day: Optional[int] = None
@@ -427,6 +435,7 @@ _MIGRATION_DEFAULTS = [
     ("ai_web_search_enabled", False),
     ("haikubox_enabled", False),
     ("bird_buddy_enabled", False),
+    ("birdweather_enabled", False),
     ("activity_log_enabled", True),
     ("activity_log_track_ip", True),
     ("activity_log_retention_days", 90),
@@ -479,9 +488,11 @@ def get_settings(db: Session = Depends(get_db)):
     out.inat_api_token   = _mask_key(s.inat_api_token)
     out.haikubox_serial  = _mask_key(s.haikubox_serial)
     out.bird_buddy_password = _mask_key(s.bird_buddy_password)
+    out.birdweather_token = _mask_key(s.birdweather_token)
     out.anthropic_api_key = _mask_key(s.anthropic_api_key)
     out.openai_api_key = _mask_key(s.openai_api_key)
     out.gemini_api_key = _mask_key(s.gemini_api_key)
+    out.ollama_api_key = _mask_key(getattr(s, "ollama_api_key", None))
     out.smtp_password    = _mask_key(s.smtp_password)   # never send password in plaintext
     out.apns_auth_key    = _mask_key(s.apns_auth_key)    # the .p8 private key content — never send in plaintext
     out.push_relay_token = _mask_key(s.push_relay_token)
@@ -508,7 +519,7 @@ def update_settings(body: SettingsIn, background_tasks: BackgroundTasks, db: Ses
     if data.get("bird_buddy_password") == "":
         del data["bird_buddy_password"]
     # Don't overwrite masked API tokens
-    for masked_field in ("ebird_api_key", "ebird_st_api_key", "inat_api_token", "haikubox_serial", "anthropic_api_key", "openai_api_key", "gemini_api_key", "apns_auth_key", "push_relay_token"):
+    for masked_field in ("ebird_api_key", "ebird_st_api_key", "inat_api_token", "haikubox_serial", "birdweather_token", "anthropic_api_key", "openai_api_key", "gemini_api_key", "ollama_api_key", "apns_auth_key", "push_relay_token"):
         if masked_field in data and data[masked_field] and "*" in str(data[masked_field]):
             del data[masked_field]
     _json_cols = {'device_api_keys', 'range_map_sources', 'range_map_source_order', 'managed_config',
@@ -620,9 +631,11 @@ def update_settings(body: SettingsIn, background_tasks: BackgroundTasks, db: Ses
     out.ebird_st_api_key = _mask_key(s.ebird_st_api_key)
     out.haikubox_serial  = _mask_key(s.haikubox_serial)
     out.bird_buddy_password = _mask_key(s.bird_buddy_password)
+    out.birdweather_token = _mask_key(s.birdweather_token)
     out.anthropic_api_key = _mask_key(s.anthropic_api_key)
     out.openai_api_key = _mask_key(s.openai_api_key)
     out.gemini_api_key = _mask_key(s.gemini_api_key)
+    out.ollama_api_key = _mask_key(getattr(s, "ollama_api_key", None))
     out.smtp_password    = _mask_key(s.smtp_password)
     out.apns_auth_key    = _mask_key(s.apns_auth_key)
     out.push_relay_token = _mask_key(s.push_relay_token)
@@ -1198,11 +1211,13 @@ def reveal_api_keys(request: Request, db: Session = Depends(get_db)):
         "ebird_api_key":    s.ebird_api_key    or "",
         "ebird_st_api_key": s.ebird_st_api_key or "",
         "inat_api_token":   s.inat_api_token   or "",
+        "birdweather_token": s.birdweather_token or "",
         "inat_token_set_at": s.inat_token_set_at.isoformat() if getattr(s, "inat_token_set_at", None) else None,
         "haikubox_serial":  s.haikubox_serial  or "",
         "anthropic_api_key": s.anthropic_api_key or "",
         "openai_api_key": getattr(s, "openai_api_key", None) or "",
         "gemini_api_key": getattr(s, "gemini_api_key", None) or "",
+        "ollama_api_key": getattr(s, "ollama_api_key", None) or "",
         "server_url":       s.server_url        or "",
         "range_map_sources": s.range_map_sources if s.range_map_sources is not None else {"aab": True, "macaulay": True, "geomodel": True, "birdlife": True},
         "range_map_source_order": s.range_map_source_order if s.range_map_source_order is not None else ["aab", "macaulay", "geomodel", "birdlife", "ebird_st"],
@@ -1694,6 +1709,29 @@ async def list_bird_buddy_feeders(db: Session = Depends(get_db)):
         raise HTTPException(status_code=502, detail=f"Could not reach Bird Buddy: {e}")
 
 
+@router.post("/birdweather/sync-now")
+def trigger_birdweather_sync(background_tasks: BackgroundTasks):
+    """Runs one BirdWeather sync now instead of waiting for the next one."""
+    from ..services.birdweather_sync import get_sync_service
+    background_tasks.add_task(get_sync_service().run_sync)
+    return {"status": "sync_queued"}
+
+
+@router.post("/birdweather/test")
+def test_birdweather(db: Session = Depends(get_db)):
+    """Checks the saved station token: how many soundscapes in the last 7 days."""
+    from ..models import AppSettings
+    from ..services.birdweather_sync import get_sync_service, _describe
+    s = db.query(AppSettings).filter(AppSettings.id == 1).first()
+    token = (getattr(s, "birdweather_token", None) or "").strip() if s else ""
+    if not token:
+        raise HTTPException(status_code=400, detail="Save a BirdWeather station token first.")
+    try:
+        return get_sync_service().check(token)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=_describe(e))
+
+
 @router.post("/bird-buddy/sync-now")
 def trigger_bird_buddy_sync(background_tasks: BackgroundTasks):
     """Manually triggers one Bird Buddy sync cycle immediately, rather than
@@ -1759,7 +1797,17 @@ class AiKeyTestRequest(BaseModel):
     provider: str  # "anthropic" | "openai" | "gemini" | "ollama"
     api_key: Optional[str] = None  # if omitted, tests whatever's already stored for that provider
     base_url: Optional[str] = None  # ollama only — testing an unsaved value, same idea as api_key above
-    model: Optional[str] = None     # ollama only
+    model: Optional[str] = None     # ollama only (api_key is then the optional proxy key)
+
+
+def _ollama_key(given: Optional[str], db) -> Optional[str]:
+    """The Ollama proxy key to use: one typed but not yet saved, else the
+    saved one. A masked value (from the settings form) means "the saved one"."""
+    if given and "*" not in given:
+        return given.strip()
+    from ..models import AppSettings
+    s = db.query(AppSettings).filter(AppSettings.id == 1).first()
+    return getattr(s, "ollama_api_key", None) if s else None
 
 
 @router.post("/ai/test")
@@ -1783,7 +1831,11 @@ def test_ai_key(body: AiKeyTestRequest, db: Session = Depends(get_db)):
         if not base_url or not model:
             raise HTTPException(status_code=400, detail="Ollama needs both a base URL and a model name configured or provided")
         import json as _json
-        credential = _json.dumps({"base_url": base_url.rstrip("/"), "model": model})
+        cfg = {"base_url": base_url.rstrip("/"), "model": model}
+        key = _ollama_key(body.api_key, db)
+        if key:
+            cfg["api_key"] = key
+        credential = _json.dumps(cfg)
         try:
             return test_provider_key("ollama", credential)
         except Exception as e:
@@ -1807,8 +1859,18 @@ def test_ai_key(body: AiKeyTestRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=502, detail=f"Key test failed: {e}")
 
 
+class OllamaModelsRequest(BaseModel):
+    base_url: Optional[str] = None
+    api_key: Optional[str] = None   # optional proxy key; kept out of the URL
+
+
+@router.post("/ai/ollama/models")
+def list_ollama_models_post(body: OllamaModelsRequest, db: Session = Depends(get_db)):
+    return list_ollama_models(body.base_url, db, api_key=body.api_key)
+
+
 @router.get("/ai/ollama/models")
-def list_ollama_models(base_url: Optional[str] = None, db: Session = Depends(get_db)):
+def list_ollama_models(base_url: Optional[str] = None, db: Session = Depends(get_db), api_key: Optional[str] = None):
     """
     Lists models already pulled on the configured (or given) Ollama
     server — the same {base_url}/api/tags call test_provider_key()
@@ -1823,7 +1885,10 @@ def list_ollama_models(base_url: Optional[str] = None, db: Session = Depends(get
     if not base_url:
         raise HTTPException(status_code=400, detail="No Ollama base URL configured or provided")
     try:
-        resp = httpx.get(f"{base_url.rstrip('/')}/api/tags", timeout=10.0)
+        from ..services.ai_providers import ollama_headers
+        resp = httpx.get(f"{base_url.rstrip('/')}/api/tags", headers=ollama_headers(_ollama_key(api_key, db)), timeout=10.0)
+        if resp.status_code == 401:
+            raise RuntimeError("the server asked for an API key (401); add or check the Ollama API key")
         resp.raise_for_status()
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Could not reach Ollama server: {e}")
@@ -1839,6 +1904,7 @@ def list_ollama_models(base_url: Optional[str] = None, db: Session = Depends(get
 class OllamaPullRequest(BaseModel):
     model: str
     base_url: Optional[str] = None  # testing/pulling to a not-yet-saved URL, same idea as AiKeyTestRequest above
+    api_key: Optional[str] = None   # optional proxy key, same idea
 
 
 @router.post("/ai/ollama/pull")
@@ -1867,10 +1933,12 @@ def pull_ollama_model(body: OllamaPullRequest, db: Session = Depends(get_db)):
     if not base_url:
         raise HTTPException(status_code=400, detail="No Ollama base URL configured or provided")
 
+    from ..services.ai_providers import ollama_headers
     try:
         resp = httpx.post(
             f"{base_url.rstrip('/')}/api/pull",
             json={"name": model, "stream": False},
+            headers=ollama_headers(_ollama_key(body.api_key, db)),
             timeout=900.0,  # large models can take this long over a slow connection
         )
         resp.raise_for_status()

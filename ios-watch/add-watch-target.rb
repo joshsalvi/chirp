@@ -24,7 +24,8 @@ abort 'usage: add-watch-target.rb <project> <bundle id> [team] [KEY=VALUE ...] |
 project = Xcodeproj::Project.open(proj_path)
 app = project.targets.find { |t| t.name == 'App' } or abort 'No App target'
 root = File.dirname(proj_path) # ios/App
-PHONE_FILES = %w[ChirpBridgeViewController.swift ChirpWatchPlugin.swift WatchLink.swift ChirpKeychain.swift].freeze
+# ChirpBridgeViewController.swift is added for every build by ios-native/add-native-files.rb.
+PHONE_FILES = %w[ChirpWatchPlugin.swift WatchLink.swift ChirpKeychain.swift].freeze
 
 if bundle_id == '--remove'
   watch = project.targets.find { |t| t.name == 'ChirpWatch' }

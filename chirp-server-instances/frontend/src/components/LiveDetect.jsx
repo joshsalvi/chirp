@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { AudioLines, Mic, Radio, ChevronRight, CheckCircle, X } from 'lucide-react'
 import { BirdIcon } from './BirdBatIcons'
 import ChirpLogo from './ChirpLogo'
-import { isApp } from '../native'
+import { isApp, deviceName } from '../native'
 import { hapticEvent } from '../lib/haptics'
 import { SeenTodayModal } from './Dashboard'
 import { api, mediaUrl } from '../lib/api'
@@ -319,6 +319,16 @@ function SaveSessionModal({ sessionDetections, onSave, onDiscard, saving, error,
   )
 }
 
+// The last `seconds` of an AudioBuffer (the buffer itself when that's all of it).
+function tailOf(ctx, buf, seconds) {
+  const n = Math.min(buf.length, Math.round(seconds * buf.sampleRate))
+  if (n < buf.sampleRate * 0.05) return null
+  if (n === buf.length) return buf
+  const out = ctx.createBuffer(buf.numberOfChannels, n, buf.sampleRate)
+  for (let c = 0; c < buf.numberOfChannels; c++) out.copyToChannel(buf.getChannelData(c).subarray(buf.length - n), c)
+  return out
+}
+
 export default function LiveDetect() {
   const { fmtAgo } = useTz()
 
@@ -535,7 +545,7 @@ export default function LiveDetect() {
       // call. Reported directly: the slider would visibly move the
       // filter for a moment, then the cutoff would silently revert.
       // Root cause: this function is re-invoked on every new audio
-      // buffer in device mode (see playBuffer's own repeated call to
+      // buffer in device mode (see startDeviceVisualizer's repeated call to
       // this), and this callback's closure over filterFreq is frozen
       // at first render (empty deps below, deliberately, so the graph
       // itself doesn't get torn down and rebuilt every render) — so an
@@ -575,7 +585,7 @@ export default function LiveDetect() {
     let stream
     if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
       setMicPermissionDenied(false)
-      setError("Live Detect needs an https:// server address. Browsers and the iPhone app block the microphone on plain http:// addresses like this one; everything else works.")
+      setError("Live Detect needs an https:// server address. Browsers and the Chirp app block the microphone on plain http:// addresses like this one; everything else works.")
       return false
     }
     try {
@@ -743,41 +753,43 @@ export default function LiveDetect() {
     }
     const analyser = analyserRef.current
 
-    const fetchAndDecode = () =>
-      api.diagnostics.listen(deviceId, micName)
-        .then(blob => blob.arrayBuffer())
-        .then(arrayBuffer => audioCtx.decodeAudioData(arrayBuffer))
-
-    const playBuffer = async (bufferPromise) => {
+    // The station answers each request with the last few seconds it heard.
+    // Ask every 2 s, keep only the part newer than the previous answer, and
+    // queue it on one timeline: playback runs on without repeats (the first
+    // clip used to play twice), and the saved session is as long as the
+    // listening.
+    const FETCH_EVERY_MS = 2000
+    let lastAskedAt = null
+    let nextStart = 0
+    const step = async () => {
       if (stoppedRef.current) return
-      let audioBuffer
+      const askedAt = performance.now()
+      let audioBuffer = null
       try {
-        audioBuffer = await bufferPromise
+        const blob = await api.diagnostics.listen(deviceId, micName)
+        audioBuffer = await audioCtx.decodeAudioData(await blob.arrayBuffer())
       } catch {
-        audioBuffer = null
+        audioBuffer = null // one bad clip shouldn't stop the stream; try again shortly
       }
       if (stoppedRef.current) return
-      if (!audioBuffer) {
-        // A transient fetch/decode failure here shouldn't kill the whole
-        // visual over one bad clip — the detection loop already surfaces
-        // connectivity errors to the person; this one just quietly
-        // retries after a beat.
-        setTimeout(() => playBuffer(fetchAndDecode().catch(() => null)), 1000)
-        return
+      if (audioBuffer) {
+        const newSeconds = lastAskedAt == null ? audioBuffer.duration : Math.min(audioBuffer.duration, (askedAt - lastAskedAt) / 1000)
+        lastAskedAt = askedAt
+        const fresh = tailOf(audioCtx, audioBuffer, newSeconds)
+        if (fresh) {
+          sessionBuffersRef.current.push(fresh) // for "save this session" at Stop
+          const source = audioCtx.createBufferSource()
+          source.buffer = fresh
+          connectProcessingChain(audioCtx, source, analyser, true)
+          nextStart = Math.max(nextStart, audioCtx.currentTime + 0.15)
+          source.start(nextStart)
+          nextStart += fresh.duration
+          bufferSourceRef.current = source
+        }
       }
-      sessionBuffersRef.current.push(audioBuffer) // accumulated for a possible "save this session" at Stop, independent of playback
-      const source = audioCtx.createBufferSource()
-      source.buffer = audioBuffer
-      connectProcessingChain(audioCtx, source, analyser, true)
-      bufferSourceRef.current = source
-      // Start fetching the NEXT clip now — while THIS one plays — rather
-      // than waiting for onended, which is the entire fix.
-      const nextPromise = fetchAndDecode().catch(() => null)
-      source.onended = () => { if (!stoppedRef.current) playBuffer(nextPromise) }
-      source.start()
+      setTimeout(step, audioBuffer ? Math.max(0, askedAt + FETCH_EVERY_MS - performance.now()) : 1000)
     }
-
-    playBuffer(fetchAndDecode().catch(() => null))
+    step()
   }, [connectProcessingChain])
 
   const startDevicePolling = useCallback(() => {
@@ -792,6 +804,7 @@ export default function LiveDetect() {
     startDeviceVisualizer(selectedDevice.id, birdMicName)
     const loop = async () => {
       if (stoppedRef.current) return
+      const startedAt = performance.now()
       setStatusTextHeld(`Listening through ${selectedDevice.name}\u2026`, false)
       try {
         const resp = await api.liveDetect.analyze('device', { deviceId: selectedDevice.id, micName: birdMicName, minConfidence: sensitivityRef.current })
@@ -802,7 +815,9 @@ export default function LiveDetect() {
       } catch (e) {
         if (!stoppedRef.current) setError(e.message || 'Analysis failed')
       }
-      if (!stoppedRef.current) pollTimerRef.current = setTimeout(loop, 500)
+      // A check every 1.5 s, like the phone mic: each one hears the last few
+      // seconds, so checking more often counted the same calls again.
+      if (!stoppedRef.current) pollTimerRef.current = setTimeout(loop, Math.max(300, startedAt + 1500 - performance.now()))
     }
     loop()
     return true
@@ -969,7 +984,9 @@ export default function LiveDetect() {
   const changeDevice = (id) => { if (listening) stopEverything(); setSelectedDeviceId(id) }
 
   return (
-    <div className="page-root">
+    // Capped width: on an iPad or a wide window the sliders and cards
+    // stretched across the whole screen.
+    <div className="page-root max-w-3xl">
       <div className="flex items-center gap-2 mb-1">
         <ChirpLogo size={30} animate={listening ? 'meter' : false}/>
         <h1 className="font-display text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Live Detect</h1>
@@ -1081,7 +1098,7 @@ export default function LiveDetect() {
               <span className="block text-[11px] mt-0.5" style={{ color: 'var(--text-tertiary)', lineHeight: 1.45 }}>
                 {!useLocation ? 'Off: recordings use the home site\'s location.'
                   : locState === 'locating' ? 'Finding your location…'
-                  : locState === 'denied' ? 'Location isn\'t allowed. Turn it on in the iPhone Settings app → Chirp → Location.'
+                  : locState === 'denied' ? `Location isn't allowed. Turn it on in the ${deviceName()} Settings app → Chirp → Location.`
                   : locState === 'unavailable' ? 'Location isn\'t available right now; using the home site\'s.'
                   : locState?.acc != null ? `Saved with recordings and used to judge likely birds (±${locState.acc} m).`
                   : 'Saved with Live Detect recordings and used to judge which birds are likely where you are.'}

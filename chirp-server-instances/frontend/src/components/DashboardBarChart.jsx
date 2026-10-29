@@ -1,4 +1,5 @@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { CHART_ANIMATION } from '../lib/motion'
 
 /**
  * The Dashboard's two bar charts, in a separate lazy chunk so the Dashboard
@@ -18,7 +19,7 @@ export default function DashboardBarChart({
         <XAxis dataKey={xKey} tick={tick} tickLine={false} axisLine={false} interval={interval}/>
         <YAxis tick={tick} tickLine={false} axisLine={false} width={yWidth} allowDecimals={false}/>
         <Tooltip content={tooltip} cursor={{ fill: 'rgba(255,255,255,.03)', radius: 4 }}/>
-        <Bar dataKey={yKey} radius={radius} fill={cellFill ? undefined : fill}>
+        <Bar isAnimationActive={CHART_ANIMATION} dataKey={yKey} radius={radius} fill={cellFill ? undefined : fill}>
           {cellFill && data.map((d, i) => (
             <Cell key={i} fill={cellFill(d, i)} opacity={cellOpacity ? cellOpacity(d, i) : 1}/>
           ))}

@@ -5,7 +5,7 @@ import {
   Cpu, Wifi, WifiOff, MapPin, RefreshCw, Trash2, Edit2,
   Check, X, ChevronDown, ChevronUp, Radio, Mic, Zap,
   Activity, Copy, Plus, AudioLines,
-  AlertCircle, Settings2, Info, ExternalLink, FileText, Server
+  AlertCircle, Settings2, Info, ExternalLink, FileText, Server, Cloud
 } from 'lucide-react'
 import { BirdBuddyIcon } from './BirdBatIcons'
 import MicFrequencyResponse from './MicFrequencyResponse'
@@ -577,6 +577,8 @@ function DeviceCard({ device, onUpdated, onDeleted, serverHasLocation, onOpenSsh
         <div className={`p-2 rounded-lg ${device.status === 'online' ? 'bg-chirp-900/40' : 'bg-surface-800'}`}>
           {device.birdnet_backend === 'bird_buddy'
             ? <BirdBuddyIcon size={16} className={device.status === 'online' ? 'text-chirp-400' : 'text-gray-600'}/>
+            : device.birdnet_backend === 'birdweather'
+            ? <Cloud size={16} className={device.status === 'online' ? 'text-chirp-400' : 'text-gray-600'}/>
             : device.status === 'online'
             ? <Radio size={16} className="text-chirp-400"/>
             : <WifiOff size={16} className="text-gray-600"/>}
@@ -1430,7 +1432,7 @@ function DevicesInner() {
           Recording.device_id, is_online(), and the dedicated panel's own
           status queries; this only changes what renders in this one list. */}
       <div className="space-y-4">
-        {devices.filter(d => d.platform !== 'Haikubox' && d.birdnet_backend !== 'haikubox' && d.birdnet_backend !== 'bird_buddy').map(d => (
+        {devices.filter(d => d.platform !== 'Haikubox' && d.birdnet_backend !== 'haikubox' && d.birdnet_backend !== 'bird_buddy' && d.birdnet_backend !== 'birdweather').map(d => (
           <DeviceCard
             key={d.id}
             device={d}
@@ -1447,6 +1449,13 @@ function DevicesInner() {
         label="Bird Buddy"
         icon={BirdBuddyIcon}
         devices={devices.filter(d => d.birdnet_backend === 'bird_buddy')}
+        defaultOpen={false}
+        onUpdated={handleUpdated}
+      />
+      <ThirdPartyDeviceGroup
+        label="BirdWeather"
+        icon={Cloud}
+        devices={devices.filter(d => d.birdnet_backend === 'birdweather')}
         defaultOpen={false}
         onUpdated={handleUpdated}
       />
@@ -1652,7 +1661,7 @@ function DevicesInner() {
           </ol>
           <p className="text-sm text-gray-400">
             Step-by-step, including building the station and automatic setup with Discover:{' '}
-            <a href="/setup.html#connect" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>setup guide ↗</a>
+            <a href="https://ourchirp.com/setup.html#connect" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>setup guide ↗</a>
           </p>
         </div>
       )}

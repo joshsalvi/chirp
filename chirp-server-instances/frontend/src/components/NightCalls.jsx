@@ -1,13 +1,14 @@
 /**
  * Night Flight Calls (Settings → Experimental → Night flight calls):
  * calls Nighthawk found in the stations' night audio, by night, week or
- * month, collapsed into family groups. Each call has its own page
+ * month, collapsed into family groups, filtered by level, confidence and
+ * a search (server-side, so limits apply after filtering). Each call has its own page
  * (NightCallDetail.jsx).
  * API: /night-calls (api/night_calls.py); names from nighthawk_service.describe.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Moon, Play, Pause, Trash2, ChevronDown, ChevronRight } from 'lucide-react'
+import { Moon, Play, Pause, Trash2, ChevronDown, ChevronRight, Search, X } from 'lucide-react'
 import { api, mediaUrl } from '../lib/api'
 
 const LEVELS = [
@@ -19,6 +20,15 @@ const LEVELS = [
 const LEVEL_COLOR = { species: 'var(--accent-400)', group: '#a3e635', family: '#7dd3fc', order: 'var(--text-tertiary)' }
 
 export const LEVEL_RANK = { species: 0, group: 1, family: 2, order: 3 }
+
+// Filters, kept on this device: which levels show (order-level calls start
+// hidden), the lowest confidence and the search.
+const DEFAULT_LEVELS = ['species', 'group', 'family']
+const CONFIDENCE = [[0, 'Any'], [0.5, '50%+'], [0.75, '75%+'], [0.9, '90%+']]
+function stored(key, fallback) {
+  try { const v = localStorage.getItem(key); return v == null ? fallback : JSON.parse(v) } catch { return fallback }
+}
+function store(key, v) { try { localStorage.setItem(key, JSON.stringify(v)) } catch {} }
 
 export function fmtNight(night) {
   const d = new Date(`${night}T12:00:00`)
@@ -143,7 +153,15 @@ export default function NightCalls() {
   const [grouped, setGrouped] = useState(() => { try { return localStorage.getItem('chirp_nc_grouped') !== '0' } catch { return true } })
   const [openGroups, setOpenGroups] = useState(() => new Set())
   const [data, setData] = useState(null)          // { calls, total, unnarrowed }
-  const [showAll, setShowAll] = useState(false)
+  const [levels, setLevels] = useState(() => {
+    const v = stored('chirp_nc_levels', DEFAULT_LEVELS)
+    return Array.isArray(v) ? v.filter(l => l in LEVEL_RANK) : DEFAULT_LEVELS
+  })
+  const [minProb, setMinProb] = useState(() => {
+    const v = Number(stored('chirp_nc_min_prob', 0)); return CONFIDENCE.some(([k]) => k === v) ? v : 0
+  })
+  const [query, setQuery] = useState('')
+  const [search, setSearch] = useState('')      // query, once typing pauses
   const [status, setStatus] = useState(null)
   const [playing, setPlaying] = useState(null)
   const [failed, setFailed] = useState(null)
@@ -161,12 +179,22 @@ export default function NightCalls() {
 
   useEffect(() => { try { localStorage.setItem('chirp_nc_period', period); localStorage.setItem('chirp_nc_grouped', grouped ? '1' : '0') } catch {} }, [period, grouped])
 
+  useEffect(() => { store('chirp_nc_levels', levels); store('chirp_nc_min_prob', minProb) }, [levels, minProb])
+  useEffect(() => { const t = setTimeout(() => setSearch(query.trim()), 250); return () => clearTimeout(t) }, [query])
+
   useEffect(() => {
     if (!bucket) return
+    let live = true
     setData(null); setOpenGroups(new Set())
-    api.nightCalls.range(bucket.start, bucket.end, showAll, period === 'night' ? 500 : 5000)
-      .then(setData).catch(() => setData({ calls: [], total: 0, unnarrowed: 0 }))
-  }, [bucket?.start, bucket?.end, showAll])
+    api.nightCalls.range(bucket.start, bucket.end, { levels, minProb, q: search, limit: period === 'night' ? 500 : 5000 })
+      .then(d => live && setData(d)).catch(() => live && setData({ calls: [], total: 0, unnarrowed: 0, by_level: {} }))
+    return () => { live = false }
+  }, [bucket?.start, bucket?.end, levels.join(','), minProb, search])
+
+  const toggleLevel = k => setLevels(ls => (ls.includes(k) ? ls.filter(x => x !== k) : [...ls, k])
+    .sort((a, b) => LEVEL_RANK[a] - LEVEL_RANK[b]))
+  const filtered = search || minProb > 0 || levels.join(',') !== DEFAULT_LEVELS.join(',')
+  const clearFilters = () => { setQuery(''); setSearch(''); setMinProb(0); setLevels(DEFAULT_LEVELS) }
 
   const groups = useMemo(() => (data ? groupCalls(data.calls) : []), [data])
 
@@ -251,7 +279,7 @@ export default function NightCalls() {
         <div className="flex flex-wrap items-center gap-2">
           <div role="radiogroup" aria-label="Period" className="inline-flex rounded-lg p-0.5 text-sm" style={{ background: 'var(--bg-raised)' }}>
             {[['night', 'Night'], ['week', 'Week'], ['month', 'Month']].map(([k, label]) => (
-              <button key={k} role="radio" aria-checked={period === k} onClick={() => { setPeriod(k); setBucketKey(null); setShowAll(false) }}
+              <button key={k} role="radio" aria-checked={period === k} onClick={() => { setPeriod(k); setBucketKey(null) }}
                       className="px-3 py-1 rounded-md" style={period === k ? pill(true) : { color: 'var(--text-secondary)' }}>{label}</button>
             ))}
           </div>
@@ -265,7 +293,7 @@ export default function NightCalls() {
       {bucketList.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
           {bucketList.map(n => (
-            <button key={n.key} onClick={() => { setBucketKey(n.key); setShowAll(false) }}
+            <button key={n.key} onClick={() => setBucketKey(n.key)}
                     className="px-3 py-1.5 rounded-lg text-sm whitespace-nowrap flex-shrink-0" style={pill(n.key === bucket?.key)}>
               {n.label} <span className="opacity-70">· {n.calls.toLocaleString()}</span>
             </button>
@@ -288,6 +316,54 @@ export default function NightCalls() {
         </div>
       )}
 
+      {bucket && (
+        <div className="card p-4 space-y-3">
+          <div className="relative">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-tertiary)' }}/>
+            <input type="text" enterKeyHint="search" value={query} onChange={e => setQuery(e.target.value)}
+                   placeholder="Search species, families or groups" aria-label="Search night calls"
+                   className="input w-full pl-9 pr-9 text-sm"/>
+            {query && (
+              <button onClick={() => { setQuery(''); setSearch('') }} aria-label="Clear search"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1" style={{ color: 'var(--text-tertiary)' }}>
+                <X size={14}/>
+              </button>
+            )}
+          </div>
+          <div>
+            <p className="text-xs mb-1.5" style={{ color: 'var(--text-tertiary)' }}>Identified to</p>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Identified to">
+              {LEVELS.map(([k, label]) => {
+                const on = levels.includes(k), n = data?.by_level?.[k]
+                return (
+                  <button key={k} onClick={() => toggleLevel(k)} aria-pressed={on}
+                          className="px-3 py-1 rounded-full text-xs flex items-center gap-1.5"
+                          style={{ ...pill(on), border: `1px solid ${on ? LEVEL_COLOR[k] : 'var(--border-subtle)'}` }}>
+                    <span className="w-2 h-2 rounded-full" style={{ background: LEVEL_COLOR[k] }}/>
+                    {label}{n != null && <span className="opacity-70">{n.toLocaleString()}</span>}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          <div>
+            <p className="text-xs mb-1.5" style={{ color: 'var(--text-tertiary)' }}>Confidence</p>
+            <div role="radiogroup" aria-label="Confidence" className="inline-flex rounded-lg p-0.5 text-xs" style={{ background: 'var(--bg-raised)' }}>
+              {CONFIDENCE.map(([k, label]) => (
+                <button key={k} role="radio" aria-checked={minProb === k} onClick={() => setMinProb(k)}
+                        className="px-3 py-1 rounded-md" style={minProb === k ? pill(true) : { color: 'var(--text-secondary)' }}>{label}</button>
+              ))}
+            </div>
+          </div>
+          {filtered && data && (
+            <p className="text-xs flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+              {data.total.toLocaleString()} call{data.total === 1 ? '' : 's'} match
+              <button onClick={clearFilters} className="underline" style={{ color: 'var(--accent-400)' }}>Clear filters</button>
+            </p>
+          )}
+        </div>
+      )}
+
       {data && data.calls.length > 0 && (grouped ? (
         <div className="card px-4">
           {groups.map(g => (
@@ -304,14 +380,17 @@ export default function NightCalls() {
           Showing the latest {data.calls.length} of {data.total.toLocaleString()}.
         </p>
       )}
-      {data && data.unnarrowed > 0 && !showAll && (
-        <button className="btn-secondary text-sm" onClick={() => setShowAll(true)}>
+      {data && data.unnarrowed > 0 && !levels.includes('order') && (
+        <button className="btn-secondary text-sm" onClick={() => toggleLevel('order')}>
           Show {data.unnarrowed.toLocaleString()} call{data.unnarrowed === 1 ? '' : 's'} not narrowed down
         </button>
       )}
-      {data && data.calls.length === 0 && data.unnarrowed > 0 && !showAll && (
-        <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-          Every call here was only placed as a songbird or similar.
+      {data && data.calls.length === 0 && (
+        <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
+          {!levels.length ? 'Pick at least one level above.'
+            : data.unnarrowed > 0 && !levels.includes('order') && Object.entries(data.by_level || {}).every(([k, v]) => k === 'order' || !v)
+              ? 'Every call here was only placed as a songbird or similar.'
+              : 'No calls match these filters.'}
         </p>
       )}
       {bucket && !data && <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>Loading…</p>}

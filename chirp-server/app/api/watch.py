@@ -30,6 +30,11 @@ MAX_SECONDS = 60     # the watch plays at most the first minute
 
 @router.get("/recent")
 def recent(limit: int = Query(5, ge=1, le=10), db: Session = Depends(get_db)):
+    return recent_rows(db, limit)
+
+
+def recent_rows(db: Session, limit: int) -> list:
+    """Newest bird recordings showing a detection (shared with api/tv.py)."""
     s = db.query(AppSettings).filter(AppSettings.id == 1).first()
     min_conf = float(getattr(s, "min_confidence_display", 0.0) or 0.0) if s else 0.0
     recs = (

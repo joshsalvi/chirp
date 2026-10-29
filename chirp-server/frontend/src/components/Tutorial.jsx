@@ -235,9 +235,9 @@ function EnhanceAudioDemo() {
             space so the 1-line phases don't look top-aligned with a gap. */}
         <p className="text-xs text-center transition-opacity duration-300 flex items-center justify-center"
            style={{ color: 'var(--text-tertiary)', minHeight: 32 }}>
-          {phase === 'idle'    && 'Every clip starts in its original recorded state…'}
+          {phase === 'idle'    && 'Each clip starts as it was recorded…'}
           {phase === 'tap'     && 'Tap the ✨ sparkle icon…'}
-          {(phase === 'enhanced' || phase === 'hold') && 'Background noise filtered out — just the call remains'}
+          {(phase === 'enhanced' || phase === 'hold') && 'Background noise removed, leaving the call'}
         </p>
       </div>
       <style>{`
@@ -376,8 +376,8 @@ function SeenTodayDemo() {
       <p className="text-xs text-center pb-3 transition-opacity duration-300 flex items-center justify-center"
          style={{ color: 'var(--text-tertiary)', minHeight: 32 }}>
         {phase === 'idle' && 'Tap "+more" to see everything detected today…'}
-        {phase === 'tap'  && 'Tap!'}
-        {(phase === 'open' || phase === 'hold') && 'Every species today, each linking to its own profile'}
+        {phase === 'tap'  && 'Tap'}
+        {(phase === 'open' || phase === 'hold') && 'Every species heard today, each linked to its profile'}
       </p>
     </div>
   )
@@ -389,13 +389,13 @@ const ALL_SECTIONS = [
     title: 'What is Chirp?',
     icon: ChirpLogo,
     color: '#fb923c',
-    tldr: 'A Raspberry Pi listens continuously and identifies species by ear — this server is where you browse everything it hears.',
+    tldr: 'A Raspberry Pi station listens all day and identifies bird calls. This server stores what it hears so you can browse it.',
     content: (
       <div className="space-y-4">
         <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-          Chirp is an automated bird call detection system. A Raspberry Pi device listens continuously
-          for bird calls, identifies species using BirdNET AI, and sends recordings to this server
-          where you can browse, search, and explore everything detected at your location.
+          Chirp detects bird calls automatically. A Raspberry Pi station listens all day, identifies
+          species with the BirdNET model, and sends each recording to this server. Here you can browse
+          and search everything detected at your location.
         </p>
         <div className="grid grid-cols-3 gap-3">
           {[
@@ -419,7 +419,7 @@ const ALL_SECTIONS = [
               '🎤  Pi detects audio above the energy threshold',
               '🧠  BirdNET AI analyses the 3-second window',
               '📤  Recording + detections uploaded to this server',
-              '🔔  You see it in real-time on the Dashboard',
+              '🔔  It appears on the Dashboard within seconds',
             ].map(s => (
               <p key={s} className="text-sm" style={{ color: 'var(--text-secondary)' }}>{s}</p>
             ))}
@@ -433,17 +433,17 @@ const ALL_SECTIONS = [
     title: 'Navigating Chirp',
     icon: BookOpen,
     color: '#38bdf8',
-    tldr: 'Six main tabs, always at the bottom of the screen on mobile or the side on desktop.',
+    tldr: 'The main pages are in the bar at the bottom on a phone and in the sidebar on a computer.',
     content: (
       <div className="space-y-4">
         <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-          Chirp has two navigation styles depending on your screen size.
+          Where the menu sits depends on your screen size.
         </p>
 
         {/* Desktop sidebar */}
         <div className="card p-4 space-y-3">
           <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-            🖥 Desktop — Sidebar + Top Dropdown
+            🖥 Desktop: sidebar and top menu
           </p>
           <div className="rounded-xl overflow-hidden border" style={{ borderColor: 'var(--border-default)' }}>
             {/* Mock browser */}
@@ -484,7 +484,7 @@ const ALL_SECTIONS = [
             </div>
           </div>
           <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-            The <strong style={{ color: 'var(--accent-400)' }}>center dropdown</strong> in the top bar always shows the current page — click it to jump to any section.
+            The <strong style={{ color: 'var(--accent-400)' }}>center dropdown</strong> in the top bar always shows the current page. Click it to go to any other page.
             The <strong style={{ color: 'var(--accent-400)' }}>sidebar</strong> collapses to icons with the ← button at the bottom.
           </p>
         </div>
@@ -492,18 +492,18 @@ const ALL_SECTIONS = [
         {/* Mobile nav */}
         <div className="card p-4 space-y-3">
           <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-            📱 Mobile — Bottom Navigation Bar
+            📱 Phone: bottom navigation bar
           </p>
           <Reveal animation="animate-scale-in" threshold={0.05}><NavigationDemo/></Reveal>
           <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-            The <strong style={{ color: 'var(--accent-400)' }}>bottom bar</strong> has Dashboard, Recordings, Live Detect, Life List, and Field Guide, plus a <strong style={{ color: 'var(--accent-400)' }}>⋮ menu</strong> for Notes, Statistics, Settings, What's New, and My Profile — admins also get Devices, Activity, Users, Logs, and Tech Docs there.
+            The <strong style={{ color: 'var(--accent-400)' }}>bottom bar</strong> has Dashboard, Recordings, Live Detect, Life List, and Field Guide, plus a <strong style={{ color: 'var(--accent-400)' }}>⋮ menu</strong> for Notes, Statistics, Settings, What's New and My Profile. Admins also see Devices, Activity, Users, Logs and Tech Docs there.
           </p>
         </div>
 
         <div className="card p-3 space-y-2" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)' }}>
           <p className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>💡 Finding the Tutorial again</p>
           <ul className="space-y-1 text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-            <li>• Scroll to the bottom of the <strong style={{ color: 'var(--accent-400)' }}>Dashboard</strong> — there's a "Getting Started guide" link</li>
+            <li>• Scroll to the bottom of the <strong style={{ color: 'var(--accent-400)' }}>Dashboard</strong> to find the "Getting Started guide" link</li>
             <li>• Or navigate directly to <code style={{ fontFamily: 'monospace', color: 'var(--accent-400)' }}>/tutorial</code></li>
             <li>• Or toggle it back on in <strong style={{ color: 'var(--accent-400)' }}>Settings → My Notifications</strong></li>
           </ul>
@@ -516,7 +516,7 @@ const ALL_SECTIONS = [
     title: 'Dashboard',
     icon: LayoutDashboard,
     color: '#22c55e',
-    tldr: 'Live detections, recent recordings, and today\'s AI-written journal — all in one place.',
+    tldr: 'Live detections, recent recordings and today\'s journal.',
     content: (
       <div className="space-y-4">
         <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
@@ -553,14 +553,12 @@ const ALL_SECTIONS = [
 
         <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>📓 Journal</p>
         <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-          Two independent AI-written entries, each with its own schedule and its own regenerate
-          button (Settings → AI Features): <strong style={{ color: 'var(--accent-400)' }}>Daily Journal</strong>{' '}
-          covers today so far, and <strong style={{ color: 'var(--accent-400)' }}>Weekly Journal</strong> covers
-          the trailing 7 days — including any real arrivals or departures (a species newly present,
-          or one that had been regular but has gone quiet), plus a bit more educational depth than a
-          single day supports. Both start collapsed on every page load, showing a short preview with a
-          "Read more" to expand — nothing is ever fully hidden. Off by default; needs an AI provider
-          assigned in Settings to appear at all.
+          Two AI-written entries, each with its own schedule and regenerate button in
+          Settings → AI Features. The <strong style={{ color: 'var(--accent-400)' }}>Daily Journal</strong>{' '}
+          covers today so far. The <strong style={{ color: 'var(--accent-400)' }}>Weekly Journal</strong> covers
+          the last 7 days, including arrivals and departures (a species that is new, or one that was
+          regular and has gone quiet), with a little more background than a single day allows. Each
+          shows a short preview with "Read more". Both are off until an AI provider is set up in Settings.
         </p>
 
         <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>📷 Seen today</p>
@@ -570,43 +568,41 @@ const ALL_SECTIONS = [
         <div className="card p-3 space-y-2" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)' }}>
           <p className="text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
             <strong style={{ color: 'var(--accent-400)' }}>Active Streaks</strong> shows which species
-            have been detected every single day recently, most consecutive days first — a streak ends
-            the moment a full day passes with no detection of that species, so it always reflects what's
-            reliably present right now, not just historically common.
+            have been detected on each of the last several days, longest streak first. A streak ends
+            after a full day without that species, so the list shows birds that are around now rather
+            than birds that were common in the past.
           </p>
           <p className="text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
             <strong style={{ color: 'var(--accent-400)' }}>Yard Diversity</strong> shows species richness
-            (a plain count, no gauge — it has no natural ceiling) at the top, then a diversity score with
-            its own gauge, then a second score called <strong style={{ color: 'var(--accent-400)' }}>Balance</strong>
-            below it as a simple bar. The main score combines species count with how evenly detections are
-            spread across them; a month with 20 species but one bird drowning out the rest scores lower than
-            20 species detected roughly equally often. Balance asks a related but different question — the
-            odds two random detections that month were different species — and weighs common species more
-            heavily, so an occasional rare visitor doesn't swing it much the way the main score can. Tap the
-            <strong style={{ color: 'var(--accent-400)' }}> ⓘ</strong> icon for the full interpretation guide,
-            both scores' technical names (Shannon's H and Simpson's diversity), and their bands. Both use
-            standard point-count ecological benchmarks; Chirp's continuous acoustic detection samples
-            differently enough that they're best read as a consistent way to track your own yard over time,
-            not an exact match to a textbook number.
+            (a plain count) at the top, then a diversity score with a gauge, then a second score called
+            <strong style={{ color: 'var(--accent-400)' }}> Balance</strong> as a bar. The diversity score combines
+            the number of species with how evenly detections are spread across them: a month with 20 species
+            where one bird dominates scores lower than 20 species heard about equally often. Balance is the
+            chance that two random detections from the month are different species. It weighs common species
+            more, so one rare visitor moves it less. Tap the
+            <strong style={{ color: 'var(--accent-400)' }}> ⓘ</strong> icon for how to read both scores, their
+            technical names (Shannon's H and Simpson's diversity) and their ranges. The ranges come from
+            point-count surveys, and Chirp samples differently, so use the scores to compare your yard with
+            itself over time rather than with published numbers.
           </p>
         </div>
 
         <div className="card p-3 space-y-2" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)' }}>
           <p className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>💡 Tips</p>
           <ul className="space-y-1 text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-            <li>• Tap the live card to jump straight to that recording's full detail page.</li>
-            <li>• Tap <strong style={{ color: 'var(--accent-400)' }}>+N more</strong> on the species grid to see every bird detected today in one popup, each linking to its own profile.</li>
-            <li>• The <strong style={{ color: 'var(--accent-400)' }}>Today's / This Week's Summary</strong> heading is itself the toggle — tap "Today's" or "This Week's" directly in the title to switch periods.</li>
+            <li>• Tap the live card to open that recording.</li>
+            <li>• Tap <strong style={{ color: 'var(--accent-400)' }}>+N more</strong> on the species grid to see every bird detected today, each linked to its profile.</li>
+            <li>• The <strong style={{ color: 'var(--accent-400)' }}>Today's / This Week's Summary</strong> heading switches the period. Tap "Today's" or "This Week's" in the title.</li>
             <li>• Tap any species in <strong style={{ color: 'var(--accent-400)' }}>Active Streaks</strong> to open its profile page.</li>
-            <li>• Every section on the Dashboard can be collapsed with the chevron in its corner — your choice is remembered next time you visit.</li>
+            <li>• Each Dashboard section folds up with the arrow in its corner, and Chirp remembers how you left it.</li>
             <li>• Use the time period buttons (6h / 24h / 7d…) further down to zoom the detection-activity chart.</li>
             <li>• Recent notes at the bottom show the latest comments from all users across every bird.</li>
-            <li>• First time here, you'll be asked to pick a <strong style={{ color: 'var(--accent-400)' }}>Simplified</strong> or <strong style={{ color: 'var(--accent-400)' }}>Detailed</strong> Dashboard — change it anytime via the link at the bottom of this page, or in Settings → Appearance. This is tied to your account, not your browser.</li>
-            <li>• <strong style={{ color: 'var(--accent-400)' }}>Today's Journal</strong> is an AI-written daily recap in a birder's-journal tone. It's off by default — turn it on in Settings → AI Features, where every AI feature and provider key lives together. It only appears once a summary has actually generated successfully; nothing shows if it's off or if generation fails.</li>
-            <li>• A Bird Profile's own AI presence note (same on/off setup) appears near the top of the page once enabled — a short note about when and how often you've actually detected that species in your own yard, generated the first time you view a profile after turning it on.</li>
-            <li>• <strong style={{ color: 'var(--accent-400)' }}>Device Notifications</strong> in My Profile turns on real notifications for this specific device, including while Chirp is closed — separate from Email Notifications above, though it follows the same "new species" preference. Requires the app be installed/added to your home screen for full reliability on mobile.</li>
-            <li>• A <strong style={{ color: 'var(--accent-400)' }}>Re-check this call</strong> button appears on a Recording's detail page once Bird Call Re-analysis is enabled — asks the AI for a second opinion on the spectrogram, shown as a plain-language note below. A sanity check, not a replacement for the actual detection.</li>
-            <li>• AI provider keys (Anthropic, OpenAI, Gemini, and Ollama — self-hosted, no API key, just a server address and a model name you've pulled locally), each with its own Test button, plus assigning each AI feature to one of them (or disabling it) and usage stats per provider, all live together in Settings → AI Features.</li>
+            <li>• The first time you open Chirp, you pick a <strong style={{ color: 'var(--accent-400)' }}>Simplified</strong> or <strong style={{ color: 'var(--accent-400)' }}>Detailed</strong> Dashboard. Change it with the link at the bottom of the Dashboard or in Settings → Appearance. The choice is saved to your account, so it follows you to other devices.</li>
+            <li>• <strong style={{ color: 'var(--accent-400)' }}>Today's Journal</strong> is an AI-written summary of the day, in the style of a birder's journal. It's off until you turn it on in Settings → AI Features, where all AI features and provider keys are. Nothing shows until the first entry has been written.</li>
+            <li>• Bird profiles can also show an AI note near the top about when and how often your station has heard that species. It's set up in the same place and is written the first time you open a profile after turning it on.</li>
+            <li>• <strong style={{ color: 'var(--accent-400)' }}>Device Notifications</strong> in My Profile turns on notifications for this device, including when Chirp is closed. On a phone, install the app or add it to your home screen so they arrive reliably.</li>
+            <li>• When AI Second Opinion is on, a recording's page has a button that asks an AI model to review the spectrogram. Its verdict appears below the recording. It's a check on BirdNET's result and doesn't replace it.</li>
+            <li>• Settings → AI Features holds the provider keys (Anthropic, OpenAI and Gemini, or an Ollama server at home, which needs an address and a model name, plus a key only if your server asks for one), a Test button for each, which provider each feature uses, and usage per provider.</li>
           </ul>
         </div>
       </div>
@@ -617,14 +613,14 @@ const ALL_SECTIONS = [
     title: 'Recordings',
     icon: Mic,
     color: '#3b82f6',
-    tldr: 'Every clip Chirp has ever captured, with its own spectrogram and confidence score.',
+    tldr: 'Every clip Chirp has recorded, with its spectrogram and confidence score.',
     content: (
       <div className="space-y-4">
         <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-          Every bird call detected by the Pi creates a recording card here.
-          Each card shows a spectrogram thumbnail — a visual fingerprint of the sound.
+          Each bird call the station detects becomes a recording card here.
+          The card shows a small spectrogram, a picture of the sound.
         </p>
-        <ScreenMockup label="Recording cards — tap any to open">
+        <ScreenMockup label="Recording cards: tap one to open it">
           <div className="grid grid-cols-2 gap-2">
             {[
               { sp: 'American Robin', conf: '84%', t: '2h ago' },
@@ -652,19 +648,19 @@ const ALL_SECTIONS = [
         <div className="card p-3 space-y-2" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)' }}>
           <p className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>💡 Tips</p>
           <ul className="space-y-1 text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-            <li>• Tap any card to open the full recording detail page with the audio player, spectrogram, and all detections.</li>
-            <li>• Tap the <strong style={{ color: 'var(--accent-400)' }}>detections count</strong> on a card to expand it in place — play any individual bird call's clip without leaving the list.</li>
+            <li>• Tap a card to open the recording with its player, spectrogram and detections.</li>
+            <li>• Tap the <strong style={{ color: 'var(--accent-400)' }}>detections count</strong> on a card to open the list of birds in it and play each call without leaving the page.</li>
             <li>• Every bird audio player has one <strong style={{ color: 'var(--accent-400)' }}>Enhance</strong> control: <strong style={{ color: 'var(--accent-400)' }}>Original</strong>, <strong style={{ color: 'var(--accent-400)' }}>Enhanced</strong> (cuts low rumble from traffic, wind and HVAC and reduces steady background noise, with a matching spectrogram) or <strong style={{ color: 'var(--accent-400)' }}>AI</strong> (neural denoising, when AI Enhance is on in Settings → AI Features; it isolates a call harder but loses sound above 8 kHz). In Enhanced, a <strong style={{ color: 'var(--accent-400)' }}>Low cut</strong> slider sets the rumble cutoff; Auto picks it from the birds detected. Settings → Detection → Playback: Enhance picks what recordings open in.</li>
             <li>• Bat recordings keep their own <strong style={{ color: 'var(--accent-400)' }}>Enhanced</strong> (slowed-down) and <strong style={{ color: 'var(--accent-400)' }}>De-wobbled</strong> toggles.</li>
-            <li>• <strong style={{ color: 'var(--accent-400)' }}>AI Second Opinion</strong> asks a vision-capable AI model to look at the spectrogram directly and give its own read on each flagged call — agreeing, disagreeing, or uncertain, with the visual reasoning behind it. It also does a second pass over the whole image for anything BirdNET didn't flag at all: another bird call it can identify, or a non-bird sound like a chorus of insects. Needs a vision-capable AI Feature provider assigned in Settings.</li>
+            <li>• <strong style={{ color: 'var(--accent-400)' }}>AI Second Opinion</strong> asks an AI model that can read images to look at the spectrogram and rate each bird BirdNET found as likely right, likely wrong or uncertain, with its reasons. It also looks for anything BirdNET missed, such as another bird or insects. It needs an AI provider that handles images, set in Settings.</li>
             <li>• Use the filter icon (top-right) to search by species name or filter by confidence, filter by <strong style={{ color: 'var(--accent-400)' }}>device</strong> (if you have more than one), and the <strong style={{ color: 'var(--accent-400)' }}>calendar icon</strong> to narrow the list to the last 24 hours, 7/30/90 days, or a custom date range. <strong style={{ color: 'var(--accent-400)' }}>Time of day</strong> (dawn, morning, afternoon, evening, night or your own hours, in the site's time zone) narrows it further, and <strong style={{ color: 'var(--accent-400)' }}>Saved</strong> shows only recordings you've saved.</li>
             <li>• Tap <strong style={{ color: 'var(--accent-400)' }}>Save</strong> on a recording to keep it: saved recordings are never archived or deleted by automatic storage cleanup.</li>
-            <li>• If bat detection is set up (a separate ultrasonic USB mic, in addition to your regular bird mic), a <strong style={{ color: 'var(--accent-400)' }}>Birds only / Bats only</strong> toggle appears next to the filters — bat recordings show a pulse-train spectrogram instead of a bird call's, and get their own species classification pass where possible.</li>
-            <li>• The <strong style={{ color: 'var(--accent-400)' }}>No detections</strong> toggle shows only recordings the pipeline captured but never identified anything in — useful for spotting false triggers or recordings worth pruning.</li>
-            <li>• The <strong style={{ color: 'var(--accent-400)' }}>Upload</strong> button (top-right) lets you manually add an existing audio file — mark it as a bird or bat recording so it's analyzed by the correct pipeline. Bat uploads need a genuine ultrasonic-mic recording (192kHz+); a normal phone/bird-mic recording can't physically contain echolocation calls and will be rejected.</li>
+            <li>• If bat detection is set up (a separate ultrasonic USB mic, in addition to your regular bird mic), a <strong style={{ color: 'var(--accent-400)' }}>Birds only / Bats only</strong> toggle appears next to the filters. Bat recordings show a series of pulses in the spectrogram, and Chirp tries to identify the bat species.</li>
+            <li>• The <strong style={{ color: 'var(--accent-400)' }}>No detections</strong> toggle shows only recordings where nothing was identified. Use it to find false triggers or recordings to delete.</li>
+            <li>• The <strong style={{ color: 'var(--accent-400)' }}>Upload</strong> button (top right) adds an audio file you recorded elsewhere. Mark it as a bird or bat recording so it's analyzed the right way. Bat uploads must come from an ultrasonic microphone (192 kHz or higher); a phone or bird microphone can't record echolocation calls, so those uploads are rejected.</li>
             <li>• The spectrogram shows frequency on the Y-axis and time on the X-axis. Bright spots = loud sounds.</li>
-            <li>• You can add notes to any recording — notes are shared with all users.</li>
-            <li>• <strong style={{ color: 'var(--accent-400)' }}>Archive</strong> a recording from its detail page to delete just the audio and free up space — the spectrogram, detections, and notes stay intact, and it keeps counting in every statistic. <strong style={{ color: 'var(--accent-400)' }}>Delete</strong> removes everything. Admins can also set either to happen automatically after N days in Settings → Storage &amp; Backup; saved recordings are skipped.</li>
+            <li>• You can add notes to any recording. Everyone on the site can read them.</li>
+            <li>• <strong style={{ color: 'var(--accent-400)' }}>Archive</strong> a recording from its page to delete the audio and free up space. The spectrogram, detections and notes stay, and it still counts in statistics. <strong style={{ color: 'var(--accent-400)' }}>Delete</strong> removes everything. Admins can also set either to happen automatically after N days in Settings → Storage &amp; Backup; saved recordings are skipped.</li>
           </ul>
         </div>
       </div>
@@ -675,17 +671,16 @@ const ALL_SECTIONS = [
     title: 'Live Detect',
     icon: AudioLines,
     color: '#f97316',
-    tldr: 'Point your phone at the trees and watch identifications appear in real time — no waiting for a recording to finish and process.',
+    tldr: 'Hold up your phone and see birds identified within a few seconds of calling.',
     content: (
       <div className="space-y-4">
         <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-          Recordings on the previous page are things Chirp's own microphone already
-          heard and finished analyzing. Live Detect is the other direction — active,
-          in-the-moment listening, the same idea as pointing a phone at a bird and
-          getting an answer back within a few seconds, like Merlin Bird ID's live
-          mode. Tap Live Detect in the bottom bar, choose a source, and tap Start.
+          The Recordings page shows what your station has already heard and analyzed.
+          Live Detect listens now: you hold up your phone and get an answer within a few
+          seconds, like Merlin Bird ID's live mode. Tap Live Detect in the bottom bar,
+          choose a source and tap Start.
         </p>
-        <ScreenMockup label="Live Detect — a session in progress">
+        <ScreenMockup label="Live Detect during a session">
           <div className="space-y-2">
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-1.5">
@@ -712,22 +707,20 @@ const ALL_SECTIONS = [
         <div className="card p-3 space-y-2" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)' }}>
           <p className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>💾 Saving a session</p>
           <p className="text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-            Tap Stop when you're done. If the session heard anything, Chirp asks whether to
-            save the whole walk as one continuous recording — accept, and every small clip
-            behind those identifications gets combined into a single recording with its own
-            spectrogram, findable in Recordings and tagged as a Live Detect session. Decline,
-            and nothing is lost either way — the individual detections stay in your history
-            regardless of what you choose here.
+            Tap Stop when you're done. If the session heard any birds, Chirp asks whether to
+            save it as one recording. If you save it, the short clips are joined into a single
+            recording with its own spectrogram, listed in Recordings as a Live Detect session.
+            The detections stay in your history whether you save the session or not.
           </p>
         </div>
         <div className="card p-3 space-y-2" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)' }}>
           <p className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>💡 Tips</p>
           <ul className="space-y-1 text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-            <li>• Choose <strong style={{ color: 'var(--accent-400)' }}>Phone mic</strong> for listening on the move, or <strong style={{ color: 'var(--accent-400)' }}>ChirpPi</strong> (if you have one) to listen through your yard's own installed microphone from wherever you are — useful for checking in without walking outside.</li>
-            <li>• The <strong style={{ color: 'var(--accent-400)' }}>Volume boost</strong> and <strong style={{ color: 'var(--accent-400)' }}>cut low rumble</strong> sliders only affect what you hear while listening — never what gets analyzed or saved, so boosting to hear better can't accidentally change what Chirp identifies.</li>
-            <li>• Detected species show a small photo and confidence — tap one to jump straight to that bird's profile.</li>
-            <li>• Live Detect draws on the same detection pipeline as your regular recordings, so anything identified here counts toward Life List, Dashboard stats, and everything else immediately, whether or not you save the session as a recording afterward.</li>
-            <li>• Haikubox and Bird Buddy sources aren't available here — Live Detect is specifically for a microphone you're actively pointing at something, not a third-party feed.</li>
+            <li>• Choose <strong style={{ color: 'var(--accent-400)' }}>Phone mic</strong> for listening on the move, or <strong style={{ color: 'var(--accent-400)' }}>ChirpPi</strong> (if you have one) to listen through your station's microphone while you're away from home.</li>
+            <li>• The <strong style={{ color: 'var(--accent-400)' }}>Volume boost</strong> and <strong style={{ color: 'var(--accent-400)' }}>cut low rumble</strong> sliders only change what you hear. They don't change what's analyzed or saved.</li>
+            <li>• Each detected species shows a photo and confidence. Tap one to open its profile.</li>
+            <li>• Live Detect uses the same identification as your station's recordings, so its detections count toward the Life List and Dashboard right away, whether or not you save the session.</li>
+            <li>• Haikubox and Bird Buddy can't be used as sources here. Live Detect only works with a microphone.</li>
           </ul>
         </div>
       </div>
@@ -738,14 +731,14 @@ const ALL_SECTIONS = [
     title: 'Life List',
     icon: Award,
     color: '#f59e0b',
-    tldr: 'Every species you\'ve ever detected, ranked by how often you\'ve heard them.',
+    tldr: 'Every species your station has detected, sorted by how often it was heard.',
     content: (
       <div className="space-y-4">
         <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-          Your Life List is every species ever detected at your location, sorted by first detection date.
-          It grows automatically as new species are discovered.
+          Your Life List has every species detected at your location, with the most-detected first.
+          New species are added as they're heard. You can also sort by name or by first detection.
         </p>
-        <ScreenMockup label="Life List — tap any row to see the full bird profile">
+        <ScreenMockup label="Life List: tap a row to open the bird's profile">
           <div className="space-y-2">
             {[
               { n: 1, sp: 'American Robin',  sci: 'Turdus migratorius', det: 23, first: 'Jan 5' },
@@ -782,24 +775,23 @@ const ALL_SECTIONS = [
     title: 'Bird Profiles',
     icon: () => <BirdIcon size={16}/>,
     color: '#8b5cf6',
-    tldr: 'Tap any species anywhere to see its full profile — range map, photos, and an AI-written note on its presence in your yard specifically.',
+    tldr: 'Tap a species anywhere in Chirp to open its profile: range map, photos and an optional AI note about it in your yard.',
     content: (
       <div className="space-y-4">
         <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-          Each bird gets a rich profile page automatically populated with information from
-          Wikipedia, eBird, and iNaturalist — including photos, descriptions, range maps,
-          example calls, and seasonal presence data.
+          Each bird has a profile page filled in from Wikipedia, eBird and iNaturalist, with
+          photos, a description, range maps, example calls and when it's reported in your area.
         </p>
         <ScreenMockup label="Bird profile sections">
           <div className="space-y-2">
             {[
-              { icon: '✨', title: 'AI Presence Summary', sub: 'Optional — a short note on this species\u2019 pattern in your specific yard, not a generic description; needs an AI Feature provider assigned in Settings' },
+              { icon: '✨', title: 'AI Presence Summary', sub: 'Optional. A short note on when this species is heard in your yard; needs an AI provider set in Settings' },
               { icon: '📖', title: 'About', sub: 'Wikipedia description and taxonomy' },
               { icon: '🎵', title: 'Example Calls & Songs', sub: 'iNaturalist community recordings' },
               { icon: '🎙️', title: 'Recordings', sub: 'All detections of this species at your location' },
               { icon: '🗺️', title: 'Range Map', sub: 'eBird or GBIF occurrence data' },
               { icon: '📅', title: 'Seasonal Presence', sub: 'Monthly frequency bar chart' },
-              { icon: '📷', title: 'Photos', sub: 'Upload your own photos — optionally AI-confirmed against the species' },
+              { icon: '📷', title: 'Photos', sub: 'Upload photos; AI can check they show this species' },
               { icon: '📝', title: 'Notes', sub: 'Shared comments from all users' },
             ].map(({ icon, title, sub }) => (
               <div key={title} className="flex items-center gap-3 p-2 rounded-lg" style={{ background: 'var(--bg-raised)' }}>
@@ -816,16 +808,15 @@ const ALL_SECTIONS = [
           <p className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>💡 Tips</p>
           <ul className="space-y-1 text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
             <li>• If a profile has no photo or description yet, click <strong style={{ color: 'var(--accent-400)' }}>Refresh All Data</strong> to fetch it.</li>
-            <li>• In the Recordings list on a profile, each entry has a small <strong style={{ color: 'var(--accent-400)' }}>Clip</strong> button — plays just that bird's call within the recording, instead of the whole thing.</li>
-            <li>• You'll see <strong style={{ color: 'var(--accent-400)' }}>two ✨ icons</strong> next to each other there — they're independent: hover for a label, <strong style={{ color: 'var(--accent-400)' }}>Enhance clip</strong> only affects that short clip, <strong style={{ color: 'var(--accent-400)' }}>Enhance full recording</strong> only affects the whole thing.</li>
-            <li>• Notes are shared — all users can read and post notes about a bird.</li>
+            <li>• In the Recordings list on a profile, each entry has a small <strong style={{ color: 'var(--accent-400)' }}>Clip</strong> button that plays only that bird's call instead of the whole recording.</li>
+            <li>• The <strong style={{ color: 'var(--accent-400)' }}>two ✨ icons</strong> next to each other work separately: <strong style={{ color: 'var(--accent-400)' }}>Enhance clip</strong> changes only the short clip, and <strong style={{ color: 'var(--accent-400)' }}>Enhance full recording</strong> changes the whole recording. Hover over each for its label.</li>
+            <li>• Everyone on the site can read and add notes about a bird.</li>
             <li>• The range map can be switched between Wikipedia, eBird S&T, and GBIF occurrence data.</li>
             <li>
-              • The Seasonal Presence bars show <strong style={{ color: 'var(--accent-400)' }}>real eBird
-              checklist frequency</strong> for just this one species — each bar's height is scaled
-              against that species' own busiest month, not compared against other species. (The Field
-              Guide's Very Likely/Likely/Possible/Rare labels work differently — see that section
-              below for how those are ranked.)
+              • The Seasonal Presence bars show <strong style={{ color: 'var(--accent-400)' }}>eBird
+              checklist frequency</strong> for this species. Each bar is scaled to the species' busiest
+              month, so you can't compare bars between species. The Field Guide's Very Likely, Likely,
+              Possible and Rare labels are ranked differently; the Field Guide section below explains how.
             </li>
           </ul>
         </div>
@@ -837,13 +828,12 @@ const ALL_SECTIONS = [
     title: 'Field Guide',
     icon: BookOpen,
     color: '#14b8a6',
-    tldr: 'Every species that could plausibly show up at your location, ranked by real likelihood for the current month.',
+    tldr: 'Birds reported near your location, ranked by how likely they are this month.',
     content: (
       <div className="space-y-4">
         <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-          The Field Guide shows every bird recorded in your region (from eBird data),
-          not just the ones Chirp has detected. Use the month selector to see what's expected
-          in any season.
+          The Field Guide lists the birds reported in your region on eBird, including ones
+          Chirp hasn't detected yet. Pick a month to see what to expect then.
         </p>
         <ScreenMockup label="Field Guide with month selector">
           <div className="space-y-2">
@@ -889,29 +879,25 @@ const ALL_SECTIONS = [
           </div>
         </ScreenMockup>
         <div className="card p-3 space-y-2" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)' }}>
-          <p className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>📊 What the labels actually mean</p>
+          <p className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>📊 What the labels mean</p>
           <ul className="space-y-1.5 text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
             <li>
               The underlying number behind every bar is <strong style={{ color: 'var(--text-primary)' }}>the
-              fraction of eBird checklists in your region that reported the species that month</strong> —
-              the same real-world metric the Merlin app shows as its blue frequency bars. It's
-              community observation data, not a prediction.
+              share of eBird checklists in your region that reported the species that month</strong>.
+              The Merlin app shows the same figure as its blue frequency bars. It comes from people's
+              observations, not from a model.
             </li>
             <li>
               <strong style={{ color: 'var(--accent-400)' }}>Very Likely / Likely / Possible / Rare</strong> are
-              {' '}<em>not</em> fixed percentage cutoffs (there's no rule like "60%+ = Likely"). Each
-              label is a <strong style={{ color: 'var(--text-primary)' }}>relative rank</strong> — this
-              species' frequency compared against every other species shown for that same month.
-              That means the same raw percentage can earn a different label in different months: a
-              species sitting at a modest frequency could be "Very Likely" in a quiet winter month
-              with few active species, but only "Possible" during peak spring migration when most
-              species score high.
+              {' '}not fixed percentages. Each label is a <strong style={{ color: 'var(--text-primary)' }}>rank</strong>{' '}
+              that compares the species with every other species shown for the same month. The same
+              percentage can get a different label in different months: a species could be "Very Likely"
+              in winter, when few species are around, and only "Possible" during spring migration.
             </li>
             <li>
-              <strong style={{ color: 'var(--text-primary)' }}>"Detected Here"</strong> is a separate,
-              independent flag — it means Chirp's own device has actually picked up that species at
-              your location, regardless of what the regional eBird frequency says. A species can be
-              "Detected Here" while also showing as "Rare" regionally, or vice versa.
+              <strong style={{ color: 'var(--text-primary)' }}>"Detected Here"</strong> means your station
+              has recorded the species, whatever its eBird frequency. A species can be "Detected Here" and
+              "Rare" at the same time.
             </li>
           </ul>
         </div>
@@ -931,28 +917,27 @@ const ALL_SECTIONS = [
     title: 'Settings & Devices',
     icon: Settings,
     color: '#64748b',
-    tldr: 'Everything configurable lives here — detection sensitivity, AI features, devices, backups, and more.',
+    tldr: 'Detection, AI features, devices, backups and the other settings.',
     content: (
       <div className="space-y-4">
         <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-          Settings is organized into tabs — My Notifications, Appearance, General, Detection, Bats,
+          Settings has tabs for My Notifications, Appearance, General, Detection, Bats,
           Alerts &amp; Email, Integrations, AI Features, Storage &amp; Backup, Access &amp; Security,
-          Experimental and Diagnostics — with a search box at the top that finds any setting by name
-          or by what it does. Cards start collapsed; tap any title to expand it. Admins can
-          configure location, BirdNET parameters, storage limits, and more. All users can
-          change their color theme from Settings.
+          Experimental and Diagnostics. The search box at the top finds a setting by name or by what
+          it does. Tap a card's title to open it. Admins set the location, BirdNET options, storage
+          limits and more; everyone can change their own theme.
         </p>
         <div className="grid grid-cols-2 gap-2">
           {[
-            { icon: '🎨', title: 'Themes', sub: '25 built-in themes, or build your own and save as many as you like' },
+            { icon: '🎨', title: 'Themes', sub: '25 built-in themes, or make and save your own' },
             { icon: '🗂️', title: 'Card Defaults', sub: 'Choose whether collapsible cards start expanded or collapsed, app-wide' },
-            { icon: '📍', title: 'Location', sub: 'Now under Detection — feeds species-list prediction and Field Guide data' },
+            { icon: '📍', title: 'Location', sub: 'Under Detection; sets the expected species and Field Guide data' },
             { icon: '🔑', title: 'eBird API Key', sub: 'Enables regional bird data' },
             { icon: '🧠', title: 'Detection Model', sub: 'BirdNET v3 (default; with owl checks) or BirdNET 2.4, plus confidence & sensitivity tuning' },
-            { icon: '📦', title: 'Archive & Auto-Delete', sub: 'Two independent age-based timers — see Tips below' },
-            { icon: '📡', title: 'Haikubox', sub: 'Third-Party Integrations — sync detections from a Haikubox into Chirp' },
-            { icon: '🐦', title: 'Bird Buddy', sub: 'Third-Party Integrations — sync postcards from your smart feeder' },
-            { icon: '🔬', title: 'iNaturalist', sub: 'Third-Party Integrations — personal or shared token, with auto-refresh' },
+            { icon: '📦', title: 'Archive & Auto-Delete', sub: 'Two separate timers by age; see Tips below' },
+            { icon: '📡', title: 'Haikubox', sub: 'Integrations: copy detections from a Haikubox into Chirp' },
+            { icon: '🐦', title: 'Bird Buddy', sub: 'Integrations: copy postcards from your smart feeder' },
+            { icon: '🔬', title: 'iNaturalist', sub: 'Integrations: personal or shared token, renewed automatically' },
             { icon: '📧', title: 'Email', sub: 'SMTP + notification preferences' },
             { icon: '🔐', title: 'Auth', sub: 'Enable login for shared servers' },
             { icon: '🤖', title: 'AI Features', sub: 'Daily and Weekly Journal, Bird Profile summaries, AI Second Opinion and AI Enhance; each cloud feature assignable to Anthropic, OpenAI, Gemini or a self-hosted Ollama server, off by default.' },
@@ -972,16 +957,16 @@ const ALL_SECTIONS = [
           <p className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>💡 Tips</p>
           <ul className="space-y-1 text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
             <li>• On mobile, use the <strong style={{ color: 'var(--accent-400)' }}>⋮ menu</strong> (bottom-right) for the Field Guide, Statistics, Night Calls and Notes, then admin pages, then My Profile, Settings and What's New.</li>
-            <li>• <strong style={{ color: 'var(--accent-400)' }}>Card Defaults</strong> controls every collapsible card across Bird Profile, Settings, Statistics, and My Profile at once — but if you've ever individually expanded or collapsed a specific card yourself, that choice is remembered and always wins over the global setting for that one card. A "Reset all cards to default" action clears every individual override at once.</li>
-            <li>• The <strong style={{ color: 'var(--accent-400)' }}>Statistics</strong> page shows charts of detection patterns by month, hour, season, and species. Related charts are grouped in pairs under one shared header — collapsing one collapses both at once, so a row never ends up half-collapsed and lopsided.</li>
+            <li>• <strong style={{ color: 'var(--accent-400)' }}>Card Defaults</strong> sets whether cards on Bird Profile, Settings, Statistics and My Profile start open. A card you've opened or closed yourself stays that way. "Reset all cards to default" clears those choices.</li>
+            <li>• The <strong style={{ color: 'var(--accent-400)' }}>Statistics</strong> page charts detections by month, hour, season and species. Related charts sit in pairs under one header and fold up together.</li>
             <li>• The Devices page lets you view live logs from your Pi, push config changes, and sync location.</li>
-            <li>• Have a <strong style={{ color: 'var(--accent-400)' }}>Haikubox</strong> too? Turn it on in Settings → Integrations — Chirp polls it every 15 minutes and shows its detections on a dedicated <strong style={{ color: 'var(--accent-400)' }}>Haikubox Detections</strong> page (linked from Recordings and the Devices page once you have any), separate from your Pi's own recordings since Haikubox detections have no audio attached.</li>
-            <li>• Have a <strong style={{ color: 'var(--accent-400)' }}>Bird Buddy</strong> smart feeder? Also in Settings → Integrations — Chirp pulls each new postcard's video, extracts its real audio, and runs it through the same BirdNET pipeline as your Pi's own recordings (Bird Buddy's own species guess isn't used, for consistent confidence scoring).</li>
-            <li>• <strong style={{ color: 'var(--accent-400)' }}>Archive</strong> a recording (or set an automatic age threshold in Storage &amp; Data) to delete just its audio file and free up space — the spectrogram, detections, and notes stay, and it still counts in every statistic. This is different from <strong style={{ color: 'var(--accent-400)' }}>Delete</strong>, which removes the recording entirely. Archiving can't be undone once the audio is gone.</li>
+            <li>• If you have a <strong style={{ color: 'var(--accent-400)' }}>Haikubox</strong>, turn it on in Settings → Integrations. Chirp checks it every 15 minutes and lists its detections on a separate <strong style={{ color: 'var(--accent-400)' }}>Haikubox Detections</strong> page (linked from Recordings and Devices), because they come without audio.</li>
+            <li>• A <strong style={{ color: 'var(--accent-400)' }}>Bird Buddy</strong> feeder is also set up in Settings → Integrations. Chirp downloads each new postcard's video, takes the audio, and identifies the bird with BirdNET like any other recording. Bird Buddy's species guess isn't used, so confidence scores stay comparable.</li>
+            <li>• <strong style={{ color: 'var(--accent-400)' }}>Archive</strong> a recording (or set an age limit in Storage &amp; Backup) to delete its audio and free up space. The spectrogram, detections and notes stay, and it still counts in statistics. This is different from <strong style={{ color: 'var(--accent-400)' }}>Delete</strong>, which removes the recording entirely. Archiving can't be undone once the audio is gone.</li>
             <li>• Set <strong style={{ color: 'var(--accent-400)' }}>Min. Confidence Display</strong> to hide low-confidence detections without deleting them.</li>
             <li>• Admins can <strong style={{ color: 'var(--accent-400)' }}>backup and restore</strong> the database from Settings → Storage &amp; Backup.</li>
-            <li>• The <strong style={{ color: 'var(--accent-400)' }}>Life List</strong> can be sorted by detections, name, or first-seen date — its "Download" button exports an eBird-compatible CSV; make sure to pick <strong style={{ color: 'var(--accent-400)' }}>eBird Record Format</strong>, not Checklist Format, when importing it at eBird's Submit page.</li>
-            <li>• <strong style={{ color: 'var(--accent-400)' }}>AI Features</strong> are entirely optional and off until you assign a provider — Daily Journal and Bird Profile Summaries can each auto-generate on a schedule; Bird Profile Summaries specifically can also auto-refresh a stale summary periodically rather than only ever generating once on first view.</li>
+            <li>• The <strong style={{ color: 'var(--accent-400)' }}>Life List</strong> sorts by detections, name or first-seen date. Its Download button exports a CSV for eBird; pick <strong style={{ color: 'var(--accent-400)' }}>eBird Record Format</strong>, not Checklist Format, when importing it at eBird's Submit page.</li>
+            <li>• <strong style={{ color: 'var(--accent-400)' }}>AI Features</strong> are optional and stay off until you choose a provider. The Daily Journal and Bird Profile Summaries can be written on a schedule, and profile summaries can be refreshed when they get old.</li>
           </ul>
         </div>
       </div>
@@ -992,11 +977,11 @@ const ALL_SECTIONS = [
     title: 'Install as an App',
     icon: Smartphone,
     color: '#22d3ee',
-    tldr: 'Add Chirp to your home screen for a real app-like experience — no App Store needed.',
+    tldr: 'Add Chirp to your home screen to use it like an app.',
     content: (
       <div className="space-y-4">
         <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-          Chirp is a <strong style={{ color: 'var(--text-primary)' }}>Progressive Web App (PWA)</strong> — you can install it on any device and use it like a native app. No app store required.
+          Chirp is a <strong style={{ color: 'var(--text-primary)' }}>Progressive Web App (PWA)</strong>, so you can install it from the browser on any device and use it like an app.
         </p>
 
         {/* Platform cards */}
@@ -1012,13 +997,13 @@ const ALL_SECTIONS = [
                 <span className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
                       style={{ background: 'rgba(34,211,238,.15)', color: '#22d3ee', marginTop: 1 }}>1</span>
                
-                <span><span>Open Chirp in <strong style={{ color: 'var(--text-primary)' }}>Safari</strong> (required — Chrome on iOS won't install PWAs)</span></span>
+                <span><span>Open Chirp in <strong style={{ color: 'var(--text-primary)' }}>Safari</strong>. Chrome on iPhone can't install web apps</span></span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
                       style={{ background: 'rgba(34,211,238,.15)', color: '#22d3ee', marginTop: 1 }}>2</span>
                
-                <span><span>Tap the <strong style={{ color: 'var(--text-primary)' }}>Share</strong> button <span style={{ color: 'var(--text-tertiary)' }}>(the box with the arrow pointing up — bottom center on iPhone, top-right on iPad)</span></span></span>
+                <span><span>Tap the <strong style={{ color: 'var(--text-primary)' }}>Share</strong> button <span style={{ color: 'var(--text-tertiary)' }}>(the box with an upward arrow: bottom center on iPhone, top right on iPad)</span></span></span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
@@ -1030,7 +1015,7 @@ const ALL_SECTIONS = [
                 <span className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
                       style={{ background: 'rgba(34,211,238,.15)', color: '#22d3ee', marginTop: 1 }}>4</span>
                
-                <span><span>Tap <strong style={{ color: 'var(--text-primary)' }}>Add</strong> — Chirp appears on your home screen with its own icon</span></span>
+                <span><span>Tap <strong style={{ color: 'var(--text-primary)' }}>Add</strong>. Chirp appears on your home screen with its icon</span></span>
               </li>
             </ol>
           </div>
@@ -1052,7 +1037,7 @@ const ALL_SECTIONS = [
                 <span className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
                       style={{ background: 'rgba(34,211,238,.15)', color: '#22d3ee', marginTop: 1 }}>2</span>
                 
-                <span>Chrome may show an <strong style={{ color: 'var(--text-primary)' }}>"Add to Home Screen"</strong> banner automatically — tap it. If not, tap the <strong style={{ color: 'var(--text-primary)' }}>⋮ menu</strong> (top right)</span>
+                <span>Chrome may show an <strong style={{ color: 'var(--text-primary)' }}>"Add to Home Screen"</strong> banner; tap it. If it doesn't, tap the <strong style={{ color: 'var(--text-primary)' }}>⋮ menu</strong> (top right)</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
@@ -1064,7 +1049,7 @@ const ALL_SECTIONS = [
                 <span className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
                       style={{ background: 'rgba(34,211,238,.15)', color: '#22d3ee', marginTop: 1 }}>4</span>
                 
-                <span>Tap <strong style={{ color: 'var(--text-primary)' }}>Install</strong> — Chirp opens in its own window without browser chrome</span>
+                <span>Tap <strong style={{ color: 'var(--text-primary)' }}>Install</strong>. Chirp opens in its own window without the browser's toolbars</span>
               </li>
             </ol>
           </div>
@@ -1080,7 +1065,7 @@ const ALL_SECTIONS = [
                 <span className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
                       style={{ background: 'rgba(34,211,238,.15)', color: '#22d3ee', marginTop: 1 }}>1</span>
                 
-                <span>Look for the <strong style={{ color: 'var(--text-primary)' }}>install icon</strong> <span style={{ color: 'var(--text-tertiary)' }}>(computer with down-arrow)</span> in the address bar — click it</span>
+                <span>Look for the <strong style={{ color: 'var(--text-primary)' }}>install icon</strong> <span style={{ color: 'var(--text-tertiary)' }}>(computer with down-arrow)</span> in the address bar and click it</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
@@ -1092,7 +1077,7 @@ const ALL_SECTIONS = [
                 <span className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
                       style={{ background: 'rgba(34,211,238,.15)', color: '#22d3ee', marginTop: 1 }}>3</span>
                 
-                <span>Click <strong style={{ color: 'var(--text-primary)' }}>Install</strong> — Chirp opens in a standalone window and appears in your taskbar/dock</span>
+                <span>Click <strong style={{ color: 'var(--text-primary)' }}>Install</strong>. Chirp opens in its own window and appears in your taskbar or Dock</span>
               </li>
             </ol>
           </div>
@@ -1100,7 +1085,7 @@ const ALL_SECTIONS = [
 
         <div className="card p-3" style={{ background: 'rgba(34,211,238,.06)', border: '1px solid rgba(34,211,238,.2)' }}>
           <p className="text-xs" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-            <strong style={{ color: '#22d3ee' }}>Why install it?</strong> The installed app loads faster, fills the full screen, and stays accessible from your home screen or taskbar without needing to open a browser first. Your data stays on your own server — nothing is sent to any app store.
+            <strong style={{ color: '#22d3ee' }}>Why install it?</strong> The installed app loads faster, fills the screen, and opens from your home screen or taskbar without a browser. Your data stays on your Chirp server.
           </p>
         </div>
       </div>
@@ -1282,14 +1267,14 @@ export default function Tutorial() {
               Getting Started
             </h1>
             <p className="text-base mt-1" style={{ color: 'var(--text-secondary)' }}>
-              A quick guide to Chirp — your automated bird call detection system.
+              A short guide to each page of Chirp.
             </p>
             <p className="text-xs mt-2 flex items-center gap-1.5" style={{ color: 'var(--text-tertiary)' }}>
-              <Clock size={11}/> {SECTIONS.length} sections · ~5 min read · jump to any section below, or scroll through top to bottom
+              <Clock size={11}/> {SECTIONS.length} sections, about 5 minutes to read. Tap a section below or scroll through.
             </p>
             <p className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
-              Also online: the <a href="/guide.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>user guide ↗</a> and
-              the <a href="/setup.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>setup guide ↗</a> for stations and servers.
+              Also online: the <a href="https://ourchirp.com/guide.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>user guide ↗</a> and
+              the <a href="https://ourchirp.com/setup.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>setup guide ↗</a> for stations and servers.
             </p>
           </div>
         </div>

@@ -1226,8 +1226,28 @@ def get_identified_bats(db: Session = Depends(get_db)):
 
 # ── Regional Bird Library ──────────────────────────────────────────────────────
 
+# Lists fetched before this used worldwide, per-species-scaled frequencies
+# (strays showed as "Very Likely"). Each site's first visit refreshes once.
+REGIONAL_FREQ_FIXED_AT = datetime(2026, 10, 21, 12, 0)
+_regional_refresh_queued: set = set()
+
+
+def _queue_refresh_if_outdated(db, background_tasks) -> None:
+    from ..models import RegionalSpecies
+    try:
+        newest = db.query(func.max(RegionalSpecies.fetched_at)).scalar()
+    except Exception:
+        return
+    key = str(db.get_bind().url)
+    if newest and newest < REGIONAL_FREQ_FIXED_AT and key not in _regional_refresh_queued:
+        _regional_refresh_queued.add(key)
+        logger.info("Regional library predates the frequency fix; refreshing")
+        background_tasks.add_task(_refresh_regional_library_bg)
+
+
 @router.get("/regional-library")
 def get_regional_library(
+    background_tasks: BackgroundTasks,
     limit: int = Query(1000, ge=1, le=2000),   # increased: show ALL regional birds
     search: Optional[str] = Query(None),
     detected_only: bool = Query(False),
@@ -1240,6 +1260,7 @@ def get_regional_library(
     """
     from ..models import RegionalSpecies
 
+    _queue_refresh_if_outdated(db, background_tasks)
     is_canonical = not search and not detected_only and limit == 1000
     if is_canonical:
         from ..cache import regional_library_cache
@@ -1459,16 +1480,15 @@ def _refresh_regional_library_bg():
     Refresh regional species list from eBird.
 
     Uses eBird spplist for full year-round coverage (not just the past 30 days),
-    then supplements with iNaturalist histogram data for 12-month frequency bars.
+    with 12-month frequency from eBird's bar chart or, when that needs a login,
+    iNaturalist observations near the site.
 
     ATOMIC WRITE: all new rows are assembled in memory first, then the old table
     is replaced in a single transaction — reads never see a partial list.
     """
-    import time as _time
     from ..database import SessionLocal
     from ..models import RegionalSpecies, AppSettings
     from ..services.ebird_service import fetch_regional_species_with_monthly_frequency
-    import httpx as _httpx
 
     db = SessionLocal()
     try:
@@ -1512,40 +1532,6 @@ def _refresh_regional_library_bg():
         detected_names = {r[0] for r in _det_q.distinct().all()}
         current_month = datetime.utcnow().month - 1
 
-        # ── BirdProfile lookup (for cached monthly data + taxon IDs) ─────────
-        profile_map: dict = {}
-        for bp in db.query(BirdProfile).all():
-            profile_map[bp.common_name] = bp
-            if bp.scientific_name:
-                profile_map[bp.scientific_name] = bp
-
-        def _inat_histogram(taxon_id: int) -> Optional[list]:
-            """Fetch 12-month frequency from iNaturalist histogram (cached in profile)."""
-            try:
-                r = _httpx.get(
-                    "https://api.inaturalist.org/v1/observations/histogram",
-                    params={
-                        "taxon_id": taxon_id,
-                        "quality_grade": "research",
-                        "verifiable": "true",
-                        "date_field": "observed",
-                        "interval": "month_of_year",
-                    },
-                    headers={"User-Agent": "Chirp-BirdDetection/1.0"},
-                    timeout=10,
-                )
-                if r.status_code != 200:
-                    return None
-                data = r.json().get("results", {})
-                monthly_data = data.get("month_of_year", data)
-                raw = [float(monthly_data.get(str(m), 0)) for m in range(1, 13)]
-                peak = max(raw) or 1.0
-                return [round(v / peak, 3) for v in raw]
-            except Exception:
-                return None
-            finally:
-                _time.sleep(0.3)
-
         # ── Build ALL new rows in memory (no DB writes yet) ───────────────────
         # Assembling everything first means we never write a partial list to the DB.
         new_rows: list = []
@@ -1568,19 +1554,10 @@ def _refresh_regional_library_bg():
             inserted_keys.add(dedup_key)
             sci = sp.get("scientific_name", "")
 
-            # Frequency priority:
-            #   1. BirdProfile cached monthly_frequency (already enriched)
-            #   2. iNaturalist histogram via known taxon_id (one API call)
-            #   3. Frequency already in species_list entry (from bar chart/estimate)
-            monthly = None
-            bp = profile_map.get(name) or profile_map.get(sci)
-            if bp and bp.monthly_frequency and any(v > 0 for v in bp.monthly_frequency):
-                monthly = bp.monthly_frequency
-            elif bp and bp.inaturalist_id:
-                monthly = _inat_histogram(bp.inaturalist_id)
-
-            if not monthly or not any(v > 0 for v in monthly):
-                monthly = sp.get("monthly_frequency") or [0.0] * 12
+            # Regional data only (eBird bar chart or iNaturalist nearby).
+            # Profiles hold worldwide seasonality scaled to each species' own
+            # peak, which made strays like Shiny Cowbird look "Very Likely".
+            monthly = sp.get("monthly_frequency") or [0.0] * 12
 
             current_freq = float(monthly[current_month]) if monthly else 0.0
 

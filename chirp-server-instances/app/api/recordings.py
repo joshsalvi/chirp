@@ -392,6 +392,7 @@ class RecordingOut(BaseModel):
     created_at: datetime
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    place_name: Optional[str] = None        # phone recordings: where it was made
     deleted_at: Optional[datetime] = None   # None = active; set = soft-deleted
     archived_at: Optional[datetime] = None  # None = audio intact; set = audio deleted, everything else preserved
     file_size_bytes: Optional[int] = None   # current on-disk file size
@@ -545,6 +546,7 @@ def recording_to_out(rec: Recording, db=None, _app_settings=None, _profile_map: 
         created_at=rec.created_at,
         latitude=rec.latitude,
         longitude=rec.longitude,
+        place_name=getattr(rec, "place_name", None),
         deleted_at=rec.deleted_at,
         archived_at=getattr(rec, 'archived_at', None),
         device_id=rec.device_id,
@@ -1979,8 +1981,19 @@ def recording_stats(
     total_detections = _det_base.with_entities(
         func.count(Detection.id)).scalar()
 
-    # Latest non-deleted recording
-    _latest_q = db.query(Recording).order_by(Recording.trigger_timestamp.desc())
+    # Latest recording that shows a bird: the Dashboard's Live card and "Last
+    # detection" link to it. Live Detect poll clips (deleted moments later
+    # when they hold nothing), Haikubox rows and recordings with nothing at
+    # the display threshold are skipped; any of them could leave the card
+    # showing "Unidentified" or linking to a recording that no longer exists.
+    _latest_q = (db.query(Recording)
+                 .filter(Recording.is_live_detect_clip.isnot(True))
+                 .filter(Recording.haikubox_detection_id.is_(None))
+                 .filter(Recording.detections.any(Detection.confidence >= _min_conf))
+                 # Finished: the server pass can still purge a recording it
+                 # finds empty, so an unfinished one may vanish moments later.
+                 .filter(Recording.processing_status == "done")
+                 .order_by(Recording.trigger_timestamp.desc()))
     if not _show_deleted:
         _latest_q = _latest_q.filter(Recording.deleted_at.is_(None))
     latest = _latest_q.first()
@@ -5469,7 +5482,7 @@ def full_statistics(
     metric='detections' (default): counts Detection rows (one per species per recording).
     metric='recordings': counts distinct Recording rows (one per triggered event).
     """
-    from ..cache import statistics_cache
+    from ..cache import slow_stats_cache as statistics_cache
     _metric = metric if metric in ("detections", "recordings") else "detections"
     _by_rec = _metric == "recordings"
     cache_key = f"stats_{heatmap_limit}_{_metric}_{exclude_bats}"
@@ -5532,16 +5545,45 @@ def full_statistics(
     top10 = [s for s, _ in top_species[:heatmap_limit]]
 
     # Monthly distribution
-    monthly_rows = (
-        _base()
-        .with_entities(
-            func.strftime("%m", Recording.trigger_timestamp).label("month"),
-            _count_expr.label("n"),
+    # Counting detections, month / hour / weekday / month-by-species all come
+    # from one grouped scan instead of four (each full scan of the
+    # detections join took about half a second on a year-old site).
+    # Counting recordings needs DISTINCT per group, so it keeps its queries.
+    _cube = None
+    if not _by_rec:
+        _cube = (
+            _base()
+            .with_entities(
+                func.strftime("%m", Recording.trigger_timestamp).label("month"),
+                func.strftime("%H", Recording.trigger_timestamp).label("hour"),
+                func.strftime("%w", Recording.trigger_timestamp).label("dow"),
+                Detection.common_name,
+                func.count(Detection.id).label("n"),
+            )
+            .filter(Recording.trigger_timestamp.isnot(None))
+            .group_by("month", "hour", "dow", Detection.common_name).all()
         )
-        .filter(Recording.trigger_timestamp.isnot(None))
-        .group_by("month").order_by("month").all()
-    )
-    monthly_dict = {int(r.month): r.n for r in monthly_rows}
+
+    def _cube_sum(*keys):
+        out: dict = {}
+        for r in _cube:
+            k = tuple(getattr(r, x) for x in keys)
+            out[k] = out.get(k, 0) + r.n
+        return out
+
+    if _cube is not None:
+        monthly_dict = {int(k[0]): n for k, n in _cube_sum("month").items()}
+    else:
+        monthly_rows = (
+            _base()
+            .with_entities(
+                func.strftime("%m", Recording.trigger_timestamp).label("month"),
+                _count_expr.label("n"),
+            )
+            .filter(Recording.trigger_timestamp.isnot(None))
+            .group_by("month").order_by("month").all()
+        )
+        monthly_dict = {int(r.month): r.n for r in monthly_rows}
     monthly_data = [{"month": m, "count": monthly_dict.get(m, 0)} for m in range(1, 13)]
 
     # Hour-of-day distribution — convert UTC → configured timezone before grouping
@@ -5556,16 +5598,19 @@ def full_statistics(
     _now = _dt.now(ZoneInfo("UTC")).astimezone(_tz)
     _offset_h = int(_now.utcoffset().total_seconds() // 3600)
 
-    hourly_rows = (
-        _base()
-        .with_entities(
-            func.strftime("%H", Recording.trigger_timestamp).label("hour"),
-            _count_expr.label("n"),
+    if _cube is not None:
+        hourly_dict_utc = {int(k[0]): n for k, n in _cube_sum("hour").items()}
+    else:
+        hourly_rows = (
+            _base()
+            .with_entities(
+                func.strftime("%H", Recording.trigger_timestamp).label("hour"),
+                _count_expr.label("n"),
+            )
+            .filter(Recording.trigger_timestamp.isnot(None))
+            .group_by("hour").order_by("hour").all()
         )
-        .filter(Recording.trigger_timestamp.isnot(None))
-        .group_by("hour").order_by("hour").all()
-    )
-    hourly_dict_utc = {int(r.hour): r.n for r in hourly_rows}
+        hourly_dict_utc = {int(r.hour): r.n for r in hourly_rows}
     # Shift each UTC bucket to local time
     hourly_dict: dict[int, int] = {}
     for h_utc, n in hourly_dict_utc.items():
@@ -5611,40 +5656,51 @@ def full_statistics(
     ]
 
     # Confidence distribution buckets
-    conf_values = [c for (c,) in _base().with_entities(Detection.confidence).all()]
+    # Bucketed in SQL rather than pulling every confidence value into Python.
+    from sqlalchemy import Integer, cast
+    _bucket = cast(Detection.confidence * 10, Integer)
     conf_hist = [0] * 10
-    for c in conf_values:
-        conf_hist[min(int(c * 10), 9)] += 1
+    for b, n in _base().with_entities(_bucket.label("b"), func.count(Detection.id)).group_by("b").all():
+        if b is not None:
+            conf_hist[min(max(int(b), 0), 9)] += n
     conf_data = [{"bucket": f"{i*10}-{(i+1)*10}%", "low": i * 10, "count": conf_hist[i]}
                  for i in range(10)]
 
     # Species × Month heatmap (top 10 species)
-    sbm_rows = (
-        _base()
-        .with_entities(
-            func.strftime("%m", Recording.trigger_timestamp).label("month"),
-            Detection.common_name,
-            _count_expr.label("n"),
-        )
-        .filter(Recording.trigger_timestamp.isnot(None))
-        .group_by("month", Detection.common_name).all()
-    )
     heatmap: dict = {s: [0] * 12 for s in top10}
-    for row in sbm_rows:
-        if row.common_name in heatmap:
-            heatmap[row.common_name][int(row.month) - 1] = row.n
+    if _cube is not None:
+        for (month, name), n in _cube_sum("month", "common_name").items():
+            if name in heatmap:
+                heatmap[name][int(month) - 1] = n
+    else:
+        sbm_rows = (
+            _base()
+            .with_entities(
+                func.strftime("%m", Recording.trigger_timestamp).label("month"),
+                Detection.common_name,
+                _count_expr.label("n"),
+            )
+            .filter(Recording.trigger_timestamp.isnot(None))
+            .group_by("month", Detection.common_name).all()
+        )
+        for row in sbm_rows:
+            if row.common_name in heatmap:
+                heatmap[row.common_name][int(row.month) - 1] = row.n
 
     # Day-of-week (SQLite %w: 0=Sun)
-    dow_rows = (
-        _base()
-        .with_entities(
-            func.strftime("%w", Recording.trigger_timestamp).label("dow"),
-            _count_expr.label("n"),
+    if _cube is not None:
+        dow_dict = {int(k[0]): n for k, n in _cube_sum("dow").items()}
+    else:
+        dow_rows = (
+            _base()
+            .with_entities(
+                func.strftime("%w", Recording.trigger_timestamp).label("dow"),
+                _count_expr.label("n"),
+            )
+            .filter(Recording.trigger_timestamp.isnot(None))
+            .group_by("dow").order_by("dow").all()
         )
-        .filter(Recording.trigger_timestamp.isnot(None))
-        .group_by("dow").order_by("dow").all()
-    )
-    dow_dict = {int(r.dow): r.n for r in dow_rows}
+        dow_dict = {int(r.dow): r.n for r in dow_rows}
     dow_labels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
     dow_data = [{"day": dow_labels[d], "count": dow_dict.get(d, 0)} for d in range(7)]
 
@@ -6263,6 +6319,54 @@ def regenerate_weekly_journal(db: Session = Depends(get_db)):
     return get_weekly_journal(db)
 
 
+def _species_local_dates(db, base_filters, min_conf, tz, since=None) -> dict:
+    """{species: set of local calendar dates it was detected on}, for the
+    streak endpoints. On SQLite the database groups detections by
+    (species, UTC hour) first, which turns hundreds of thousands of rows
+    into a few thousand; each hour maps to exactly one local date as long
+    as the site's UTC offset is whole hours (true almost everywhere).
+    Otherwise it reads every row, as before."""
+    from datetime import timedelta as _td
+    from zoneinfo import ZoneInfo
+    from sqlalchemy import func
+    utc = ZoneInfo("UTC")
+    now = datetime.utcnow().replace(tzinfo=utc)
+    whole_hours = all((tz.utcoffset(now + _td(days=d)) or _td(0)).total_seconds() % 3600 == 0
+                      for d in (0, 91, 182, 273))
+    try:
+        sqlite = db.get_bind().dialect.name == "sqlite"
+    except Exception:
+        sqlite = False
+    out: dict = {}
+    if sqlite and whole_hours:
+        bucket = func.strftime("%Y-%m-%d %H", Recording.trigger_timestamp)
+        q = (db.query(Detection.common_name, bucket)
+             .join(Recording, Detection.recording_id == Recording.id)
+             .filter(*base_filters))
+        if since is not None:
+            q = q.filter(Recording.trigger_timestamp >= since)
+        if min_conf > 0:
+            q = q.filter(Detection.confidence >= min_conf)
+        for name, b in q.group_by(Detection.common_name, bucket).all():
+            if not b:
+                continue
+            local = datetime.strptime(b, "%Y-%m-%d %H").replace(tzinfo=utc).astimezone(tz).date()
+            out.setdefault(name, set()).add(local)
+        return out
+    q = (db.query(Detection.common_name, Recording.trigger_timestamp)
+         .join(Recording, Detection.recording_id == Recording.id)
+         .filter(*base_filters))
+    if since is not None:
+        q = q.filter(Recording.trigger_timestamp >= since)
+    if min_conf > 0:
+        q = q.filter(Detection.confidence >= min_conf)
+    for name, ts in q.all():
+        if ts is None:
+            continue
+        out.setdefault(name, set()).add(ts.replace(tzinfo=utc).astimezone(tz).date())
+    return out
+
+
 @router.get("/statistics/yard-pulse")
 def yard_pulse(db: Session = Depends(get_db)):
     """
@@ -6293,6 +6397,12 @@ def yard_pulse(db: Session = Depends(get_db)):
     from ..models import AppSettings as _AS, BirdProfile as _BP
     import math
 
+    from ..cache import slow_stats_cache as statistics_cache
+    _yp_cache_key = "yard_pulse"
+    _yp_cached = statistics_cache.get(_yp_cache_key)
+    if _yp_cached is not None:
+        return _yp_cached
+
     _s = db.query(_AS).filter(_AS.id == 1).first()
     _show_deleted = bool(getattr(_s, "show_deleted_detections", False)) if _s else False
     _min_conf = float(getattr(_s, "min_confidence_display", 0.0) or 0.0) if _s else 0.0
@@ -6319,24 +6429,9 @@ def yard_pulse(db: Session = Depends(get_db)):
     # awkward across SQLite/Postgres alike; this is a few hundred rows at
     # most, trivial to walk in-process.
     window_start = datetime.combine(today_local - _td(days=120), datetime.min.time())
-    q = (
-        db.query(Detection.common_name, Recording.trigger_timestamp)
-        .join(Recording, Detection.recording_id == Recording.id)
-        .filter(*base_filters)
-        .filter(Recording.trigger_timestamp >= window_start)
-    )
-    if _min_conf > 0:
-        q = q.filter(Detection.confidence >= _min_conf)
-
-    # Convert each row's UTC timestamp to the configured local date —
-    # matches how "today" is defined everywhere else on this dashboard,
-    # so a detection at 11pm local doesn't get miscounted as "yesterday".
-    species_dates: dict[str, set] = {}
-    for common_name, ts in q.all():
-        if ts is None:
-            continue
-        local_date = ts.replace(tzinfo=ZoneInfo("UTC")).astimezone(_tz).date()
-        species_dates.setdefault(common_name, set()).add(local_date)
+    # Local dates (not UTC), matching how "today" is defined everywhere else
+    # on this dashboard, so a detection at 11pm local isn't counted as tomorrow.
+    species_dates = _species_local_dates(db, base_filters, _min_conf, _tz, since=window_start)
 
     streaks = []
     for common_name, dates in species_dates.items():
@@ -6484,7 +6579,7 @@ def yard_pulse(db: Session = Depends(get_db)):
             simpson_label = "Very balanced"
             simpson_description = "Practically every species is heard equally often."
 
-    return {
+    _yp_result = {
         "streaks": top_streaks,
         "diversity": {
             "species_last_30d": species_last_30d,
@@ -6497,6 +6592,8 @@ def yard_pulse(db: Session = Depends(get_db)):
             "description": diversity_description,
         },
     }
+    statistics_cache.set(_yp_cache_key, _yp_result)
+    return _yp_result
 
 
 @router.get("/statistics/diversity-trend")
@@ -6718,24 +6815,6 @@ def species_streaks(db: Session = Depends(get_db)):
         base_filters.append(Recording.deleted_at.is_(None))
     base_filters.append(Recording.haikubox_detection_id.is_(None))
 
-    def _fetch_species_dates(since=None):
-        q = (
-            db.query(Detection.common_name, Recording.trigger_timestamp)
-            .join(Recording, Detection.recording_id == Recording.id)
-            .filter(*base_filters)
-        )
-        if since:
-            q = q.filter(Recording.trigger_timestamp >= since)
-        if _min_conf > 0:
-            q = q.filter(Detection.confidence >= _min_conf)
-        species_dates: dict[str, set] = {}
-        for common_name, ts in q.all():
-            if ts is None:
-                continue
-            local_date = ts.replace(tzinfo=ZoneInfo("UTC")).astimezone(_tz).date()
-            species_dates.setdefault(common_name, set()).add(local_date)
-        return species_dates
-
     def _longest_run(dates: set) -> int:
         best = cur = 0
         prev = None
@@ -6748,10 +6827,15 @@ def species_streaks(db: Session = Depends(get_db)):
             prev = d
         return best
 
-    # Active streaks — bounded 120-day window, same as yard_pulse
-    active_dates = _fetch_species_dates(since=datetime.combine(today_local - _td(days=120), datetime.min.time()))
+    from ..cache import slow_stats_cache as statistics_cache
+    _cached = statistics_cache.get("species_streaks")
+    if _cached is not None:
+        return _cached
+
+    # One pass over full history; active streaks only look back from today.
+    all_dates = _species_local_dates(db, base_filters, _min_conf, _tz)
     active = []
-    for common_name, dates in active_dates.items():
+    for common_name, dates in all_dates.items():
         if today_local not in dates and (today_local - _td(days=1)) not in dates:
             continue
         cursor = today_local if today_local in dates else today_local - _td(days=1)
@@ -6764,7 +6848,6 @@ def species_streaks(db: Session = Depends(get_db)):
     active = active[:10]
 
     # Lifetime longest — full history, no window cap
-    all_dates = _fetch_species_dates(since=None)
     lifetime = [
         {"common_name": name, "streak_days": _longest_run(dates)}
         for name, dates in all_dates.items()
@@ -6784,7 +6867,9 @@ def species_streaks(db: Session = Depends(get_db)):
         x["photo_url"] = p.photo_url if p else None
         x["profile_id"] = p.id if p else None
 
-    return {"active": active, "lifetime": lifetime}
+    result = {"active": active, "lifetime": lifetime}
+    statistics_cache.set("species_streaks", result)
+    return result
 
 
 @router.get("/statistics/bat-activity")

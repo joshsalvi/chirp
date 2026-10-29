@@ -1,6 +1,7 @@
 """
-Chirp Device — OLED Display Driver
-Argon ONE v5 "Industria" Case — 128×32 SSD1306 OLED
+Chirp Device — OLED Display Driver (optional)
+128×32 SSD1306 OLED, e.g. the Argon ONE v5 "Industria" case's top panel.
+Without a display the station runs headless; nothing else depends on it.
 
 Hardware:
   Display:   128×32 monochrome OLED, SSD1306 controller
@@ -58,7 +59,7 @@ LOGO_Y = 4        # top margin
 
 
 class OledDisplay:
-    """128×32 SSD1306 OLED on the Argon ONE v5 Industria panel."""
+    """Optional 128×32 SSD1306 OLED (e.g. the Argon ONE v5 Industria panel)."""
 
     def __init__(self, config: Dict):
         self._config   = config
@@ -100,15 +101,24 @@ class OledDisplay:
                 logger.debug("OLED init attempt %d: %s", attempt + 1, e)
 
         if last_err:
-            if "Permission" in str(last_err) or "13" in str(last_err):
+            # Not a bare "13": "SSD1306" contains it, so every missing screen
+            # used to be reported as an I2C permission problem.
+            if isinstance(last_err, PermissionError) or "Permission denied" in str(last_err) \
+                    or "Errno 13" in str(last_err):
                 logger.warning(
                     "OLED: permission denied on /dev/i2c-%d. "
                     "Fix: sudo usermod -aG i2c %s  then restart service.",
                     OLED_I2C_BUS, os.environ.get("USER", "$USER"))
-            elif "No such file" in str(last_err):
+            elif "No such file" in str(last_err) and all(
+                    "No such file" in e for e in getattr(self, "_bus_errors", {}).values() or [str(last_err)]):
+                # No I2C bus at all, not just no screen on an existing bus.
                 logger.warning(
                     "OLED: /dev/i2c-%d not found. "
                     "Add dtparam=i2c_arm=on to /boot/firmware/config.txt", OLED_I2C_BUS)
+            elif "not found at address" in str(last_err):
+                # The usual case on a Pi without a screen: not a problem.
+                logger.info("No OLED display found; running without one (it's optional). "
+                            "Set display.enabled: false in config.yaml to skip the check.")
             else:
                 logger.warning("OLED init failed: %s", last_err)
         return False
@@ -178,6 +188,7 @@ class OledDisplay:
                 continue
 
         # Nothing worked — raise so the caller gets a meaningful message
+        self._bus_errors = errors
         raise OSError(
             f"SSD1306 OLED not found at address 0x{addr:02X} on any I2C bus. "
             f"Tried buses {list(errors.keys())}. "

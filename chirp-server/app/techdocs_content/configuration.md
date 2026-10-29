@@ -42,7 +42,7 @@ A device paired to a server runs the server's managed config on top of these val
 | `backend` | `cpu` (default) or `coral`. Coral needs a compiled BirdNET EdgeTPU model, which isn't published upstream; a Coral that can't load falls back to CPU |
 | `num_threads` | 2 — TFLite CPU threads for BirdNET (birdnetlib uses 1) |
 
-The Devices page offers a switch to Coral only when the device has a compiled EdgeTPU model, and a switch back to CPU when Coral is selected but can't load. Since device 1.2.30 the heartbeat reports the backend actually running, not only the configured one.
+The Devices page offers a switch to Coral only when the device has a compiled EdgeTPU model, and a switch back to CPU when Coral is selected but can't load. Since device 1.2.30 the heartbeat reports the backend in use, not only the configured one.
 
 Every 10 minutes the device logs a `Window stats` line: window count, how many passed the gate and BirdNET, the 10th/50th/90th percentile and max window level, the gate, and dropped windows. If owls are missed while p90 sits well below the gate, lower `threshold_db`. When BirdNET falls behind, the device temporarily cuts the overlap to 1 s (no gaps between 3 s windows) instead of dropping windows.
 

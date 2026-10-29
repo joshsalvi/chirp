@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom'
 import { Search, RefreshCw, MapPin, ExternalLink, CheckCircle, AlertCircle, Calendar, X, ChevronDown, ChevronUp } from 'lucide-react'
 import { api } from '../lib/api'
 import { BirdIcon, BatIcon } from './BirdBatIcons'
+import { useRevealMore } from '../lib/useRevealMore'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const MONTHS_SHORT = ['J','F','M','A','M','J','J','A','S','O','N','D']
@@ -102,7 +103,7 @@ const SpeciesCard = memo(function SpeciesCard({ sp, label, viewMonth }) {
     : { to: `/bird?label=${encodeURIComponent(sp.label || sp.common_name)}`, state: { from: '/regional' } }
 
   return (
-    <div className="card-hover flex items-start gap-3 p-3 group overflow-hidden"
+    <div className="card-hover cv-row flex items-start gap-3 p-3 group overflow-hidden"
          style={{ borderLeft: `2px solid ${style.dot}`, boxShadow: 'var(--shadow-card)' }}>
       {/* Photo */}
       <Link {...profileLink} className="flex-shrink-0">
@@ -153,7 +154,7 @@ const BatSpeciesCard = memo(function BatSpeciesCard({ sp }) {
     : { to: `/library?name=${encodeURIComponent(sp.common_name)}`, state: { from: '/regional' } }
 
   return (
-    <div className="card-hover flex items-start gap-3 p-3 group overflow-hidden"
+    <div className="card-hover cv-row flex items-start gap-3 p-3 group overflow-hidden"
          style={{ borderLeft: '2px solid #a78bfa' }}>
       <Link {...profileLink} className="flex-shrink-0">
         <div className="w-12 h-12 rounded-lg overflow-hidden" style={{ background: 'var(--bg-raised)' }}>
@@ -205,7 +206,6 @@ export default function RegionalLibrary() {
   // vocabulary (Recordings' 6/12/24/48 options).
   const CHUNK = 24
   const [visibleCount, setVisibleCount] = useState(CHUNK)
-  const sentinelRef = useRef(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -337,20 +337,8 @@ export default function RegionalLibrary() {
   // make a newly-narrowed search feel inconsistent with a fresh page load.
   useEffect(() => { setVisibleCount(CHUNK) }, [search, filter, sortBy, viewMonth])
 
-  useEffect(() => {
-    const el = sentinelRef.current
-    if (!el) return
-    const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisibleCount(c => Math.min(c + CHUNK, filtered.length))
-        }
-      },
-      { rootMargin: '400px' }  // start revealing the next chunk well before the sentinel is actually on-screen
-    )
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [filtered.length])
+  // Next chunk as the end of the list nears the screen (lib/useRevealMore).
+  const sentinelRef = useRevealMore(() => setVisibleCount(c => Math.min(c + CHUNK, filtered.length)))
 
   const locationStr = publicPlace(settings?.location_name)
     || (settings?.latitude ? `${settings.latitude.toFixed(3)}, ${settings.longitude.toFixed(3)}` : null)
@@ -532,7 +520,15 @@ export default function RegionalLibrary() {
           {/* Sentinel — revealing this (rootMargin: 400px, so well before it's
               actually visible) loads the next chunk of cards. Invisible, zero
               height, purely a scroll-position trigger. */}
-          {visibleCount < filtered.length && <div ref={sentinelRef} style={{ height: 1 }}/>}
+          {visibleCount < filtered.length && (
+            // Loads the next chunk on its own as it nears the screen; the
+            // button is there in case the observer never fires.
+            <button key={visibleCount} ref={sentinelRef} type="button"
+                    onClick={() => setVisibleCount(c => Math.min(c + CHUNK, filtered.length))}
+                    className="btn-secondary w-full justify-center text-sm py-2.5 mt-2">
+              Show more · {filtered.length - visibleCount} more species
+            </button>
+          )}
         </>
       )}
 

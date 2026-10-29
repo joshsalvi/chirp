@@ -6,7 +6,7 @@
   <Network>bridge</Network>
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
-  <Support>https://ourchirp.com/support.html</Support>
+  <Support>https://forums.unraid.net/topic/201069-support-joshsalvi-chirp-bird-and-bat-call-detection/</Support>
   <Project>https://github.com/joshsalvi/chirp</Project>
   <Overview>Optional companion to Chirp-Headscale: Caddy with the Cloudflare DNS plugin, giving Headscale a public HTTPS address with automatic certificates (Headscale can't run behind Cloudflare's proxy or tunnel).</Overview>
   <Description>Copy chirp-server-instances/caddy/Caddyfile from github.com/joshsalvi/chirp to the Caddyfile path below and replace headscale.ourchirp.com with your own hostname. That DNS record must be "DNS only" (grey cloud) in Cloudflare. Forward your router's port 443 to this container's HTTPS port. The Cloudflare token needs only Zone:DNS:Edit for that one zone.</Description>

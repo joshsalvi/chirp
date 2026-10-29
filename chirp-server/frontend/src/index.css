@@ -2131,16 +2131,35 @@
      utility-detection to emit them, fixes it for every one of those
      pages at once and doesn't depend on any component ever applying an
      `animate-shimmer` className it currently doesn't. */
+  /* The shine is a pseudo-element moved with transform, so the GPU
+     composites it; animating background-position repainted every
+     skeleton on every frame and made lists stutter on iPhone while
+     thumbnails loaded. */
   @keyframes shimmer {
-    0%   { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
   }
   .skeleton {
-    background: linear-gradient(90deg, var(--s800) 25%, var(--s700) 50%, var(--s800) 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.8s linear infinite;
+    background: var(--s800);
     border-radius: 6px;
+    overflow: hidden;
   }
+  .skeleton:not(.absolute):not(.fixed) { position: relative; }
+  /* Long lists: the browser skips layout and paint for rows that are off
+     screen (Safari 18+, other browsers ignore it). The size is a starting
+     guess; "auto" remembers each row's size once it has been shown. */
+  .cv-row  { content-visibility: auto; contain-intrinsic-size: auto 76px; }
+  .cv-line { content-visibility: auto; contain-intrinsic-size: auto 48px; }
+  .cv-card { content-visibility: auto; contain-intrinsic-size: auto 210px; }
+  .skeleton::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, var(--s700), transparent);
+    transform: translateX(-100%);
+    animation: shimmer 1.8s linear infinite;
+    will-change: transform;
+  }
+  @media (prefers-reduced-motion: reduce) { .skeleton::after { animation: none; opacity: 0; } }
 
   /* ── Live indicator ────────────────────────────────────────── */
   .live-dot { animation: livePulse 2s ease-in-out infinite; }

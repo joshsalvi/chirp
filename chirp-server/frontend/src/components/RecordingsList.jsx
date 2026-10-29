@@ -210,6 +210,7 @@ export default function RecordingsList() {
         const bbSelected = s.bird_buddy_selected_feeders || []
         setDeviceOptions((devs || []).filter(d => {
           if (d.birdnet_backend === 'haikubox') return false
+          if (d.birdnet_backend === 'birdweather' && !s.birdweather_enabled) return false
           if (d.birdnet_backend === 'bird_buddy') {
             if (!bbEnabled) return false
             if (bbSelected.length > 0 && !bbSelected.includes(d.bird_buddy_feeder_id)) return false
@@ -870,7 +871,7 @@ export default function RecordingsList() {
         /* ── Compact list — no spectrogram images, optimized for density ── */
         <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border-subtle)' }}>
           {recordings.map((rec, i) => (
-            <div key={rec.id}>
+            <div key={rec.id} className="cv-line">
               <Link to={`/recordings/${rec.id}`}
                     className="list-row flex items-center gap-3 px-3 py-2 group"
                     style={{ borderTop: i === 0 ? 'none' : '1px solid var(--border-subtle)' }}>
@@ -922,7 +923,7 @@ export default function RecordingsList() {
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {recordings.map(rec => (
-            <div key={rec.id} className="card-hover group overflow-hidden relative">
+            <div key={rec.id} className="card-hover cv-card group overflow-hidden relative">
               {/* Bulk select checkbox */}
               <label className="absolute top-2 left-2 z-10 cursor-pointer"
                      onClick={e => e.stopPropagation()}>

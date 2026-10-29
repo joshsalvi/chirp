@@ -64,6 +64,14 @@ def _looks_truncated(text: str) -> bool:
     return stripped[-1] not in ".!?\"'”’)`"
 
 
+def ollama_headers(cfg_or_key) -> dict:
+    """Authorization header for an Ollama server behind a key-checking
+    proxy; empty when no key is set (plain Ollama has no sign-in)."""
+    key = cfg_or_key.get("api_key") if isinstance(cfg_or_key, dict) else cfg_or_key
+    key = (key or "").strip()
+    return {"Authorization": f"Bearer {key}"} if key else {}
+
+
 def _ollama_chat(cfg: dict, messages: list, options: dict, timeout: float,
                  think: Optional[bool] = None) -> tuple:
     """POST /api/chat; returns (response json, think) where think is None
@@ -75,12 +83,12 @@ def _ollama_chat(cfg: dict, messages: list, options: dict, timeout: float,
             "options": {"num_ctx": OLLAMA_NUM_CTX, **options}, "keep_alive": OLLAMA_KEEP_ALIVE}
     if think is False:
         body["think"] = False
-    resp = httpx.post(f"{cfg['base_url']}/api/chat", json=body, timeout=timeout)
+    resp = httpx.post(f"{cfg['base_url']}/api/chat", json=body, headers=ollama_headers(cfg), timeout=timeout)
     if think is False and resp.status_code == 400 and "think" in resp.text.lower():
         # An Ollama too old for the think option: ask without it.
         body.pop("think", None)
         think = None
-        resp = httpx.post(f"{cfg['base_url']}/api/chat", json=body, timeout=timeout)
+        resp = httpx.post(f"{cfg['base_url']}/api/chat", json=body, headers=ollama_headers(cfg), timeout=timeout)
     _check_response(resp)
     data = resp.json()
     msg = data.get("message") or {}
@@ -88,7 +96,7 @@ def _ollama_chat(cfg: dict, messages: list, options: dict, timeout: float,
         return data, think
     logger.info("Ollama %s spent its whole answer on reasoning; asking again with thinking off",
                 cfg["model"])
-    resp = httpx.post(f"{cfg['base_url']}/api/chat", json={**body, "think": False}, timeout=timeout)
+    resp = httpx.post(f"{cfg['base_url']}/api/chat", json={**body, "think": False}, headers=ollama_headers(cfg), timeout=timeout)
     _check_response(resp)
     return resp.json(), False
 
@@ -99,7 +107,7 @@ def warm_ollama(cfg: dict, timeout: float = 5.0) -> str:
     for a multi-GB vision model to load. Returns "loaded" (already in
     memory), "loading" (load started) or "unavailable"."""
     try:
-        ps = httpx.get(f"{cfg['base_url']}/api/ps", timeout=timeout)
+        ps = httpx.get(f"{cfg['base_url']}/api/ps", headers=ollama_headers(cfg), timeout=timeout)
         if ps.status_code == 200:
             names = {m.get("name") or m.get("model") for m in (ps.json().get("models") or [])}
             want = cfg["model"]
@@ -112,7 +120,8 @@ def warm_ollama(cfg: dict, timeout: float = 5.0) -> str:
     def _load():
         try:
             httpx.post(f"{cfg['base_url']}/api/generate",
-                       json={"model": cfg["model"], "keep_alive": OLLAMA_KEEP_ALIVE}, timeout=300)
+                       json={"model": cfg["model"], "keep_alive": OLLAMA_KEEP_ALIVE},
+                       headers=ollama_headers(cfg), timeout=300)
         except Exception as e:
             logger.debug("Ollama warm-up failed: %s", e)
     import threading
@@ -192,7 +201,7 @@ def get_feature_config(feature_key: str, db) -> Optional[Tuple[str, str]]:
     a call to attempt and handle a failure.
 
     For hosted providers, credential is a plain API key. For "ollama"
-    (self-hosted, no API key) it's a JSON string of {"base_url", "model"}
+    (self-hosted) it's a JSON string of {"base_url", "model", "api_key"?}
     packed into the same slot every caller already treats as "api_key",
     so adding this provider didn't require touching existing callers.
     """
@@ -211,7 +220,10 @@ def get_feature_config(feature_key: str, db) -> Optional[Tuple[str, str]]:
         if not base_url or not model:
             return None
         import json as _json
-        return provider, _json.dumps({"base_url": base_url.rstrip("/"), "model": model})
+        cfg = {"base_url": base_url.rstrip("/"), "model": model}
+        if getattr(s, "ollama_api_key", None):
+            cfg["api_key"] = s.ollama_api_key
+        return provider, _json.dumps(cfg)
 
     key_map = {"anthropic": s.anthropic_api_key, "openai": s.openai_api_key, "gemini": getattr(s, "gemini_api_key", None)}
     api_key = key_map.get(provider)
@@ -265,7 +277,7 @@ def test_provider_key(provider: str, api_key: str) -> dict:
         # can be up with a completely different model list than expected).
         import json as _json
         cfg = _json.loads(api_key)
-        resp = httpx.get(f"{cfg['base_url']}/api/tags", timeout=10.0)
+        resp = httpx.get(f"{cfg['base_url']}/api/tags", headers=ollama_headers(cfg), timeout=10.0)
         _check_response(resp)
         models = [m.get("name", "") for m in resp.json().get("models", [])]
         model_available = any(cfg["model"] == m or m.startswith(cfg["model"] + ":") for m in models)
@@ -466,7 +478,7 @@ def call_vision_completion(
                          "keep_alive": OLLAMA_KEEP_ALIVE}
             if think is False:
                 cont_body["think"] = False
-            cont_resp = httpx.post(f"{cfg['base_url']}/api/chat", json=cont_body, timeout=timeout)
+            cont_resp = httpx.post(f"{cfg['base_url']}/api/chat", json=cont_body, headers=ollama_headers(cfg), timeout=timeout)
             _check_response(cont_resp)
             cont_data = cont_resp.json()
             cont_msg = cont_data.get("message") or {}

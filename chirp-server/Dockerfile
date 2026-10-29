@@ -30,6 +30,18 @@ COPY frontend/ .
 # correctly computed /VERSION as the path it expected, but nothing had
 # ever copied a file there in this stage.
 COPY VERSION ./VERSION
+# ourchirp.com's website pages (about, guides, support, privacy) and its
+# own Global Admin tabs (src/website) are left out of every other build;
+# those servers link to ourchirp.com instead (app/website). Only
+# ourchirp.com's build sets CHIRP_WEBSITE=1 (its .env, via docker-compose.yml).
+ARG CHIRP_WEBSITE=0
+RUN if [ "$CHIRP_WEBSITE" != "1" ]; then \
+      cd public && rm -rf about.html about-img setup.html guide.html troubleshooting.html support.html testflight.html \
+        privacy.html docs.css site.js && cd .. && \
+      if [ -d src/website ]; then rm -rf src/website && mkdir src/website && \
+        printf '// Not in this build: ourchirp.com only.\nexport const websiteTabsFirst = []\nexport const websiteTabsLast = []\n' \
+          > src/website/WebsiteAdmin.jsx; fi; \
+    fi
 RUN npm run build
 
 # ── Stage 2: Python Backend ───────────────────────────────────────────────────
@@ -118,6 +130,11 @@ COPY models/ ./models/
 
 # Copy built frontend into static directory
 COPY --from=frontend-builder /frontend/dist ./app/static
+# Late, so changing it doesn't rebuild the layers above (app/website).
+ARG CHIRP_WEBSITE=0
+ENV CHIRP_WEBSITE=$CHIRP_WEBSITE
+RUN if [ "$CHIRP_WEBSITE" != "1" ] && [ -d app/website ]; then \
+      find app/website -name '*.py' ! -name '__init__.py' -delete; fi
 
 # Create data directories
 RUN mkdir -p /app/data/recordings \

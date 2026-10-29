@@ -88,6 +88,12 @@ dir_size_cache: TTLCache = TTLCache(ttl_seconds=60.0, maxsize=8)
 # independently — show_deleted_detections and min_confidence_display).
 life_list_cache: TTLCache = TTLCache(ttl_seconds=45.0, maxsize=4)
 statistics_cache: TTLCache = TTLCache(ttl_seconds=45.0, maxsize=8)
+# Statistics page, Yard Pulse and species streaks — 2 min TTL, and NOT cleared
+# on every new detection: an active station uploads every minute or so, which
+# kept statistics_cache empty and made these (the slowest aggregates, 0.3-2 s
+# each) run cold on almost every visit. A couple of minutes behind is fine for
+# monthly charts and multi-day streaks. Cleared on settings changes.
+slow_stats_cache: TTLCache = TTLCache(ttl_seconds=120.0, maxsize=16)
 # Species heard only through Haikubox (see services/species_filters.py).
 species_filter_cache: TTLCache = TTLCache(ttl_seconds=300.0, maxsize=64)
 
@@ -112,6 +118,7 @@ def invalidate_settings():
     life_list_cache.clear()
     statistics_cache.clear()
     regional_library_cache.clear()
+    slow_stats_cache.clear()
 
 
 def invalidate_detection_caches():

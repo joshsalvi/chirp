@@ -7,6 +7,7 @@ is for the app. Experimental model status lives here too (/status).
 """
 import logging
 import os
+import re
 import threading
 import uuid
 from collections import Counter
@@ -17,6 +18,7 @@ from typing import Optional
 from fastapi import (APIRouter, BackgroundTasks, Depends, File, Form, Header, HTTPException,
                      Query, UploadFile, status)
 from fastapi.responses import FileResponse, Response
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..config import settings
@@ -141,27 +143,71 @@ def list_nights(limit: int = Query(60, ge=1, le=366), db: Session = Depends(get_
     return {"nights": out}
 
 
+ALL_LEVELS = ("species", "group", "family", "order")
+
+
+def _search_text(c: FlightCall, d: dict) -> str:
+    """Everything a search can match for a call: its names, family, order,
+    sound-alike group and that group's species."""
+    parts = [d["name"], c.common_name, c.scientific_name, c.family, d["family_name"], c.order,
+             nh.ORDER_NAMES.get(c.order or ""), c.group, d["level_label"], *(d["members"] or [])]
+    return " ".join(p for p in parts if p).lower()
+
+
+def _matches(text: str, words: list) -> bool:
+    # Each word matches at the start of a word: "thr" finds thrush, not "Northern".
+    return all(re.search(r"(^|[^a-z0-9])" + re.escape(w), text) for w in words)
+
+
 @router.get("")
 def list_calls(night: Optional[str] = None, start: Optional[str] = None, end: Optional[str] = None,
                include_unnarrowed: bool = False,
+               levels: Optional[str] = Query(None, description="Comma list of species, group, family, order"),
+               min_prob: float = Query(0.0, ge=0.0, le=1.0),
+               q: Optional[str] = Query(None, max_length=100),
                limit: int = Query(500, ge=1, le=5000), offset: int = Query(0, ge=0),
                db: Session = Depends(get_db)):
     """Calls for a night (or nights start..end, YYYY-MM-DD, inclusive), newest
-    first. Order-level calls ("Songbird") are left out unless
-    include_unnarrowed; "unnarrowed" says how many there are."""
-    q = db.query(FlightCall)
+    first, filtered by how far Nighthawk got (levels), its confidence
+    (min_prob) and a search of names, families and sound-alike groups (q).
+    Without levels, order-level calls ("Songbird") are left out unless
+    include_unnarrowed. by_level counts the calls that pass the confidence
+    and search filters at each level; "unnarrowed" is its order count."""
+    query = db.query(FlightCall)
     if night:
-        q = q.filter(FlightCall.night == night)
+        query = query.filter(FlightCall.night == night)
     if start:
-        q = q.filter(FlightCall.night >= start)
+        query = query.filter(FlightCall.night >= start)
     if end:
-        q = q.filter(FlightCall.night <= end)
-    unnarrowed = q.filter(FlightCall.level == "order").count()
-    if not include_unnarrowed:
-        q = q.filter(FlightCall.level != "order")
-    total = q.count()
-    rows = q.order_by(FlightCall.detected_at.desc()).offset(offset).limit(limit).all()
-    return {"calls": [_call_out(c) for c in rows], "total": total, "unnarrowed": unnarrowed}
+        query = query.filter(FlightCall.night <= end)
+    if min_prob > 0:
+        query = query.filter(FlightCall.prob >= min_prob)
+    if levels:
+        want = {x.strip() for x in levels.split(",")} & set(ALL_LEVELS)
+    else:
+        want = set(ALL_LEVELS[:3]) | ({"order"} if include_unnarrowed else set())
+    words = [w for w in (q or "").lower().split() if w]
+    query = query.order_by(FlightCall.detected_at.desc())
+
+    if words:
+        by_level, kept = Counter(), []
+        for c in query.all():
+            d = nh.describe(c.level, c.category, c.common_name, c.family, c.order, c.group)
+            if not _matches(_search_text(c, d), words):
+                continue
+            by_level[c.level] += 1
+            if c.level in want:
+                kept.append(c)
+        total, rows = len(kept), kept[offset:offset + limit]
+    else:
+        by_level = Counter(dict(query.with_entities(FlightCall.level, func.count(FlightCall.id))
+                                .group_by(FlightCall.level).order_by(None).all()))
+        query = query.filter(FlightCall.level.in_(want)) if want else query.filter(False)
+        total = query.count()
+        rows = query.offset(offset).limit(limit).all()
+    return {"calls": [_call_out(c) for c in rows], "total": total,
+            "by_level": {k: by_level.get(k, 0) for k in ALL_LEVELS},
+            "unnarrowed": by_level.get("order", 0)}
 
 
 @router.get("/status")

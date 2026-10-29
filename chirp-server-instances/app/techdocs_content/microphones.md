@@ -56,7 +56,7 @@ loudness/directivity and whether a reflector is involved.
 | **Primo EM272Z1** *(Clippy/Pluggy)* | ~$100–150 | 2-wire plug-in-power (mini) or XLR w/ phantom power (Pluggy) | Omnidirectional | 14 dBA | 80 dB @ 1kHz | Close-range/clip-on; extends well with a parabolic reflector | Best noise-per-dollar in field recording; tiny 10mm capsule; widely used DIY/semi-pro standard |
 | **Sennheiser MKH 8020** | ~$1,500+ | XLR, needs 48V phantom power | Omnidirectional (cardioid/supercardioid modules also available in the 8000 series) | 10 dBA (DIN, A-weighted) | Not published as one number — excellent dynamic range instead | Flat response and low noise hold up at distance in quiet settings | RF condenser design (immune to humidity noise other condensers get); 10Hz–60kHz response; modular capsule system |
 | **Wildlife Acoustics Song Meter SM4** | ~$700–900 | Standalone recorder — 2 built-in mics + 2 cabled mic/hydrophone ports | Omnidirectional (built-in); cabled mic optional for distant placement | Not published separately from SNR | 80 dB typ. @ 1kHz (1 Pa, A-weighted) | Every +6dB of SNR roughly doubles usable detection distance (WA's own rule of thumb) | Fully standalone (no Pi needed) — weatherproof, D-cell battery (up to 650hrs), dual SD failover, scheduled recording |
-| **Dodotronic Ultramic 192K** | ~$250–280 | USB (Audio Class, plug-and-play) | Omnidirectional | "Low noise" (no dB figure published) | Not published | Short-range point-source ultrasonic detection (bats, insects, rodents) | Purpose-built ultrasonic USB mic, 192kHz sampling, 16-bit — a genuine drop-in upgrade over AudioMoth for the bat pipeline specifically |
+| **Dodotronic Ultramic 192K** | ~$250–280 | USB (Audio Class, plug-and-play) | Omnidirectional | "Low noise" (no dB figure published) | Not published | Short-range point-source ultrasonic detection (bats, insects, rodents) | Purpose-built ultrasonic USB mic, 192kHz sampling, 16-bit, and a drop-in upgrade over AudioMoth for the bat pipeline specifically |
 
 **Bottom line:** for the bird pipeline, the EM272Z1-based mics are the
 standout value — a fraction of the MKH 8020's price for self-noise
@@ -121,14 +121,14 @@ cat" foam cover (available for ~$10).
 
 If you have the circular ReSpeaker with a USB cable (XVF-3000 or
 XVF-3800 chip, with case), it's a USB plug-and-play device — no driver
-installation needed, just plug it into any USB port on the Pi and Chirp
+installation needed; plug it into any USB port on the Pi and Chirp
 detects it automatically. Don't run `install-respeaker-hat.sh` for this
 variant (that's only for the GPIO HAT variants). The LED ring flashes
 green on every bird detection (requires `pyusb`, installed by
 `install.sh`), and all 4 mic channels are mixed to mono automatically
 for BirdNET.
 
-### Can I just plug it into the Pi's USB port?
+### Can I plug it directly into the Pi's USB port?
 
 Yes, completely. The ReSpeaker USB Mic Array uses USB Audio Class 1.0
 and appears as a generic USB microphone to any application — no
@@ -146,7 +146,7 @@ defaults.pcm.card N
 defaults.ctl.card N
 ```
 
-For Chirp, just run `install.sh` as normal — `respeaker.mode: auto` in
+For Chirp, run `install.sh` as normal — `respeaker.mode: auto` in
 `config.yaml` handles detection automatically.
 
 ### Verify Chirp sees your ReSpeaker

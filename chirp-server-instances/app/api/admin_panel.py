@@ -568,3 +568,4 @@ def run_instance_diagnostics(
         return result
     finally:
         db.close()
+

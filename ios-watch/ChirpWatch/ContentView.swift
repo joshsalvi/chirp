@@ -60,6 +60,7 @@ struct ContentView: View {
                         .foregroundStyle(statusIsProblem ? .orange : .secondary)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
+                    if live.state == .listening && live.problem == nil { progress }
                     if let text = savingText {
                         Text(text.0)
                             .font(.footnote)
@@ -116,6 +117,39 @@ struct ContentView: View {
         }
     }
 
+    /// What the clips are doing: identifying now, the last answer and how
+    /// long answers take, and clips skipped on a slow connection.
+    private var progress: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { ctx in
+            VStack(spacing: 2) {
+                if live.inFlight > 0 {
+                    HStack(spacing: 4) {
+                        ProgressView().controlSize(.mini)
+                        Text(live.lastAnswer == nil ? "Identifying first clip…" : "Identifying…")
+                    }
+                    .foregroundStyle(.secondary)
+                }
+                if let at = live.lastAnswer {
+                    let ago = max(0, Int(ctx.date.timeIntervalSince(at)))
+                    Text(live.lastFound.isEmpty ? "Last clip: no birds · \(ago)s ago"
+                                                : "Last clip: \(live.lastFound.joined(separator: ", "))")
+                        .foregroundStyle(live.lastFound.isEmpty ? Color.secondary : Color.green)
+                        .lineLimit(2)
+                    if let rt = live.lastRoundTrip {
+                        Text(String(format: "Answers in %.1f s", rt)).foregroundStyle(.tertiary)
+                    }
+                }
+                if live.skipped > 0 {
+                    Text("Slow connection: skipped \(live.skipped) clip\(live.skipped == 1 ? "" : "s")")
+                        .foregroundStyle(.orange)
+                }
+            }
+            .font(.caption2)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
+        }
+    }
+
     /// (text, is a problem)
     private var savingText: (String, Bool)? {
         switch live.saving {
@@ -137,7 +171,7 @@ struct ContentView: View {
         case .starting: return "Starting…"
         case .listening:
             if let p = live.problem { return p }
-            return live.clipsSent == 0 ? "Listening…" : "Listening · \(live.clipsSent) clips checked"
+            return live.clipsSent == 0 ? "Listening… first check in a few seconds" : "Listening · \(live.clipsSent) clips checked"
         case .idle:
             return live.heard.isEmpty ? "Tap to listen for birds" : "Stopped"
         }

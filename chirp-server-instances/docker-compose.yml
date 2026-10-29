@@ -25,6 +25,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # 1 only on ourchirp.com: keeps the website pages (about, guides,
+        # support, privacy). Other servers link to ourchirp.com for them.
+        - CHIRP_WEBSITE=${CHIRP_WEBSITE:-0}
     container_name: chirp-server-instances
     restart: unless-stopped
     network_mode: host

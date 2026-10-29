@@ -20,7 +20,7 @@ mobile-style app (PWA).
 
 This is conceptually similar to commercial products like BirdWeather or
 HaikuBox, but self-hosted (your data stays on your own hardware) and built
-around a genuinely novel two-stage on-device detection architecture — see
+around a novel two-stage on-device detection architecture — see
 [Detection Pipeline](detection-pipeline.md) for the specifics that
 distinguish it from simpler "always run the full classifier" approaches.
 
@@ -33,7 +33,7 @@ distinguish it from simpler "always run the full classifier" approaches.
 | [Species Enrichment](enrichment.md) | How a raw species name becomes a full profile — photos, calls, range maps, descriptions |
 | [Hardware & Edge Device](hardware.md) | What the edge device is, configuration parameters, microphone handling, OLED status display |
 | [Microphones](microphones.md) | Model recommendations, ReSpeaker-specific setup, running a bird mic alongside a bat-detection mic |
-| [Device Setup Guide](device-setup.md) | Step-by-step build: OS flashing, Argon ONE case assembly, Coral install, OLED, Zigbee, systemd, troubleshooting, bill of materials |
+| [Device Setup Guide](device-setup.md) | Step-by-step build: OS flashing, case assembly (Argon ONE optional), Coral install, OLED, Zigbee, systemd, troubleshooting, bill of materials |
 | [Server Deployment](deployment.md) | Docker-based deployment, environment variables, volumes |
 | [Configuration Reference](configuration.md) | Every currently-used configuration knob, drawn directly from the config files |
 | [AI Features](ai-features.md) | Optional LLM-powered features (Daily Journal, profile summaries, call re-analysis) and Ollama setup |
@@ -93,7 +93,7 @@ changelog when it changes.
 
 **Minor `Y`** — increments when a new user-visible feature is added. New
 pages, new integrations, new hardware support. The system still works
-the same way, just has more capabilities.
+the same way and has more capabilities.
 
 **Patch `Z`** — a letter (`a`, `b`, `c`, `d` …) that resets to `a`
 whenever `Y` increments. Contains only fixes and small improvements

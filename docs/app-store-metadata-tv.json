@@ -1,0 +1,23 @@
+{
+  "_comment": "Apple TV App Store listing. ASC_PLATFORM is not needed for listing (platform below). asc.py listing docs/app-store-metadata-tv.json [~/Developer/Chirp/app-store/tv]",
+  "platform": "TV_OS",
+  "localization": {
+    "locale": "en-US",
+    "description": "Chirp on the big screen. A small listening station records bird calls day and night, identifies each species with the BirdNET model, and sends everything to your Chirp server. Chirp for Apple TV puts it all in your living room.\n\nWHAT YOU CAN DO\n• Today: the day's species with photos, counts and an hour-by-hour activity chart. Select a bird to hear its best recording.\n• Recent: the newest recordings, each with its spectrogram and every bird found in the clip. Move the playhead with the remote to play from any point.\n• Live: listen through one of your stations in real time, with a scrolling spectrogram and birds named as they sing.\n• Journal: the Daily and Weekly Journal, written each evening from your station's detections.\n\nSIGN IN WITH YOUR PHONE\nThe TV shows a short code and a QR code. Enter the code in the Chirp app (My Profile → Apple TV) or at ourchirp.com/tv. No typing passwords with the remote. Running your own Chirp server? Choose Server on the sign-in screen.\n\nYOUR DATA STAYS YOURS\nChirp runs on its operator's server. No ads, no tracking, no selling of data.\n\nChirp needs a Chirp site account. Ask the person who runs your Chirp site for an invite.",
+    "promotional_text": "Your backyard birds on the big screen: today's species, recordings with spectrograms, and live listening through your Chirp station.",
+    "keywords": "birds,birding,bird song,bird call,birdnet,backyard,nature,spectrogram,owl,live,listen,sound",
+    "support_url": "https://ourchirp.com/support.html",
+    "marketing_url": "https://ourchirp.com/about",
+    "whats_new": "• Recordings have a playhead you can move with the remote: ◀ ▶ on the spectrogram, then Select to play from there. Play/Pause works anywhere on the screen.\n• Down from the tabs now goes straight to Play, and the birds under the spectrogram light up when selected. Pick one to hear its first call.\n• Signing in to your own server shows the right address to link the TV, including home servers with a port."
+  },
+  "screenshots": {
+    "APP_APPLE_TV": [
+      "1-today.png",
+      "2-recording.png",
+      "3-recent.png",
+      "4-live.png",
+      "5-journal.png",
+      "6-sign-in.png"
+    ]
+  }
+}

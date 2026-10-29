@@ -11,13 +11,14 @@ it's what the software is actively developed and tested against.
 Typical hardware requirements: Raspberry Pi 5 (4 GB+ RAM recommended),
 1–2 USB microphones (see [Microphones](microphones.md)), and a 5V/5A
 USB-C power supply. See [Device Setup Guide](device-setup.md) for a
-full bill of materials and step-by-step assembly, including the
-reference Argon ONE v5 Industria case.
+full bill of materials and step-by-step assembly. Any Pi 5 case with
+active cooling works; the guide's reference build uses the Argon ONE v5
+Industria case, which is optional.
 
 Optional: a **Google Coral USB/M.2 Accelerator** (EdgeTPU), which
 meaningfully speeds up Stage 2 classification (see
 [Detection Pipeline](detection-pipeline.md)) but isn't required — the
-same classifier runs on CPU if one isn't present, just slower per
+same classifier runs on CPU if one isn't present, only slower per
 window.
 
 | Backend | Inference latency (per 3s window) |
@@ -39,7 +40,7 @@ Multiple USB microphones can be connected simultaneously. Devices are
 matched by a configurable list of name substrings (things like "USB",
 "Microphone", specific brand names, "AudioMoth") — this is a permissive
 default list, and there's a broader fallback scan over *all* connected input
-devices (not just hint-matched ones) specifically so a legitimate
+devices (not only hint-matched ones) specifically so a legitimate
 microphone with an unexpected name isn't silently missed.
 
 A separate, independent exclude list removes specific devices from bird
@@ -60,17 +61,17 @@ mic for bat detection.
 
 ## OLED status display
 
-The reference Argon ONE v5 Industria case includes a 128×32 SSD1306
+Optional. The reference Argon ONE v5 Industria case includes a 128×32 SSD1306
 OLED (I²C address `0x3C`) that rotates through status pages — current
 detection counts, the most recent species, upload queue depth, system
 health (CPU temp, RAM, disk, uptime), and active hardware backend. Fully
 optional and non-blocking: if absent or if I²C fails, Chirp continues
-running normally with a single log warning.
+running normally and logs "No OLED display found" once.
 
 The case's own bundled OLED daemon (`argononed.service`) drives the same
 physical screen and will win control of it if left running — the
 installer disables that daemon automatically so Chirp's own display
-takes over. See [Device Setup Guide](device-setup.md#oled-display-industria-panel)
+takes over. See [Device Setup Guide](device-setup.md#oled-display-industria-panel-optional)
 for setup, configuration, and the daemon-conflict trade-off (it also
 controls the case's physical power button).
 

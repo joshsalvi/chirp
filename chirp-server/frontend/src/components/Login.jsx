@@ -157,8 +157,8 @@ export default function Login({ onLogin }) {
           {mode === 'login' ? 'Default: admin / chirp-admin · Change via CHIRP_ADMIN_PASSWORD' : 'New accounts require admin approval.'}
         </p>
         <p className="text-xs text-center mt-3">
-          <a href="/about" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>What is Chirp? ↗</a> <span style={{ color: 'var(--text-tertiary)' }}>·</span>{' '}
-          <a href="/setup.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>Setup guide ↗</a>
+          <a href="https://ourchirp.com/about" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>What is Chirp? ↗</a> <span style={{ color: 'var(--text-tertiary)' }}>·</span>{' '}
+          <a href="https://ourchirp.com/setup.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>Setup guide ↗</a>
         </p>
         {hasServerPicker() && (
           <p className="text-xs text-center mt-2" style={{ color: 'var(--text-tertiary)' }}>

@@ -325,7 +325,7 @@ fi
 echo ""
 
 # ── Step 7: Hand the OLED over from the Argon ONE's own software ─────────────
-info "Step 7/9: Checking for the Argon ONE's own OLED service..."
+info "Step 7/9: Argon ONE case (optional): checking for its OLED service..."
 
 # The Argon ONE v5 Industria case ships with its own setup script
 # (curl https://download.argon40.com/argon1v5.sh | bash) which installs
@@ -359,7 +359,7 @@ if [ -n "${ARGON_SERVICE}" ]; then
     sudo systemctl disable "${ARGON_SERVICE}" 2>/dev/null || true
     success "Argon ONE OLED service disabled — Chirp's display.py now has sole control of the screen."
 else
-    info "No Argon ONE OLED service found (not installed, or already removed) — nothing to do."
+    info "No Argon ONE case software found. Nothing to do; the case and its screen are optional."
 fi
 echo ""
 

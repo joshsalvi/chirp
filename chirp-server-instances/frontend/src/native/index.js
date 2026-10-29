@@ -19,6 +19,14 @@ export const isIOS = () =>
 
 // The iOS app appends "ChirpApp/1" to its user agent (capacitor.config.json),
 // so the app is recognized even before the native bridge reports in.
+// "iPad" or "iPhone", for wording like "the iPad Settings app". iPadOS can
+// report a Mac user agent, so a touch screen with a Mac agent counts as iPad.
+export const deviceName = () => {
+  if (typeof navigator === 'undefined') return 'iPhone'
+  const ua = navigator.userAgent || ''
+  return /iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? 'iPad' : 'iPhone'
+}
+
 export const isApp = () =>
   isNative() || (typeof navigator !== 'undefined' && /\bChirpApp\//.test(navigator.userAgent || ''))
 
@@ -102,6 +110,21 @@ function reportWatch(data) {
   } catch { /* diagnostics only */ }
 }
 let _watch
+let _icon
+async function appIconPlugin() {
+  if (_icon !== undefined) return _icon
+  _icon = null
+  if (!isApp()) return _icon
+  try {
+    const { Capacitor, registerPlugin } = await import('@capacitor/core')
+    if (Capacitor.getPlatform() === 'ios' && Capacitor.isPluginAvailable('ChirpAppIcon')) {
+      const P = registerPlugin('ChirpAppIcon')
+      _icon = { get: () => P.get(), set: o => P.set(o) }
+    }
+  } catch { /* stays null */ }
+  return _icon
+}
+
 async function watchPlugin() {
   if (_watch !== undefined) return _watch
   _watch = null
@@ -203,6 +226,33 @@ export const native = {
    * week per account and site, since the sign-in lasts 30 days. clear()
    * signs the watch out. Both do nothing outside the app or with no watch.
    */
+  /**
+   * Home Screen icon (the ChirpAppIcon plugin, app builds from 0.5.17).
+   * Icons are named after themes; 'forest' is the main icon. set() resolves
+   * true when the icon changed or already matched, false otherwise.
+   */
+  appIcon: {
+    available: async () => {
+      const p = await appIconPlugin()
+      if (!p) return false
+      try { return !!(await withTimeout(p.get(), 3000))?.supported } catch { return false }
+    },
+    current: async () => {
+      const p = await appIconPlugin()
+      if (!p) return null
+      try {
+        const r = await withTimeout(p.get(), 3000)
+        return r?.name ? r.name.replace(/^AppIcon-/, '') : 'forest'
+      } catch { return null }
+    },
+    set: async (themeId) => {
+      const p = await appIconPlugin()
+      if (!p) return false
+      const name = !themeId || themeId === 'forest' ? '' : `AppIcon-${themeId}`
+      try { await withTimeout(p.set({ name }), 8000); return true } catch { return false }
+    },
+  },
+
   watch: {
     available: async () => !!(await watchPlugin()),
     status: async () => {

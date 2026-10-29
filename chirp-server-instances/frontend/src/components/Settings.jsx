@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback, lazy, Suspense } from 'react'
-import { isApp } from '../native'
+import { isApp, deviceName, native } from '../native'
+import { getIconChoice, setIconChoice, iconForTheme } from '../lib/appIcon'
 import { DEFAULTS } from '../lib/constants'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
@@ -7,7 +8,7 @@ import {
   ChevronDown, Brain, Lock, HardDrive, Sliders, Clock, FlaskConical,
   Palette, CheckCircle, Mail, Send, Smartphone, GripVertical, Stethoscope,
   Download, AlertCircle, CheckCircle2, XCircle, Server, Database, Cpu, Zap, Mic, Activity,
-  Plug, Radio, LayoutDashboard, Sparkles, X, Search, ChevronRight, ChevronLeft, Volume2, AudioLines, Moon, Globe, Calendar
+  Plug, Radio, LayoutDashboard, Sparkles, X, Search, ChevronRight, ChevronLeft, Volume2, AudioLines, Moon, Globe, Calendar, Cloud
 } from 'lucide-react'
 import { api, clearApiCache } from '../lib/api'
 import { saveUrl } from '../lib/download'
@@ -186,7 +187,7 @@ function DashboardStyleSection() {
   const [showPicker, setShowPicker] = useState(false)
 
   useEffect(() => {
-    api.auth.me().then(u => setMode(u.dashboard_mode || 'detailed')).catch(() => setMode('detailed'))
+    api.auth.whoami().then(u => setMode(u?.dashboard_mode || 'detailed')).catch(() => setMode('detailed'))
   }, [])
 
   const choose = async (m) => {
@@ -229,6 +230,71 @@ function DashboardStyleSection() {
       {showPicker && (
         <DashboardModePicker onChoose={choose} onClose={() => setShowPicker(false)}/>
       )}
+    </Section>
+  )
+}
+
+// ── App icon (iPhone/iPad app only) ─────────────────────────────────────────
+function AppIconSection() {
+  const [show, setShow] = useState(false)
+  const [choice, setChoice] = useState(getIconChoice())
+  const [theme, setTheme] = useState(getStoredTheme())
+  const [msg, setMsg] = useState(null)
+  const [current, setCurrent] = useState(null)    // the icon on the Home Screen now
+  useEffect(() => {
+    native.appIcon.available().then(ok => { setShow(ok); if (ok) native.appIcon.current().then(setCurrent) })
+  }, [])
+  useEffect(() => {
+    const on = e => setTheme(e.detail?.theme || getStoredTheme())
+    window.addEventListener('chirp-theme-changed', on)
+    return () => window.removeEventListener('chirp-theme-changed', on)
+  }, [])
+  if (!show) return null
+  const shown = choice === 'theme' ? (iconForTheme(theme) || current) : choice === 'keep' ? current : choice
+  const pick = async (c) => {
+    setChoice(c)
+    setMsg(null)
+    const ok = await setIconChoice(c, theme)
+    if (ok && c !== 'keep') setCurrent(c === 'theme' ? (iconForTheme(theme) || current) : c)
+    if (!ok && (c !== 'theme' || iconForTheme(theme))) setMsg('Couldn\u2019t change the icon. Try again with Chirp open.')
+  }
+  return (
+    <Section icon={Smartphone} title="App Icon" id="settings-appearance-icon">
+      <p className="text-xs mb-3" style={{ color: 'var(--text-secondary)' }}>
+        The Chirp icon on this {deviceName()}'s Home Screen. The one you pick stays when you change themes,
+        unless you choose Match my theme. iOS confirms each change with a short alert.
+      </p>
+      <div className="flex gap-2 mb-4">
+        {[['pick', 'Choose an icon'], ['theme', 'Match my theme']].map(([k, label]) => {
+          const on = k === 'theme' ? choice === 'theme' : choice !== 'theme'
+          return (
+            <button key={k} type="button"
+                    onClick={() => k === 'theme' ? pick('theme') : choice === 'theme' && pick('keep')}
+                    className="text-xs px-3 py-1.5 rounded-full"
+                    style={{ background: on ? 'var(--nav-active-bg)' : 'var(--bg-raised)', color: on ? 'var(--nav-active-text)' : 'var(--text-secondary)',
+                             border: `1px solid ${on ? 'var(--border-focus)' : 'var(--border-subtle)'}` }}>
+              {label}
+            </button>
+          )
+        })}
+      </div>
+      {choice === 'theme' && !iconForTheme(theme) && (
+        <p className="text-xs mb-3" style={{ color: 'var(--text-tertiary)' }}>Custom themes have no icon of their own, so the last one stays.</p>
+      )}
+      <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(64px, 1fr))' }}>
+        {THEMES.map(t => {
+          const on = shown === t.id
+          return (
+            <button key={t.id} type="button" onClick={() => pick(t.id)} title={t.name}
+                    className="flex flex-col items-center gap-1" aria-pressed={on}>
+              <img src={`/app-icons/${t.id}.png`} alt="" width={52} height={52} loading="lazy"
+                   style={{ borderRadius: 12, outline: on ? '2px solid var(--accent-400)' : '1px solid var(--border-subtle)', outlineOffset: 2 }}/>
+              <span className="text-[10px] truncate max-w-full" style={{ color: on ? 'var(--accent-400)' : 'var(--text-tertiary)' }}>{t.name}</span>
+            </button>
+          )
+        })}
+      </div>
+      {msg && <p className="text-xs mt-3" style={{ color: 'var(--pastel-red)' }}>{msg}</p>}
     </Section>
   )
 }
@@ -508,6 +574,34 @@ function DigestHourSelect({ value, onChange }) {
         <option key={h} value={h}>{label(h)} · {h >= 12 ? 'same day' : 'day before'}</option>
       ))}
     </select>
+  )
+}
+
+// The app only: a text file about this copy of the app (lib/appDiagnostics.js),
+// also offered under My Profile → Help & Feedback.
+function AppDiagnosticsCard() {
+  const [state, setState] = useState(null)
+  const run = async () => {
+    setState('Collecting…')
+    try {
+      const [{ buildReport }, { saveText }] = await Promise.all([import('../lib/appDiagnostics'), import('../lib/download')])
+      await saveText(await buildReport(), `chirp-app-diagnostics-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.txt`)
+      setState(null)
+    } catch (e) { setState(e.message || 'Couldn\u2019t export.') }
+  }
+  return (
+    <div className="rounded-2xl p-4 md:p-5 mb-4 flex items-center gap-3 flex-wrap"
+         style={{ background: 'var(--bg-card)', border: '1px solid var(--border-default)' }}>
+      <div className="flex-1 min-w-[200px]">
+        <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>This {deviceName()} app</p>
+        <p className="text-xs" style={{ color: state && state !== 'Collecting…' ? 'var(--pastel-red)' : 'var(--text-tertiary)' }}>
+          {state || 'A text file about the app, this device, notifications and recent errors, to send with a problem report. No passwords or sign-in tokens.'}
+        </p>
+      </div>
+      <button onClick={run} disabled={state === 'Collecting…'} className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5">
+        <Download size={13}/> Export app diagnostics
+      </button>
+    </div>
   )
 }
 
@@ -1168,7 +1262,7 @@ Keys and settings for Chirp's AI features. eBird, iNaturalist and station keys a
                   <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer"
                      style={{color:'var(--accent-500)'}}>aistudio.google.com</a></>}/>
 
-      <OllamaSection form={form} setForm={setForm}/>
+      <OllamaSection form={form} setForm={setForm} settings={settings}/>
 
       <AiFeatureProviderSection form={form} setForm={setForm} settings={settings}/>
 
@@ -1245,7 +1339,8 @@ function formatBytes(bytes) {
   return `${(bytes / 1e3).toFixed(0)} KB`
 }
 
-function OllamaSection({ form, setForm }) {
+function OllamaSection({ form, setForm, settings }) {
+  const savedKey = settings?.ollama_api_key && !form.ollama_api_key_clear
   const [testState, setTestState] = useState(null) // null | 'loading' | 'ok' | error-string
   const [models, setModels] = useState(null) // null = not loaded yet; [] = loaded, none pulled
   const [modelsError, setModelsError] = useState(null)
@@ -1255,7 +1350,7 @@ function OllamaSection({ form, setForm }) {
   const test = async () => {
     setTestState('loading')
     try {
-      await api.settings.testAiKey({ provider: 'ollama', base_url: form.ollama_base_url, model: form.ollama_model })
+      await api.settings.testAiKey({ provider: 'ollama', base_url: form.ollama_base_url, model: form.ollama_model, api_key: form.ollama_api_key || undefined })
       setTestState('ok')
     } catch (e) {
       setTestState(e?.message || 'Failed')
@@ -1266,14 +1361,14 @@ function OllamaSection({ form, setForm }) {
   const refreshModels = useCallback(async () => {
     if (!form.ollama_base_url) { setModels(null); setModelsError(null); return }
     try {
-      const resp = await api.settings.ollamaModels(form.ollama_base_url)
+      const resp = await api.settings.ollamaModels(form.ollama_base_url, form.ollama_api_key)
       setModels(resp.models || [])
       setModelsError(null)
     } catch (e) {
       setModelsError(e?.message || 'Could not reach Ollama server')
       setModels(null)
     }
-  }, [form.ollama_base_url])
+  }, [form.ollama_base_url, form.ollama_api_key])
 
   // Only re-fetches when the base_url changes (typing pauses,
   // not every keystroke) — a debounce-free effect here would hammer a
@@ -1288,7 +1383,7 @@ function OllamaSection({ form, setForm }) {
     if (!name) return
     setPullState('loading')
     try {
-      await api.settings.ollamaPull(name, form.ollama_base_url)
+      await api.settings.ollamaPull(name, form.ollama_base_url, form.ollama_api_key)
       setPullState('ok')
       setPullModelName('')
       refreshModels()
@@ -1319,6 +1414,22 @@ function OllamaSection({ form, setForm }) {
           </button>
         </div>
       </div>
+      <div className="flex items-center gap-2">
+        <input className="input text-sm flex-1" type="password" autoComplete="off"
+               placeholder={savedKey ? `API key saved (${settings.ollama_api_key})` : 'API key (optional, only if your server asks for one)'}
+               value={form.ollama_api_key ?? ''}
+               onChange={e => setForm(f => ({ ...f, ollama_api_key: e.target.value, ollama_api_key_clear: false }))}/>
+        {savedKey && !form.ollama_api_key && (
+          <button onClick={() => setForm(f => ({ ...f, ollama_api_key: '', ollama_api_key_clear: true }))}
+                  className="text-xs px-2.5 py-2 rounded-lg flex-shrink-0"
+                  style={{ background: 'var(--bg-raised)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
+            Remove key
+          </button>
+        )}
+      </div>
+      {form.ollama_api_key_clear && (
+        <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>The saved key will be removed when you save.</p>
+      )}
       {testState === 'ok' && (
         <p className="text-xs flex items-center gap-1" style={{ color: '#4ade80' }}><CheckCircle size={11}/> Server reachable, model available</p>
       )}
@@ -1375,7 +1486,7 @@ function OllamaSection({ form, setForm }) {
       )}
 
       <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-Optional: run models on an Ollama server you host. No API key, and nothing leaves your network. Photo ID and AI Second Opinion need a vision model such as llava or llama3.2-vision.
+Optional: run models on an Ollama server you host; nothing leaves your network. Ollama has no sign-in of its own, so the API key is only for a server behind a proxy that checks one (sent as a Bearer token). Photo ID and AI Second Opinion need a vision model such as llava or llama3.2-vision.
 </p>
     </div>
   )
@@ -2008,6 +2119,80 @@ Checks your Bird Buddy every 15 minutes for new postcards and runs each video's 
   )
 }
 
+function BirdWeatherSection({ form, setForm, settings }) {
+  const { revealed, revealing, handleReveal } = useCardReveal()
+  const [busy, setBusy] = useState(null)   // 'test' | 'sync'
+  const [msg, setMsg] = useState(null)
+  const run = async (what) => {
+    setBusy(what); setMsg(null)
+    try {
+      if (what === 'test') {
+        const r = await api.settings.birdWeather.test()
+        setMsg({ ok: true, text: r.soundscapes_last_7_days
+          ? `Connected: ${r.soundscapes_last_7_days} sound${r.soundscapes_last_7_days === 1 ? '' : 's'} in the last 7 days, latest ${new Date(r.latest).toLocaleString()}.`
+          : 'Connected, but the station has no sound from the last 7 days.' })
+      } else {
+        await api.settings.birdWeather.sync()
+        setMsg({ ok: true, text: 'Sync started. New recordings appear within a few minutes.' })
+      }
+    } catch (e) {
+      setMsg({ ok: false, text: e.message || 'Could not reach BirdWeather' })
+    } finally { setBusy(null) }
+  }
+  const err = settings?.birdweather_last_sync_error
+  return (
+    <Section icon={Cloud} title="BirdWeather" id="settings-integrations-birdweather">
+      <div className="space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <p className="text-xs flex-1" style={{ color: 'var(--text-tertiary)' }}>
+            Brings in the sound from a BirdWeather station (PUC, BirdNET-Pi or BirdNET-Go) every 15 minutes and runs it through BirdNET like an upload, with spectrograms and playback. The station token is on app.birdweather.com under your station's settings.
+          </p>
+          <input type="checkbox" checked={form.birdweather_enabled ?? false}
+                 onChange={e => setForm(f => ({ ...f, birdweather_enabled: e.target.checked }))}
+                 className="w-4 h-4 accent-chirp-500 flex-shrink-0 mt-0.5" aria-label="Sync BirdWeather"/>
+        </div>
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <MaskedField label="Station token" formKey="birdweather_token" revealedKey="birdweather_token"
+                         placeholder={settings?.birdweather_token || 'Paste the BirdWeather station token…'}
+                         hint="Stored on the server and shown masked once saved."
+                         form={form} setForm={setForm} revealed={revealed}/>
+          </div>
+          <RevealButton revealed={revealed} revealing={revealing} onClick={handleReveal}/>
+        </div>
+        {settings?.birdweather_token ? (
+          <div className="rounded-xl border p-4 space-y-3 text-sm" style={{ background: 'var(--bg-raised)', borderColor: 'var(--border-subtle)' }}>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-2 h-2 rounded-full flex-shrink-0"
+                      style={{ background: err ? '#f87171' : settings?.birdweather_last_sync_at ? '#4ade80' : '#6b7280' }}/>
+                <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                  {!settings?.birdweather_enabled ? 'Sync is off'
+                    : settings?.birdweather_last_sync_at ? `Last synced ${new Date(settings.birdweather_last_sync_at + 'Z').toLocaleTimeString()}` : 'Not synced yet'}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => run('test')} disabled={!!busy} className="btn-secondary text-xs px-3 py-1 disabled:opacity-50">
+                  {busy === 'test' ? 'Testing…' : 'Test'}
+                </button>
+                {settings?.birdweather_enabled && (
+                  <button onClick={() => run('sync')} disabled={!!busy} className="btn-secondary text-xs px-3 py-1 disabled:opacity-50">
+                    {busy === 'sync' ? 'Starting…' : 'Sync now'}
+                  </button>
+                )}
+              </div>
+            </div>
+            {err && <p className="text-xs text-red-400">{err}</p>}
+            {msg && <p className="text-xs" style={{ color: msg.ok ? 'var(--text-tertiary)' : '#f87171' }}>{msg.text}</p>}
+          </div>
+        ) : (
+          <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Save a station token to test the connection.</p>
+        )}
+      </div>
+    </Section>
+  )
+}
+
 function InatSection({ form, setForm, settings }) {
   const { revealed, revealing, handleReveal } = useCardReveal()
   const [testState, setTestState] = useState('idle') // idle | testing | ok | error
@@ -2346,7 +2531,7 @@ const SETTINGS_TABS = [
   { id: 'detection',    label: 'Detection',         icon: Brain,        anchor: 'settings-detection-group',    blurb: 'BirdNET model and thresholds, night callers, server analysis and recording limits', adminOnly: true },
   { id: 'bats',         label: 'Bats',              icon: Moon,         anchor: 'settings-bats-group',         blurb: 'Bat echolocation detection, its microphone and filters', adminOnly: true },
   { id: 'notif',        label: 'Alerts & Email',    icon: Mail,         anchor: 'settings-notif-group',        blurb: 'Daily digest times, station offline alerts, the email server and iPhone push keys', adminOnly: true },
-  { id: 'integrations', label: 'Integrations',      icon: Plug,         anchor: 'settings-integrations-group', blurb: 'eBird, Haikubox, Bird Buddy and iNaturalist', adminOnly: true },
+  { id: 'integrations', label: 'Integrations',      icon: Plug,         anchor: 'settings-integrations-group', blurb: 'eBird, Haikubox, Bird Buddy, BirdWeather and iNaturalist', adminOnly: true },
   { id: 'ai',           label: 'AI Features',       icon: Sparkles,     anchor: 'settings-ai-group',           blurb: 'Journals, profile summaries, AI Second Opinion and AI Enhance', adminOnly: true },
   { id: 'storage',      label: 'Storage & Backup',  icon: HardDrive,    anchor: 'settings-storage-group',      blurb: 'Disk use, cleanup, backups and bird data refresh', adminOnly: true },
   { id: 'account',      label: 'Access & Security', icon: Lock,         anchor: 'settings-account-group',      blurb: 'Sign-in, device keys, activity log and network', adminOnly: true },
@@ -2367,6 +2552,7 @@ const CARD_KEYWORDS = {
   'settings-ai': 'AI, Anthropic, Claude, OpenAI, Gemini, Ollama, API key, daily journal, weekly journal, profile summaries, AI Second Opinion, photo ID, AI Enhance, tone, token usage, web search',
   'settings-experimental': 'experimental, Nighthawk, night flight calls, range maps, heatmap',
   'settings-appearance-theme': 'theme, colors, dark mode, light mode, custom theme',
+  'settings-appearance-icon': 'app icon, home screen icon, icon color',
   'settings-appearance-dashboard': 'dashboard style, simplified, detailed',
   'settings-appearance-dashboard-sections': 'dashboard sections, cards shown',
   'settings-appearance-layout': 'cards expanded by default, collapsed cards, layout',
@@ -2380,6 +2566,7 @@ const CARD_KEYWORDS = {
   'settings-location': 'location, latitude, longitude, time zone, timezone, address',
   'settings-integrations-haikubox': 'Haikubox serial number',
   'settings-integrations-birdbuddy': 'Bird Buddy email, password, feeders',
+  'settings-integrations-birdweather': 'BirdWeather station token, sync',
   'settings-integrations-inat': 'iNaturalist API token, username, auto refresh, OAuth',
   'settings-digest': 'daily digest, digest time, push notification time, email time, evening, morning, test digest',
   'settings-station-offline': 'station offline, device offline, back online, alert delay, minutes, pi down',
@@ -2448,7 +2635,7 @@ function SettingsHome({ tabs, onOpen, version, isAdmin }) {
         </p>
       )}
       <Link to="/changelog" className="block text-center text-xs py-2" style={{ color: 'var(--text-tertiary)', textDecoration: 'none' }}>
-        Chirp {version ? `v${version}` : ''}{appInfo ? ` · iPhone app ${appInfo.version}` : ''} · What&#39;s New
+        Chirp {version ? `v${version}` : ''}{appInfo ? ` · ${deviceName()} app ${appInfo.version}` : ''} · What&#39;s New
       </Link>
     </div>
   )
@@ -2631,7 +2818,11 @@ export default function SettingsPage({ currentUser } = {}) {
   // of tabs when none is open; wider screens open the first tab.
   const isDesktop = useIsDesktop()
   const [searchParams, setSearchParams] = useSearchParams()
-  const visibleTabs = SETTINGS_TABS.filter(t => !t.adminOnly || isAdmin)
+  // In the app, everyone gets Diagnostics for the app's own report; for
+  // people who aren't admins it's theirs, not the site's.
+  const visibleTabs = SETTINGS_TABS
+    .filter(t => !t.adminOnly || isAdmin || (t.id === 'diagnostics' && isApp()))
+    .map(t => (!isAdmin && t.id === 'diagnostics') ? { ...t, adminOnly: false, blurb: 'A report about this app for problem reports' } : t)
   const tabParam = searchParams.get('tab')
   const activeTab = visibleTabs.some(t => t.id === tabParam) ? tabParam : (isDesktop ? visibleTabs[0].id : null)
   const activeMeta = SETTINGS_TABS.find(t => t.id === activeTab)
@@ -3013,6 +3204,8 @@ export default function SettingsPage({ currentUser } = {}) {
           bird_buddy_email: s.bird_buddy_email ?? '',
           bird_buddy_password: '',
           bird_buddy_selected_feeders: s.bird_buddy_selected_feeders ?? [],
+          birdweather_enabled: s.birdweather_enabled ?? false,
+          birdweather_token: '',
           inat_auto_refresh_enabled: s.inat_auto_refresh_enabled ?? false,
           inat_username: s.inat_username ?? '',
           inat_password: '',
@@ -3023,6 +3216,8 @@ export default function SettingsPage({ currentUser } = {}) {
           gemini_api_key: '',
           ollama_base_url: s.ollama_base_url ?? '',
           ollama_model: s.ollama_model ?? '',
+          ollama_api_key: '',
+          ollama_api_key_clear: false,
           ai_feature_providers: s.ai_feature_providers ?? {},
           daily_summary_schedule_time: s.daily_summary_schedule_time ?? '07:00',
           daily_summary_schedule_times: s.daily_summary_schedule_times ?? null,
@@ -3230,9 +3425,13 @@ export default function SettingsPage({ currentUser } = {}) {
       if (!payload.ebird_st_api_key) delete payload.ebird_st_api_key
       if (!payload.inat_api_token) delete payload.inat_api_token
       if (!payload.haikubox_serial) delete payload.haikubox_serial
+      if (!payload.birdweather_token) delete payload.birdweather_token
       if (!payload.anthropic_api_key) delete payload.anthropic_api_key
       if (!payload.openai_api_key) delete payload.openai_api_key
       if (!payload.gemini_api_key) delete payload.gemini_api_key
+      if (payload.ollama_api_key_clear) payload.ollama_api_key = ''
+      else if (!payload.ollama_api_key) delete payload.ollama_api_key
+      delete payload.ollama_api_key_clear
       if (!payload.inat_password) delete payload.inat_password
       if (!payload.inat_oauth_client_secret) delete payload.inat_oauth_client_secret
       if (!payload.bird_buddy_password) delete payload.bird_buddy_password
@@ -3359,7 +3558,7 @@ export default function SettingsPage({ currentUser } = {}) {
           <div className="flex items-baseline justify-between gap-3">
             <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Settings</h1>
 <span className="text-xs flex items-center gap-3">
-              <a href="/guide.html#settings-you" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)', textDecoration: 'none' }}>Settings guide ↗</a>
+              <a href="https://ourchirp.com/guide.html#settings-you" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)', textDecoration: 'none' }}>Settings guide ↗</a>
               <Link to="/changelog" className="hidden md:inline" style={{ color: 'var(--text-tertiary)', textDecoration: 'none' }}>
                 {serverVersion ? `v${serverVersion}` : ''} · What&#39;s New
               </Link>
@@ -3418,6 +3617,7 @@ export default function SettingsPage({ currentUser } = {}) {
 
       <GroupHeader id="settings-appearance"/>
       <ThemeSection />
+      <AppIconSection />
       <DashboardStyleSection />
 
       <Section icon={Eye} title="Card Layout" id="settings-appearance-layout">
@@ -4229,6 +4429,7 @@ Tries to name the bat species (Little brown bat, Big brown bat…) with a classi
       </Section>
       <HaikuboxSection form={form} setForm={setForm} settings={settings}/>
       <BirdBuddySection form={form} setForm={setForm} settings={settings}/>
+      <BirdWeatherSection form={form} setForm={setForm} settings={settings}/>
       <InatSection form={form} setForm={setForm} settings={settings}/>
 
       <GroupHeader id="settings-ai-group"/>
@@ -5272,14 +5473,19 @@ Applies the retention setting now. It also runs every hour.
       </>}
 
       {/* ── Diagnostics ─────────────────────────────────────────────── */}
+      {!isAdmin && isApp() && (<>
+        <GroupHeader id="settings-diagnostics-group"/>
+        <AppDiagnosticsCard/>
+      </>)}
       {isAdmin && (<>
         <GroupHeader id="settings-diagnostics-group"/>
+        {isApp() && <AppDiagnosticsCard/>}
 
         <div className="rounded-2xl p-4 md:p-5 space-y-5"
              style={{ background: 'var(--bg-card)', border: '1px solid var(--border-default)' }}>
 
           <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-            Something not working? The <a href="/troubleshooting.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>troubleshooting guide ↗</a> covers common problems with the app, stations, sound and detections.
+            Something not working? The <a href="https://ourchirp.com/troubleshooting.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>troubleshooting guide ↗</a> covers common problems with the app, stations, sound and detections.
           </p>
 
           {/* Run controls */}

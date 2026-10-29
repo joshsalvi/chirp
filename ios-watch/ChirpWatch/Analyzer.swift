@@ -1,3 +1,4 @@
+import AVFoundation
 import CoreLocation
 import Foundation
 
@@ -27,11 +28,13 @@ enum Analyzer {
         return URLSession(configuration: c)
     }()
 
-    static func analyze(wav: Data, server: URL, token: String?, location: CLLocation?) async throws -> Reply {
+    /// `clip` is AAC (.m4a) or, if encoding failed, WAV; the server decodes either.
+    static func analyze(clip: Data, isAAC: Bool, server: URL, token: String?, location: CLLocation?) async throws -> Reply {
         var fields = ["source": "phone"]
         fields.merge(coords(location)) { a, _ in a }
         let data = try await post("api/v1/live-detect/analyze", server: server, token: token, fields: fields,
-                                  file: wav, filename: "watch.wav", type: "audio/wav", timeout: 20)
+                                  file: clip, filename: isAAC ? "watch.m4a" : "watch.wav",
+                                  type: isAAC ? "audio/mp4" : "audio/wav", timeout: 20)
         return try JSONDecoder().decode(Reply.self, from: data)
     }
 
@@ -91,6 +94,34 @@ enum Analyzer {
 
 private extension Data {
     mutating func append(_ s: String) { append(Data(s.utf8)) }
+}
+
+/// A clip as AAC in an .m4a, about a fifth the size of the WAV. Uploads were
+/// the slow part on the watch: a 4 s WAV is 250 KB, the AAC about 48 KB, and
+/// BirdNET finds the same birds in both (checked on a 60 s field recording).
+enum AAC {
+    static func encode(_ samples: [Int16], sampleRate: Double) -> Data? {
+        guard let format = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: sampleRate, channels: 1, interleaved: true),
+              let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(samples.count)),
+              let dst = buffer.int16ChannelData?[0] else { return nil }
+        buffer.frameLength = AVAudioFrameCount(samples.count)
+        samples.withUnsafeBufferPointer { src in dst.update(from: src.baseAddress!, count: samples.count) }
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("clip-\(UUID().uuidString).m4a")
+        defer { try? FileManager.default.removeItem(at: url) }
+        do {
+            // Scoped so the file is finished and closed before it's read back.
+            try {
+                let settings: [String: Any] = [AVFormatIDKey: kAudioFormatMPEG4AAC, AVSampleRateKey: sampleRate,
+                                               AVNumberOfChannelsKey: 1, AVEncoderBitRateKey: 96_000]
+                let file = try AVAudioFile(forWriting: url, settings: settings, commonFormat: .pcmFormatInt16, interleaved: true)
+                try file.write(from: buffer)
+            }()
+            let data = try Data(contentsOf: url)
+            return data.count > 512 ? data : nil
+        } catch {
+            return nil
+        }
+    }
 }
 
 /// 16-bit mono WAV in memory.

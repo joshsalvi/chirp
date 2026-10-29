@@ -99,7 +99,9 @@ sudo systemctl start chirp
 journalctl -u chirp -f             # Watch logs
 ```
 
-## Argon ONE v5 Industria OLED Display
+## Argon ONE v5 Industria OLED Display (optional)
+
+The case and its screen are optional; without them the station runs headless.
 
 If you're running an Argon ONE v5 Industria case, **`install.sh` now automatically disables the Argon ONE's own OLED daemon (`argononed.service`)** so Chirp's own display (bird detections, system stats, etc.) has sole control of the screen — without this, the Argon ONE's default screens (IP/CPU temp) win the conflict and Chirp's pages never show.
 
