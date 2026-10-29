@@ -172,6 +172,40 @@ from collections import defaultdict
 _failed_login_attempts: dict = defaultdict(list)  # key -> [timestamp, ...]
 LOGIN_MAX_ATTEMPTS = 5
 LOGIN_WINDOW_SECONDS = 300  # 5 minutes
+# One address trying many user names (password spraying): 30 failures in
+# 15 minutes blocks that address for every name.
+_failed_by_ip: dict = defaultdict(list)
+LOGIN_IP_MAX = 30
+LOGIN_IP_WINDOW = 900
+# Sign-up attempts from one address: 10 an hour.
+_signups_by_ip: dict = defaultdict(list)
+SIGNUP_IP_MAX = 10
+SIGNUP_IP_WINDOW = 3600
+
+
+def _note_failed_login(key: str, username: str = ""):
+    ip = key.rsplit(":", 1)[-1] if ":" in key else key
+    now = time.time()
+    _failed_login_attempts[key].append(now)
+    _failed_by_ip[ip].append(now)
+    from ..security import note
+    note("failed_login", ip, (username or "")[:40])
+
+
+def check_signup_rate(request) -> None:
+    """429 after SIGNUP_IP_MAX sign-up attempts from one address in an hour."""
+    if request is None:
+        return
+    ip = client_address(request)
+    now = time.time()
+    recent = [t for t in _signups_by_ip[ip] if now - t < SIGNUP_IP_WINDOW]
+    if len(recent) >= SIGNUP_IP_MAX:
+        _signups_by_ip[ip] = recent
+        from ..security import note
+        note("signup_limited", ip)
+        raise HTTPException(status_code=429, detail="Too many new accounts from this address. Try again in an hour.")
+    recent.append(now)
+    _signups_by_ip[ip] = recent
 
 
 # ── Username matching ────────────────────────────────────────────────────
@@ -220,9 +254,18 @@ def client_address(request: Request) -> str:
 
 def _check_login_rate_limit(key: str):
     now = time.time()
+    ip = key.rsplit(":", 1)[-1] if ":" in key else key
+    by_ip = [t for t in _failed_by_ip[ip] if now - t < LOGIN_IP_WINDOW]
+    _failed_by_ip[ip] = by_ip
+    if len(by_ip) >= LOGIN_IP_MAX:
+        from ..security import note
+        note("login_blocked", ip, "address")
+        raise HTTPException(status_code=429, detail="Too many failed sign-ins from this address. Try again later.")
     attempts = [t for t in _failed_login_attempts[key] if now - t < LOGIN_WINDOW_SECONDS]
     _failed_login_attempts[key] = attempts
     if len(attempts) >= LOGIN_MAX_ATTEMPTS:
+        from ..security import note
+        note("login_blocked", ip, key.rsplit(":", 1)[0][:40])
         retry_after = int(LOGIN_WINDOW_SECONDS - (now - attempts[0]))
         raise HTTPException(
             status_code=429,
@@ -263,7 +306,7 @@ def login(request: Request, form: OAuth2PasswordRequestForm = Depends(),
         crypt = _get_crypt()
         user = find_by_username(reg_db, GlobalUser, form.username)
         if not user or not crypt.verify(form.password, user.hashed_pw):
-            _failed_login_attempts[rate_limit_key].append(time.time())
+            _note_failed_login(rate_limit_key, form.username)
             raise HTTPException(status_code=401, detail="Invalid credentials")
         if not user.active:
             raise HTTPException(status_code=403, detail="Account disabled")
@@ -401,7 +444,7 @@ class RegisterRequest(BaseModel):
 
 
 @router.post("/register", status_code=201)
-def register(body: RegisterRequest):
+def register(body: RegisterRequest, request: Request = None):
     """
     Multi-instance addition (see ARCHITECTURE.md): creates a real
     GlobalUser identity in the registry, not a per-instance User —
@@ -432,6 +475,7 @@ def register(body: RegisterRequest):
     skipped if that location has no SMTP configured, same as every
     other notification email in this app already does.
     """
+    check_signup_rate(request)
     from ..registry_db import RegistrySessionLocal
     from ..registry_models import GlobalUser, Instance, Membership
 

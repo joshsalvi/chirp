@@ -67,13 +67,17 @@ success "Xcode: $(xcodebuild -version | head -1)"
 
 cd "$ROOT/$FRONTEND"
 VERSION="$(cat ../VERSION)"
-# App Store versions are three numbers and every release needs its own, so the
-# patch letter is folded into the third: 0.X.Y.letter → 0.X.(Y*100 + n), where
-# a=1 … z=26, aa=27 … (0.5.12.c → 0.5.1203, 0.5.13.a → 0.5.1301).
-MARKETING_VERSION="$(echo "$VERSION" | awk -F. '{
+# App Store versions are three numbers and every release needs its own.
+# Since the first App Store approval the iPhone app is 1.x:
+#   0.X.Y.letter → (X-4).Y.n, where a=1 … z=26, aa=27 …
+#   (0.5.18.a → 1.18.1, 0.5.18.c → 1.18.3, 0.6.0.a → 2.0.1).
+# IOS_LEGACY_VERSION=1 keeps the pre-approval 0.X.(Y*100 + n) scheme
+# (0.5.16.b → 0.5.1602), only for rebuilding the version that was in review.
+MARKETING_VERSION="$(echo "$VERSION" | awk -F. -v legacy="${IOS_LEGACY_VERSION:-0}" '{
   n = 0; s = tolower($4)
   for (i = 1; i <= length(s); i++) n = n * 26 + index("abcdefghijklmnopqrstuvwxyz", substr(s, i, 1))
-  printf "%d.%d.%d", $1, $2, $3 * 100 + n }')"
+  if (legacy == "1") printf "%d.%d.%d", $1, $2, $3 * 100 + n
+  else printf "%d.%d.%d", $2 - 4, $3, n }')"
 BUILD_NUMBER="$(date +%Y%m%d%H%M)"
 info "Chirp $VERSION → iOS $MARKETING_VERSION ($BUILD_NUMBER)"
 
@@ -357,7 +361,7 @@ ENT
 
   # Every paired iPhone/iPad reachable right now. Xcode 26.6+ lists these as
   # "connected" with UDIDs; earlier versions as "available" with UUIDs.
-  DEVICES=($(xcrun devicectl list devices 2>/dev/null | awk '/iPhone|iPad/ && / (available|connected)/ && !/unavailable|disconnected/ {for (i=1;i<=NF;i++) if ($i ~ /^[0-9A-F]{8}-/) print $i}'))
+  DEVICES=($(xcrun devicectl list devices 2>/dev/null | awk '/iPhone|iPad/ && / (available|connected)/ && !/unavailable|disconnected|simulated/ {for (i=1;i<=NF;i++) if ($i ~ /^[0-9A-F]{8}-/) print $i}'))
   if [[ -f ios/App/Podfile ]]; then PROJ=(-workspace ios/App/App.xcworkspace); else PROJ=(-project ios/App/App.xcodeproj); fi
 
   # A generic archive never registers a new phone, so the profile wouldn't
@@ -396,7 +400,7 @@ ENT
     done
     for D in "${DEVICES[@]}"; do
       xcodebuild "${PROJ[@]}" -scheme App -configuration Release -destination "id=$D" \
-        -allowProvisioningUpdates -allowProvisioningDeviceRegistration \
+        -allowProvisioningUpdates -allowProvisioningDeviceRegistration -packageAuthorizationProvider netrc \
         DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
         ${TARGET_SETTINGS[@]+"${TARGET_SETTINGS[@]}"} \
         build | tail -n 1 || warn "Could not register $D"
@@ -409,7 +413,7 @@ ENT
   mkdir -p "$(dirname "$ARCHIVE_PATH")" "$EXPORT_DIR"
   xcodebuild "${PROJ[@]}" -scheme App -configuration Release \
     -destination 'generic/platform=iOS' -archivePath "$ARCHIVE_PATH" \
-    -allowProvisioningUpdates -allowProvisioningDeviceRegistration ${ASC_AUTH[@]+"${ASC_AUTH[@]}"} \
+    -allowProvisioningUpdates -allowProvisioningDeviceRegistration -packageAuthorizationProvider netrc ${ASC_AUTH[@]+"${ASC_AUTH[@]}"} \
     DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
     MARKETING_VERSION="$MARKETING_VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
     ${TARGET_SETTINGS[@]+"${TARGET_SETTINGS[@]}"} \
@@ -470,6 +474,8 @@ PY
     mkdir -p "$ROOT/build" && date +%s > "$ROOT/build/last-testflight"
     # testflight-auto.sh hands this build to scripts/asc.py distribute.
     echo "$BUILD_NUMBER" > "$ROOT/build/last-testflight-build"
+    # scripts/ios-update-on-approval.py submits this build for App Review.
+    [[ "${RELEASE:-0}" == "1" ]] && echo "$BUILD_NUMBER" > "$ROOT/build/app-store-queued"
     exit 0
   fi
   xcodebuild -exportArchive -archivePath "$ARCHIVE_PATH" -exportPath "$EXPORT_DIR" \

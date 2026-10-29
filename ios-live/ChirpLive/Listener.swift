@@ -78,6 +78,13 @@ final class Listener: ObservableObject {
     private var stationTask: Task<Void, Never>?
     private var stitcher = StationStitcher()
     private var stationSinceAnalysis = 0
+    /// Station playback keeps a reserve so late answers don't cut the sound:
+    /// it starts once `reserveTarget` seconds are queued, and if the reserve
+    /// ever runs out it pauses, waits for a bigger reserve, and carries on.
+    private var queuedSeconds = 0.0
+    private var reserveTarget = 3.5
+    private var stationPlaying = false
+    private var answerTimes: [Double] = []      // recent request times, for diagnostics
     /// Phone sessions: how far the phone moved (for titles like "Morning walk").
     private var trackTask: Task<Void, Never>?
     private var lastFix: CLLocation?
@@ -123,6 +130,8 @@ final class Listener: ObservableObject {
         guard listening else { return nil }
         if stationTask != nil {
             stationTask?.cancel(); stationTask = nil
+            stationPlaying = false
+            playEngine.mainMixerNode.removeTap(onBus: 0)
             player.stop(); playEngine.stop()
         } else {
             engine.inputNode.removeTap(onBus: 0)
@@ -232,9 +241,21 @@ final class Listener: ObservableObject {
                                                  channels: 1, interleaved: false) else { return }
                 if player.engine == nil { playEngine.attach(player) }
                 playEngine.connect(player, to: playEngine.mainMixerNode, format: format)
+                // Level bars from the sound as it plays, so they move smoothly.
+                playEngine.mainMixerNode.removeTap(onBus: 0)
+                playEngine.mainMixerNode.installTap(onBus: 0, bufferSize: 2048, format: nil) { [weak self] buffer, _ in
+                    guard let ch = buffer.floatChannelData?[0], buffer.frameLength > 0 else { return }
+                    var sum: Float = 0
+                    for i in 0..<Int(buffer.frameLength) { sum += ch[i] * ch[i] }
+                    let rms = (sum / Float(buffer.frameLength)).squareRoot()
+                    Task { @MainActor [weak self] in
+                        guard let self, self.stationPlaying else { return }
+                        self.push(level: rms)
+                    }
+                }
                 try playEngine.start()
                 ClipPlayer.listenerActive = true
-                player.play()
+                queuedSeconds = 0; reserveTarget = 3.5; stationPlaying = false; answerTimes = []
                 recorder.begin()
                 ring.reset(); stitcher.reset(); stationSinceAnalysis = 0
                 started = Date()
@@ -255,6 +276,7 @@ final class Listener: ObservableObject {
                             let asked = Date()
                             next = asked.addingTimeInterval(1)
                             let wav = try await Remote.listen(st, server: server, token: token)
+                            await self?.noteAnswer(Date().timeIntervalSince(asked))
                             failures = 0
                             guard !Task.isCancelled else { break }
                             let expected = lastAsked.map { Int(asked.timeIntervalSince($0) * BirdNET.sampleRate) } ?? .max
@@ -292,20 +314,39 @@ final class Listener: ObservableObject {
               let ch = buf.floatChannelData?[0] else { return }
         buf.frameLength = AVAudioFrameCount(samples.count)
         samples.withUnsafeBufferPointer { ch.update(from: $0.baseAddress!, count: samples.count) }
-        player.scheduleBuffer(buf, completionHandler: nil)
-        recorder.write(buf)
-        // A level bar per tenth of a second.
-        let step = 4_800
-        for i in stride(from: 0, to: samples.count, by: step) {
-            let part = samples[i..<min(samples.count, i + step)]
-            push(level: (part.reduce(0) { $0 + $1 * $1 } / Float(part.count)).squareRoot())
+        let seconds = Double(samples.count) / BirdNET.sampleRate
+        queuedSeconds += seconds
+        player.scheduleBuffer(buf, completionCallbackType: .dataPlayedBack) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.played(seconds) }
         }
+        if !stationPlaying, queuedSeconds >= reserveTarget {
+            stationPlaying = true
+            player.play()
+        }
+        recorder.write(buf)
         ring.append(samples)
         stationSinceAnalysis += samples.count
         if ring.isFull, stationSinceAnalysis >= BirdNET.windowSamples / 2 {
             stationSinceAnalysis = 0
             analyze(ring.snapshot())
         }
+    }
+
+    /// A station buffer finished playing. Out of sound: pause and build a
+    /// bigger reserve rather than stutter.
+    private func played(_ seconds: Double) {
+        queuedSeconds = max(0, queuedSeconds - seconds)
+        guard stationTask != nil, stationPlaying, queuedSeconds < 0.05 else { return }
+        stationPlaying = false
+        player.pause()
+        reserveTarget = min(9, reserveTarget + 1.5)
+        let recent = answerTimes.suffix(5).map { String(format: "%.1f", $0) }.joined(separator: ", ")
+        DiagLog.note("station sound ran out; waiting for \(reserveTarget) s. Recent answers took \(recent) s")
+    }
+
+    private func noteAnswer(_ seconds: Double) {
+        answerTimes.append(seconds)
+        if answerTimes.count > 20 { answerTimes.removeFirst() }
     }
 
     private func push(level rms: Float) {

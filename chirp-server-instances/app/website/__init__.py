@@ -42,6 +42,17 @@ def www_redirect(host: str, method: str, path: str, query: str = ""):
     return f"https://{CANONICAL_HOST}{path}" + (f"?{query}" if query else "")
 
 
+def https_redirect(headers, method: str, path: str, query: str = ""):
+    """The https:// address for a page Cloudflare received over plain http
+    (CF-Visitor says so), or None. Like www, API calls are left alone."""
+    visitor = (headers.get("cf-visitor") or "").replace(" ", "")
+    if '"scheme":"http"' not in visitor or method not in ("GET", "HEAD"):
+        return None
+    if path.startswith("/api/") or path.startswith("/ws"):
+        return None
+    return f"https://{CANONICAL_HOST}{path}" + (f"?{query}" if query else "")
+
+
 def mount(app):
     """Adds the ourchirp.com-only routes and traffic counting (main.py)."""
     if not HOSTS_WEBSITE:
@@ -58,9 +69,14 @@ def mount(app):
     t.daemon = True
     t.start()
 
+    from . import monitor
+    monitor.start()
+
     @app.middleware("http")
     async def _www_to_apex(request, call_next):
         target = www_redirect(request.headers.get("host", ""), request.method, request.url.path, request.url.query)
+        if not target:
+            target = https_redirect(request.headers, request.method, request.url.path, request.url.query)
         if target:
             from fastapi.responses import RedirectResponse
             return RedirectResponse(target, status_code=301)

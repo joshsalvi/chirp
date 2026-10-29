@@ -24,9 +24,9 @@ S="$TMP/src"
 # Private or internal files.
 rm -rf "$S"/PATENT_APPLICATION* "$S"/*/PATENT_APPLICATION* "$S"/patent_figures \
        "$S"/*CHIRP_HANDOFF* "$S"/AUDIT_REPORT.md "$S"/GITHUB_SETUP.md \
-       "$S"/docs/APP_REVIEW_RESPONSE.md "$S"/docs/app-store-metadata.json \
+       "$S"/docs/APP_REVIEW_RESPONSE.md "$S"/docs/app-store-metadata.json "$S"/docs/app-store-update.json \
        "$S"/scripts/asc.py "$S"/scripts/testflight-auto.* "$S"/scripts/publish-github.sh \
-       "$S"/scripts/clean-mac-duplicates.sh
+       "$S"/scripts/clean-mac-duplicates.sh "$S"/scripts/ios-update-on-approval.py
 find "$S" \( -name '.DS_Store' -o -name '*.p8' -o -name '.env' -o -name '*.db' \) -delete
 
 # ourchirp.com's website stays private, same as the Docker builds
@@ -42,7 +42,7 @@ find "$W/app/website" -name '*.py' ! -name '__init__.py' -delete
 rm -rf "$W/frontend/src/website" && mkdir "$W/frontend/src/website"
 printf '// Not in this build: ourchirp.com only.\nexport const websiteTabsFirst = []\nexport const websiteTabsLast = []\n' \
   > "$W/frontend/src/website/WebsiteAdmin.jsx"
-rm -f "$W"/tests/test_live_pack.py "$W"/tests/test_site_requests.py "$W"/tests/test_traffic.py "$W"/tests/test_website_split.py
+rm -f "$W"/tests/test_live_pack.py "$W"/tests/test_site_requests.py "$W"/tests/test_traffic.py "$W"/tests/test_monitor.py "$W"/tests/test_website_split.py
 for gone in live_pack.py push_relay.py site_requests.py traffic.py TrafficTab.jsx about.html; do
   if find "$S" -path '*/node_modules' -prune -o -name "$gone" -print | grep -q .; then
     echo "Website file $gone still in the public copy; nothing published." >&2; exit 1

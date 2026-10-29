@@ -76,7 +76,7 @@ export function NoteActions({ c, onBlocked }) {
           )}
           {mode === 'block' && (
             <>
-              <p style={{ color: 'var(--text-secondary)' }}>You won't see notes from {author} anywhere in Chirp. You can unblock them in My Profile.</p>
+              <p style={{ color: 'var(--text-secondary)' }}>You won't see notes from {author} anywhere in Chirp. You can unblock them in Account.</p>
               <div className="flex gap-2">
                 <button onClick={block} disabled={busy} className="btn-primary" data-haptic="heavy" style={{ padding: '4px 10px', fontSize: 12 }}>Block {author}</button>
                 <button onClick={() => setMode(null)} className="btn-ghost" style={{ padding: '4px 8px', fontSize: 12 }}>Cancel</button>

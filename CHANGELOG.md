@@ -1,3 +1,16 @@
+## 0.5.18.a — 2026-10-29 — FEATURE — Security headers, reachability and security events, faster builds
+
+- Every response carries browser security headers (nosniff, frame and referrer policies, permissions policy; HSTS over HTTPS).
+- Sign-in: an address is blocked for 15 minutes after 30 wrong passwords across any names; sign-ups are limited to 10 an hour per address; wrong invite codes are limited to 20 an hour per account.
+- Unknown API addresses return a JSON 404, missing files a 404 instead of the app page, and scanner probes (/.env, /wp-login.php …) a 404 that is logged.
+- CORS no longer allows credentialed requests from other sites (sign-ins use the Authorization header, never cookies).
+- robots.txt asks search engines to stay out of private servers.
+- iPhone and iPad app: My Profile is called Account from app version 1.
+- Vendored denoiser: missing imports added (a crash if its local-attention layer ran).
+- Docker: npm ci and pip/npm build caches; Chromium installed once instead of twice; files copied with their owner, so a release no longer rewrites a ~1 GB layer.
+- Tests run in parallel (pytest-xdist), scripts/check.sh runs lint, tests and the build; the build fails when the first page load goes over its size budget.
+- Dependencies: Capacitor 8.6, tar and other build-tool fixes from npm audit.
+
 ## 0.5.17.g — 2026-10-29 — BUGFIX — ChirpPi Live Detect without repeats
 
 - Live Detect through a ChirpPi: the first clip no longer plays twice; playback runs on one timeline and the saved session matches the listening time.

@@ -1015,6 +1015,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
+_API_DOCS = os.environ.get("CHIRP_API_DOCS", "0" if os.environ.get("CHIRP_WEBSITE") == "1" else "1") == "1"
+
 app = FastAPI(
     title="Chirp Server",
     description="Automated Bird Call Detection & Identification Server",
@@ -1027,8 +1029,11 @@ app = FastAPI(
     # keep showing a stale version long after this value had moved on.
     version=settings.app_version,
     lifespan=lifespan,
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
+    # API docs and the OpenAPI schema list every endpoint; ourchirp.com
+    # leaves them off (CHIRP_API_DOCS=1 turns them on anywhere).
+    docs_url="/api/docs" if _API_DOCS else None,
+    redoc_url="/api/redoc" if _API_DOCS else None,
+    openapi_url="/openapi.json" if _API_DOCS else None,
 )
 
 # GZip compression — compresses API responses and static assets >1KB
@@ -1040,10 +1045,14 @@ app.add_middleware(AuthMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    # Sign-ins travel in the Authorization header, never in cookies, so no
+    # site needs credentialed requests (with them, any site's origin was echoed).
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+from .security import SecurityHeaders  # noqa: E402
+app.add_middleware(SecurityHeaders)   # outermost: every response, preflights included
 
 
 @app.exception_handler(RequestValidationError)
@@ -1240,6 +1249,73 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 STATIC_DIR = Path(__file__).parent / "static"
+from fastapi.responses import PlainTextResponse  # noqa: E402
+from . import security as _security  # noqa: E402
+
+_SITEMAP_PAGES = ["about", "setup.html", "guide.html", "troubleshooting.html", "support.html",
+                  "testflight.html", "privacy.html"]
+
+
+def _crawler_file(name: str):
+    """robots.txt, sitemap.xml and security.txt. Only ourchirp.com's
+    website is open to search engines; every other server asks them to
+    stay out (its pages are a private site's)."""
+    from . import website as _w
+    base = _w.WEBSITE_URL
+    if name == "robots.txt":
+        if not _w.HOSTS_WEBSITE:
+            return PlainTextResponse("User-agent: *\nDisallow: /\n")
+        allow = "".join(f"Allow: /{p}\n" for p in _SITEMAP_PAGES) + "Allow: /about-img/\nAllow: /$\n"
+        return PlainTextResponse(f"User-agent: *\n{allow}Disallow: /\n\nSitemap: {base}/sitemap.xml\n")
+    if name == "sitemap.xml" and _w.HOSTS_WEBSITE:
+        urls = "".join(f"<url><loc>{base}/{p}</loc></url>" for p in _SITEMAP_PAGES)
+        from fastapi.responses import Response
+        return Response('<?xml version="1.0" encoding="UTF-8"?>'
+                        f'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>',
+                        media_type="application/xml")
+    if name == ".well-known/security.txt" and _w.HOSTS_WEBSITE:
+        import datetime as _dt
+        expires = (_dt.datetime.utcnow() + _dt.timedelta(days=180)).strftime("%Y-%m-%dT00:00:00Z")
+        return PlainTextResponse(f"Contact: {base}/support.html\nExpires: {expires}\n"
+                                 f"Preferred-Languages: en\nCanonical: {base}/.well-known/security.txt\n")
+    return None
+
+
+
+def spa_response(full_path: str, request, static_dir: Path):
+    """The file, the app page, or a 404 for the catch-all route."""
+    if full_path.strip("/") == "about":   # public promotional page (frontend/public/about.html)
+        full_path = "about.html"
+    # Unknown API addresses are a JSON 404, not the app page.
+    if full_path.startswith("api/"):
+        return JSONResponse({"detail": "Not Found"}, status_code=404)
+    path = "/" + full_path
+    if _security.is_probe(path) or _security.is_probe(request.url.path):
+        from .api.auth import client_address
+        _security.note("probe", client_address(request), path[:120])
+        return PlainTextResponse("Not Found", status_code=404)
+    root = static_dir.resolve()
+    static_file = (static_dir / full_path).resolve()
+    if static_file != root and root not in static_file.parents:
+        return PlainTextResponse("Not Found", status_code=404)
+    if static_file.is_file():
+        return FileResponse(str(static_file))
+    # A missing file (anything with an extension) is a 404; app routes
+    # (/recordings/…) get the app page.
+    if "." in full_path.rsplit("/", 1)[-1]:
+        return PlainTextResponse("Not Found", status_code=404)
+    index = static_dir / "index.html"
+    if index.exists():
+        return FileResponse(str(index))
+    return HTMLResponse("<h1>Chirp</h1>")
+
+
+@app.get("/robots.txt", include_in_schema=False)
+@app.get("/sitemap.xml", include_in_schema=False)
+@app.get("/.well-known/security.txt", include_in_schema=False)
+async def crawler_files(request: Request):
+    return _crawler_file(request.url.path.strip("/")) or PlainTextResponse("Not Found", status_code=404)
+
 if STATIC_DIR.exists():
     try:
         assets_dir = STATIC_DIR / "assets"
@@ -1249,16 +1325,8 @@ if STATIC_DIR.exists():
         pass
 
     @app.get("/{full_path:path}", include_in_schema=False)
-    async def serve_spa(full_path: str):
-        if full_path.strip("/") == "about":   # public promotional page (frontend/public/about.html)
-            full_path = "about.html"
-        static_file = STATIC_DIR / full_path
-        if static_file.is_file():
-            return FileResponse(str(static_file))
-        index = STATIC_DIR / "index.html"
-        if index.exists():
-            return FileResponse(str(index))
-        return HTMLResponse("<h1>Chirp</h1>")
+    async def serve_spa(full_path: str, request: Request):
+        return spa_response(full_path, request, STATIC_DIR)
 else:
     @app.get("/", include_in_schema=False)
     async def root():

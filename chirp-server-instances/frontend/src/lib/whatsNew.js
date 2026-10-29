@@ -18,7 +18,7 @@
 // it back with the same text. WhatsNewModal shows it only when `popup` is
 // newer than the version last dismissed.
 export const WHATS_NEW = {
-  version: '0.5.17.g',
+  version: '0.5.18.a',
   // The release whose `latest` text this is. The popup shows once per value,
   // so small fixes that don't change `latest` don't bring it back.
   popup: '0.5.17.a',
@@ -32,7 +32,7 @@ export const WHATS_NEW = {
       },
       {
         heading: '🩺 App diagnostics',
-        body: 'My Profile → Help & Feedback can export a text file about this app and device, or add it to your message, to help sort out problems.',
+        body: 'Account → Help & Feedback can export a text file about this app and device, or add it to your message, to help sort out problems.',
       },
       {
         heading: '📱 Test the apps early',
@@ -41,13 +41,7 @@ export const WHATS_NEW = {
     ],
   },
   recent: [
-    { version: '0.5.17.g', summary: 'Live Detect through a ChirpPi plays smoothly, without repeats.' },
-    { version: '0.5.17.f', summary: 'Optional API key for an Ollama server that asks for one.' },
-    { version: '0.5.17.e', summary: 'What\'s New is remembered by your account; Requests tab fits phones.' },
-    { version: '0.5.17.d', summary: 'App diagnostics under Settings → Diagnostics in the app.' },
-    { version: '0.5.17.c', summary: 'Bird picture packs for Chirp Live from ourchirp.com.' },
-    { version: '0.5.17.b', summary: 'What\'s New shows once per account, not once per device.' },
-    { version: '0.5.17.a', summary: 'BirdWeather stations, app diagnostics export, TestFlight page.' },
+    { version: '0.5.18.a', summary: 'Security headers, sign-in limits and faster builds; ourchirp.com admins get reachability and security events.' },
   ],
 }
 
@@ -61,7 +55,8 @@ export const ERA_SUMMARIES = {
 }
 
 export const GROUP_SUMMARIES = {
-  '0.5.17': 'BirdWeather stations, app diagnostics export and a TestFlight sign-up page.',
+  '0.5.18': 'Security headers and sign-in limits, reachability and security events, faster builds.',
+  '0.5.17': 'BirdWeather stations, app diagnostics, Chirp Live picture packs, smoother ChirpPi Live Detect and an optional Ollama key.',
   '0.5.16': 'Apple TV app, iPad support, theme-matched app icon, night flight call filters, TestFlight sign-up, site traffic, safer hosted sites and the website moved to ourchirp.com only.',
   '0.5.15': 'Troubleshooting page and recent recordings on Apple Watch.',
   '0.5.14': 'BirdNET v3 by default, per-bird AI ratings, Low pitch view, Back and Forward, station hum filter, saved recordings and a tidier Recordings list.',

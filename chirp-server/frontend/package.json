@@ -1,12 +1,13 @@
 {
   "name": "chirp-frontend",
-  "version": "0.5.17.g",
+  "version": "0.5.18.a",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "prebuild": "node scripts/stamp-sw-version.mjs",
     "build": "vite build",
+    "postbuild": "node scripts/bundle-budget.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

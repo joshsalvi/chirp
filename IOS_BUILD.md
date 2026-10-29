@@ -295,8 +295,12 @@ through TestFlight (no review needed for internal testers, ~24h for external).
 
 #### Automated TestFlight with the App Store Connect API key
 
-Each release gets its own iOS version: the patch letter is folded into the third number
-(0.5.12.d → 0.5.1204, 0.5.13.a → 0.5.1301); the build number is the upload time.
+Each release gets its own iOS version, 0.X.Y.letter → (X-4).Y.n with a=1, b=2 …
+(0.5.18.a → 1.18.1, 0.6.0.a → 2.0.1); the build number is the upload time. Versions up to
+0.5.1602 used 0.X.(Y*100 + n); `IOS_LEGACY_VERSION=1` rebuilds with that scheme.
+
+`scripts/ios-update-on-approval.py` submits the queued 1.x update the day the version in
+review is approved (see "Update on approval" below).
 
 `~/Developer/Chirp/asc.env` (not in the repo) holds `ASC_KEY_ID`, `ASC_ISSUER_ID` and
 `ASC_KEY_PATH` (the `AuthKey_<id>.p8`, kept in `~/.appstoreconnect/private_keys`, mode 600).

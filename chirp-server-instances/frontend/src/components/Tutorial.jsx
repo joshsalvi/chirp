@@ -496,7 +496,7 @@ const ALL_SECTIONS = [
           </p>
           <Reveal animation="animate-scale-in" threshold={0.05}><NavigationDemo/></Reveal>
           <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-            The <strong style={{ color: 'var(--accent-400)' }}>bottom bar</strong> has Dashboard, Recordings, Live Detect, Life List, and Field Guide, plus a <strong style={{ color: 'var(--accent-400)' }}>⋮ menu</strong> for Notes, Statistics, Settings, What's New and My Profile. Admins also see Devices, Activity, Users, Logs and Tech Docs there.
+            The <strong style={{ color: 'var(--accent-400)' }}>bottom bar</strong> has Dashboard, Recordings, Live Detect, Life List, and Field Guide, plus a <strong style={{ color: 'var(--accent-400)' }}>⋮ menu</strong> for Notes, Statistics, Settings, What's New and Account. Admins also see Devices, Activity, Users, Logs and Tech Docs there.
           </p>
         </div>
 
@@ -600,7 +600,7 @@ const ALL_SECTIONS = [
             <li>• The first time you open Chirp, you pick a <strong style={{ color: 'var(--accent-400)' }}>Simplified</strong> or <strong style={{ color: 'var(--accent-400)' }}>Detailed</strong> Dashboard. Change it with the link at the bottom of the Dashboard or in Settings → Appearance. The choice is saved to your account, so it follows you to other devices.</li>
             <li>• <strong style={{ color: 'var(--accent-400)' }}>Today's Journal</strong> is an AI-written summary of the day, in the style of a birder's journal. It's off until you turn it on in Settings → AI Features, where all AI features and provider keys are. Nothing shows until the first entry has been written.</li>
             <li>• Bird profiles can also show an AI note near the top about when and how often your station has heard that species. It's set up in the same place and is written the first time you open a profile after turning it on.</li>
-            <li>• <strong style={{ color: 'var(--accent-400)' }}>Device Notifications</strong> in My Profile turns on notifications for this device, including when Chirp is closed. On a phone, install the app or add it to your home screen so they arrive reliably.</li>
+            <li>• <strong style={{ color: 'var(--accent-400)' }}>Device Notifications</strong> in Account turns on notifications for this device, including when Chirp is closed. On a phone, install the app or add it to your home screen so they arrive reliably.</li>
             <li>• When AI Second Opinion is on, a recording's page has a button that asks an AI model to review the spectrogram. Its verdict appears below the recording. It's a check on BirdNET's result and doesn't replace it.</li>
             <li>• Settings → AI Features holds the provider keys (Anthropic, OpenAI and Gemini, or an Ollama server at home, which needs an address and a model name, plus a key only if your server asks for one), a Test button for each, which provider each feature uses, and usage per provider.</li>
           </ul>
@@ -956,8 +956,8 @@ const ALL_SECTIONS = [
         <div className="card p-3 space-y-2" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)' }}>
           <p className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>💡 Tips</p>
           <ul className="space-y-1 text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-            <li>• On mobile, use the <strong style={{ color: 'var(--accent-400)' }}>⋮ menu</strong> (bottom-right) for the Field Guide, Statistics, Night Calls and Notes, then admin pages, then My Profile, Settings and What's New.</li>
-            <li>• <strong style={{ color: 'var(--accent-400)' }}>Card Defaults</strong> sets whether cards on Bird Profile, Settings, Statistics and My Profile start open. A card you've opened or closed yourself stays that way. "Reset all cards to default" clears those choices.</li>
+            <li>• On mobile, use the <strong style={{ color: 'var(--accent-400)' }}>⋮ menu</strong> (bottom-right) for the Field Guide, Statistics, Night Calls and Notes, then admin pages, then Account, Settings and What's New.</li>
+            <li>• <strong style={{ color: 'var(--accent-400)' }}>Card Defaults</strong> sets whether cards on Bird Profile, Settings, Statistics and Account start open. A card you've opened or closed yourself stays that way. "Reset all cards to default" clears those choices.</li>
             <li>• The <strong style={{ color: 'var(--accent-400)' }}>Statistics</strong> page charts detections by month, hour, season and species. Related charts sit in pairs under one header and fold up together.</li>
             <li>• The Devices page lets you view live logs from your Pi, push config changes, and sync location.</li>
             <li>• If you have a <strong style={{ color: 'var(--accent-400)' }}>Haikubox</strong>, turn it on in Settings → Integrations. Chirp checks it every 15 minutes and lists its detections on a separate <strong style={{ color: 'var(--accent-400)' }}>Haikubox Detections</strong> page (linked from Recordings and Devices), because they come without audio.</li>

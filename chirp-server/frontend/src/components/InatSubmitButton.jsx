@@ -336,7 +336,7 @@ export default function InatSubmitButton({ recordingId, detectionId, speciesName
                             <a href="/profile"
                                className="inline-flex items-center gap-1 mt-1.5 font-medium underline"
                                style={{ color: 'var(--pastel-amber-light)' }}>
-                              <Key size={11}/> Update token in My Profile →
+                              <Key size={11}/> Update token in Account →
                             </a>
                           </>
                         ) : (

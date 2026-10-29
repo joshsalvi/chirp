@@ -16,6 +16,7 @@ import WhatsNewModal from './components/WhatsNewModal'
 import HomeIconNotice from './components/HomeIconNotice'
 import AppPermissions from './components/AppPermissions'
 import AppNative from './components/AppNative'
+import { accountLabel, useAccountLabel } from './lib/accountLabel'
 import { WHATS_NEW } from './lib/whatsNew'
 import ScrollToTop from './components/ScrollToTop'
 import TVLinkPage from './components/TVLink'
@@ -129,7 +130,7 @@ const NAV = [
   // the two, not an intentional restriction.
   { to: '/settings',    icon: Settings,        label: 'Settings',     adminOnly: false },
   { to: '/changelog',   icon: GitBranch,       label: "What's New",   adminOnly: false },
-  { to: '/profile',     icon: User,            label: 'My Profile',   adminOnly: false },
+  { to: '/profile',     icon: User,            get label() { return accountLabel() },   adminOnly: false },
 ]
 
 function LiveBadge({ event, onClick }) {
@@ -397,7 +398,7 @@ function MobileNav({ currentUser, location, isGlobalAdmin, nightCallsOn }) {
     ...(isGlobalAdmin ? [
       { to: '/global-admin', icon: Shield, label: 'Global Admin', section: 'admin' },
     ] : []),
-    { to: '/profile',    icon: User,          label: 'My Profile',  section: 'you' },
+    { to: '/profile',    icon: User,          get label() { return accountLabel() },  section: 'you' },
     { to: '/settings',   icon: Settings,      label: 'Settings',    section: 'you' },
     { to: '/changelog',  icon: GitBranch,     label: "What's New",  section: 'you' },
   ]
@@ -487,6 +488,7 @@ function AppShellLock() {
 }
 
 export default function App() {
+  useAccountLabel()   // re-render once the iPhone app's version is known ("My Profile" → "Account")
   const [liveEvents, setLiveEvents] = useState([])
   const [connected, setConnected] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)

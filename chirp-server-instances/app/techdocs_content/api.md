@@ -1,8 +1,8 @@
 # API Reference
 
-Full interactive Swagger UI is always available on a running server at
-`http://YOUR_IP:8765/api/docs` — that's the authoritative, always-current
-reference. This page covers the key endpoints worth knowing about
+Full interactive Swagger UI is on a running server at
+`http://YOUR_IP:8765/api/docs` (unless `CHIRP_API_DOCS=0`) — that's the
+authoritative, always-current reference. This page covers the key endpoints worth knowing about
 without opening it.
 
 | Method | Path | Purpose |

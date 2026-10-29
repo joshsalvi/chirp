@@ -396,7 +396,7 @@ function CardExpandDefaultControl() {
 
   return (
     <Field label="Card expand/collapse default"
-           hint="Sets whether cards on Bird Profile, Settings, Statistics and My Profile start open or closed. A card you've opened or closed yourself keeps that.">
+           hint="Sets whether cards on Bird Profile, Settings, Statistics and Account start open or closed. A card you've opened or closed yourself keeps that.">
       <div className="flex items-center gap-2 flex-wrap">
         {[[GLOBAL_DEFAULTS.EXPANDED, 'Expanded'], [GLOBAL_DEFAULTS.COLLAPSED, 'Collapsed']].map(([value, label]) => (
           <button key={value} type="button" onClick={() => choose(value)}

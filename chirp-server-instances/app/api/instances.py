@@ -331,14 +331,27 @@ async def import_instance(
             pass
 
 
+# Wrong invite codes per account in the last hour (guessing one is the only
+# way into a site without being asked).
+_bad_invites: dict = {}
+
+
 @router.post("/join", response_model=TokenOut)
 def join_instance(body: JoinInstanceRequest, user: GlobalUser = Depends(get_current_global_user)):
     from ..models import User
 
     reg_db = RegistrySessionLocal()
     try:
+        import time as _t
+        now = _t.time()
+        tries = [x for x in _bad_invites.get(user.id, []) if now - x < 3600]
+        if len(tries) >= 20:
+            raise HTTPException(status_code=429, detail="Too many invalid invite codes. Try again in an hour.")
         instance = reg_db.query(Instance).filter(Instance.invite_code == body.invite_code.strip().upper()).first()
         if not instance:
+            _bad_invites[user.id] = tries + [now]
+            from ..security import note
+            note("bad_invite", "", user.username[:40])
             raise HTTPException(status_code=404, detail="Invalid invite code.")
 
         existing = reg_db.query(Membership).filter(

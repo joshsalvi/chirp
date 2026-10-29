@@ -22,6 +22,8 @@ docker-compose up -d --build
 | `CHIRP_EBIRD_API_KEY` | No | eBird API v2 key — enables the Field Guide feature |
 | `CHIRP_AUTH_ENABLED` | No | Set `true` to require login for dashboard access |
 | `CHIRP_ADMIN_PASSWORD` | No | Initial admin password (default: `chirp-admin` if unset) |
+| `CHIRP_API_DOCS` | No | `1` serves `/api/docs` and `/openapi.json`; on by default, off on ourchirp.com |
+| `CHIRP_MONITOR_URLS` | No | ourchirp.com only: more addresses for the reachability checks, comma-separated `name=url` |
 
 ## Volume paths
 
@@ -41,6 +43,21 @@ New database columns are added automatically on every container startup
 (via a migration check built into the app, not a separate migration tool like Alembic)
 — existing data is preserved, and adding a new field to the codebase is
 enough for it to appear in the live schema on next restart.
+
+## Security
+
+- Every response carries `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` and `Permissions-Policy`; HSTS is added over HTTPS (directly or behind Cloudflare / Caddy).
+- Sign-in locks for 5 minutes after 5 wrong passwords for one name from one address, and an address is blocked for 15 minutes after 30 wrong passwords across names. Sign-ups: 10 attempts an hour per address.
+- Behind a proxy the caller's address comes from `CF-Connecting-IP` or `X-Forwarded-For`. Don't expose port 8765 to the internet directly, or those headers can be forged.
+- Requests for scanner paths (`/.env`, `/wp-login.php` …) get a 404 and are logged as security events.
+- `robots.txt` asks search engines to stay out.
+
+## Checks before a release
+
+```bash
+pip install -r requirements-dev.txt
+./scripts/check.sh          # ruff (bugs only), tests in parallel, frontend build + size budget
+```
 
 ## Frontend development
 
