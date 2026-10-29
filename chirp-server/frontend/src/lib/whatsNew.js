@@ -18,7 +18,7 @@
 // it back with the same text. WhatsNewModal shows it only when `popup` is
 // newer than the version last dismissed.
 export const WHATS_NEW = {
-  version: '0.5.18.a',
+  version: '0.5.18.b',
   // The release whose `latest` text this is. The popup shows once per value,
   // so small fixes that don't change `latest` don't bring it back.
   popup: '0.5.17.a',
@@ -41,6 +41,7 @@ export const WHATS_NEW = {
     ],
   },
   recent: [
+    { version: '0.5.18.b', summary: 'Global Admin pages work again after a library update.' },
     { version: '0.5.18.a', summary: 'Security headers, sign-in limits and faster builds; ourchirp.com admins get reachability and security events.' },
   ],
 }
