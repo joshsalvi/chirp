@@ -132,7 +132,8 @@ class TailscaleManager:
         if self._thread:
             self._thread.join(timeout=5)
 
-    def reconfigure(self, enabled: bool, auth_key: str = "", login_server: str = "", hostname: str = "") -> dict:
+    def reconfigure(self, enabled: bool, auth_key: str = "", login_server: str = "", hostname: str = "",
+                    wait: bool = True) -> dict:
         """
         Applies a new config live — from Settings → Server Network's own
         "Save & Connect" button, or Global Admin's equivalent — without
@@ -145,7 +146,8 @@ class TailscaleManager:
         applies the new values, then starts fresh if the new config is
         enabled. Returns the resulting status() so the caller (the API
         endpoint) can hand it straight back to the frontend without a
-        second round-trip.
+        second round-trip. wait=False (server startup) connects in the
+        background, so an unreachable control server can't hold up boot.
         """
         self.stop()
         self._stop_event = threading.Event()
@@ -155,7 +157,7 @@ class TailscaleManager:
         self.hostname = hostname or ""
         self._binary = shutil.which("tailscale")
         if self.enabled:
-            self.start(wait_for_first_connect=True)
+            self.start(wait_for_first_connect=wait)
         else:
             self._cached_ip = None
         return self.status()

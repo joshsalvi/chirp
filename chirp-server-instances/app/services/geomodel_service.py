@@ -16,6 +16,11 @@ GEOMODEL_URLS = [
     "https://inaturalist-open-data.s3.us-east-1.amazonaws.com/geomodel/geopackages/latest/iNaturalist_geomodel_Aves_1.gpkg",
     "https://inaturalist-open-data.s3.us-east-1.amazonaws.com/geomodel/geopackages/latest/iNaturalist_geomodel_Aves_2.gpkg",
 ]
+# Bats (and other mammals), for bat range maps; fetched by range_library, not
+# part of Settings → Range Maps' download.
+EXTRA_URLS = [
+    "https://inaturalist-open-data.s3.us-east-1.amazonaws.com/geomodel/geopackages/latest/iNaturalist_geomodel_Mammalia.gpkg",
+]
 COASTLINE_URL = "https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson"
 
 _download_progress: dict[str, dict] = {}   # filename → {status, downloaded, total}
@@ -32,6 +37,11 @@ def _geomodel_dir(data_dir: str) -> Path:
 def _gpkg_paths(data_dir: str) -> list[Path]:
     d = _geomodel_dir(data_dir)
     return [d / Path(u).name for u in GEOMODEL_URLS]
+
+def _all_gpkg_paths(data_dir: str) -> list[Path]:
+    """Every downloaded collection: birds, then mammals (bats)."""
+    d = _geomodel_dir(data_dir)
+    return [d / Path(u).name for u in GEOMODEL_URLS + EXTRA_URLS]
 
 def _coastline_path(data_dir: str) -> Path:
     return _geomodel_dir(data_dir) / "countries.geojson"
@@ -281,10 +291,12 @@ def _discover_schema(conn: sqlite3.Connection):
 
 # ── Rendering ─────────────────────────────────────────────────────────────────
 
-def render_range_map(taxon_id: int, data_dir: str, output_path: str,
-                     common_name: str = "") -> bool:
+def render_range_map(taxon_id, data_dir: str, output_path: str,
+                     common_name: str = "", title: str = "") -> bool:
     """
     Query the geopackage for the taxon, render a PNG range map.
+    taxon_id may be a list: their ranges are drawn together (the generic
+    Bat profile shows every bat found where the site is).
     Returns True on success.
     """
     import json
@@ -293,53 +305,39 @@ def render_range_map(taxon_id: int, data_dir: str, output_path: str,
     import matplotlib.pyplot as plt
     import matplotlib.patches as mpatches
 
-    # Find which gpkg file has this taxon
-    gpkg_file = None
-    schema     = None
-    conn_used  = None
-    for path in _gpkg_paths(data_dir):
+    ids = [int(t) for t in (taxon_id if isinstance(taxon_id, (list, tuple, set)) else [taxon_id])]
+    if not ids:
+        return False
+    marks = ",".join("?" * len(ids))
+
+    # Collect this taxon's (or these taxa's) geometry from every collection.
+    rows = []
+    for path in _all_gpkg_paths(data_dir):
         if not path.exists() or path.stat().st_size < 1_000_000:
             continue
         try:
             conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
-            s = _discover_schema(conn)
-            if s is None:
+            try:
+                s = _discover_schema(conn)
+                if s is None:
+                    continue
+                tbl, tc, gc = s
+                rows += conn.execute(f"SELECT {gc} FROM '{tbl}' WHERE {tc} IN ({marks})", ids).fetchall()
+            finally:
                 conn.close()
-                continue
-            tbl, tc, gc = s
-            row = conn.execute(f"SELECT COUNT(*) FROM '{tbl}' WHERE {tc}=?", (taxon_id,)).fetchone()
-            if row and row[0] > 0:
-                gpkg_file = path
-                schema = s
-                conn_used = conn
-                break
-            conn.close()
         except Exception as e:
             logger.debug("Geomodel file error %s: %s", path, e)
-
-    if not gpkg_file or not schema or not conn_used:
-        logger.warning(
-            "Geomodel: taxon %d not found in any gpkg file. "
-            "Try GET /api/v1/settings/geomodel/debug to inspect the schema.",
-            taxon_id,
-        )
-        return False
-
-    tbl, taxon_col, geom_col = schema
-    logger.info("Rendering geomodel map: taxon=%d in %s.%s (taxon_col=%s, geom_col=%s)",
-                taxon_id, gpkg_file.name, tbl, taxon_col, geom_col)
-
-    try:
-        rows = conn_used.execute(
-            f"SELECT {geom_col} FROM '{tbl}' WHERE {taxon_col}=?",
-            (taxon_id,),
-        ).fetchall()
-    finally:
-        conn_used.close()
+        if rows and len(ids) == 1:
+            break
 
     if not rows:
-        logger.warning("Geomodel: no geometry rows for taxon %d", taxon_id)
+        logger.warning(
+            "Geomodel: taxon %s not found in any gpkg file. "
+            "Try GET /api/v1/settings/geomodel/debug to inspect the schema.",
+            ids if len(ids) > 1 else ids[0],
+        )
         return False
+    logger.info("Rendering geomodel map: taxon %s, %d geometry rows", ids if len(ids) > 1 else ids[0], len(rows))
 
     # Parse geometries — every polygon represents the same thing (this
     # taxon's range), so there is nothing per-polygon to vary the color
@@ -424,7 +422,7 @@ def render_range_map(taxon_id: int, data_dir: str, output_path: str,
               facecolor="#0e1a14", edgecolor="#2d4a38", labelcolor="white",
               fontsize=7)
 
-    title = f"{common_name} — iNaturalist Community Range" if common_name else "iNaturalist Community Range"
+    title = title or (f"{common_name} — iNaturalist Community Range" if common_name else "iNaturalist Community Range")
     ax.set_title(title, color="#86efac", fontsize=9, pad=6)
 
     plt.tight_layout(pad=0.3)

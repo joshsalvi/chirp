@@ -323,12 +323,50 @@ def watch_token(token: str = Depends(oauth2_scheme), current_user=Depends(get_cu
             "expires_days": WATCH_TOKEN_DAYS, "auth_required": True}
 
 
+LITE_TOKEN_DAYS = 90
+
+
+@router.post("/lite-token")
+def lite_token(token: str = Depends(oauth2_scheme), current_user=Depends(get_current_user)):
+    """
+    Sign-in for the Chirp Lite iPhone app: read-only (main.py's lite_may_use)
+    and good for 90 days. The app swaps its password sign-in for one, then
+    renews it with itself while it's in use.
+    """
+    if current_user is None:
+        return {"access_token": None, "auth_required": False}
+    payload = verify_token(token) if token else None
+    if not payload:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    if payload.get("scope") not in (None, "lite"):
+        raise HTTPException(status_code=403, detail="This sign-in can't make a Chirp Lite one")
+    claims = {k: payload[k] for k in ("sub", "global_user_id", "active_instance_id", "role") if k in payload}
+    claims["scope"] = "lite"
+    return {"access_token": create_access_token(claims, expires_minutes=LITE_TOKEN_DAYS * 1440),
+            "expires_days": LITE_TOKEN_DAYS, "auth_required": True}
+
+
+UI_MODES = ("lite", "pro")
+# Dashboard views. A user still on an old name (simplified, detailed) or none
+# sees the picker once.
+DASHBOARD_MODES = ("standard", "advanced")
+
+
+def ui_mode_for(user) -> str:
+    """Chirp Lite or Chirp Pro for this person at this site: their choice if
+    they've made one, else Lite for viewers and Pro for admins and submitters."""
+    chosen = getattr(user, "ui_mode", None)
+    if chosen in UI_MODES:
+        return chosen
+    return "lite" if getattr(user, "role", None) == "viewer" else "pro"
+
+
 @router.get("/me")
 def get_me(current_user=Depends(get_current_user)):
     if current_user is None:
         # Auth is disabled — return username=null and auth_required=false
         return {"id": "anon", "username": None, "role": "admin",
-                "active": True, "auth_required": False,
+                "active": True, "auth_required": False, "ui_mode": "pro", "ui_mode_chosen": False,
                 "created_at": datetime.utcnow().isoformat(), "last_login": None}
     # User is authenticated (either auth enabled with valid token,
     # or auth disabled but a valid token was provided anyway)
@@ -350,6 +388,8 @@ def get_me(current_user=Depends(get_current_user)):
             "notify_new_bird":     getattr(current_user, "notify_new_bird", True),
             "notify_daily_digest": getattr(current_user, "notify_daily_digest", False),
             "dashboard_mode": getattr(current_user, "dashboard_mode", None),
+            "ui_mode": ui_mode_for(current_user),
+            "ui_mode_chosen": getattr(current_user, "ui_mode", None) in UI_MODES,
             "last_seen_whats_new_version": getattr(current_user, "last_seen_whats_new_version", None),
             "created_at": current_user.created_at.isoformat() if current_user.created_at else None,
             "last_login": current_user.last_login.isoformat() if current_user.last_login else None}
@@ -517,7 +557,8 @@ class ProfileUpdateRequest(BaseModel):
     new_password:        Optional[str]  = None
     notify_new_bird:     Optional[bool] = None
     notify_daily_digest: Optional[bool] = None
-    dashboard_mode:      Optional[str]  = None  # 'simplified' | 'detailed'
+    dashboard_mode:      Optional[str]  = None  # 'standard' | 'advanced'
+    ui_mode:             Optional[str]  = None  # 'lite' | 'pro' (Chirp Lite or Chirp Pro)
     last_seen_whats_new_version: Optional[str] = None
     inat_api_token:      Optional[str]  = None  # per-user iNat token (submitters)
     inat_username:       Optional[str]  = None  # per-user OAuth auto-refresh — this user's own iNat account
@@ -693,9 +734,15 @@ def update_my_profile(body: ProfileUpdateRequest, request: Request, db: Session 
     if body.notify_daily_digest is not None:
         user.notify_daily_digest = body.notify_daily_digest
     if body.dashboard_mode is not None:
-        if body.dashboard_mode not in ("simplified", "detailed"):
-            raise HTTPException(status_code=400, detail="dashboard_mode must be 'simplified' or 'detailed'")
-        user.dashboard_mode = body.dashboard_mode
+        # Older copies of the web app still send the old names.
+        mode = {"simplified": "standard", "detailed": "advanced"}.get(body.dashboard_mode, body.dashboard_mode)
+        if mode not in DASHBOARD_MODES:
+            raise HTTPException(status_code=400, detail="dashboard_mode must be 'standard' or 'advanced'")
+        user.dashboard_mode = mode
+    if body.ui_mode is not None:
+        if body.ui_mode not in UI_MODES:
+            raise HTTPException(status_code=400, detail="ui_mode must be 'lite' or 'pro'")
+        user.ui_mode = body.ui_mode
     if body.last_seen_whats_new_version is not None:
         # Never backwards: an older copy of the web app (cached page, another
         # device) would otherwise make the newer popup show again.

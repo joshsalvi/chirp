@@ -92,7 +92,11 @@ def _migrate_registry_columns():
         "global_users": [
             ("is_global_admin", "BOOLEAN DEFAULT 0"),
         ],
+        "site_requests": [
+            ("user_id", "VARCHAR"),
+        ],
         "registry_settings": [
+            ("location_approval", "BOOLEAN"),
             ("headscale_basic_auth_enabled", "BOOLEAN DEFAULT 0"),
             ("headscale_basic_auth_username", "VARCHAR"),
             ("headscale_basic_auth_password_hash", "VARCHAR"),

@@ -48,6 +48,7 @@ from .api import techdocs as techdocs_router
 from .api import live_detect as live_detect_router
 from .api import watch as watch_router
 from .api import tv as tv_router
+from .api import lite as lite_router
 from .api import near_misses as near_misses_router
 from .services import log_buffer
 from .cache import settings_cache, user_token_cache
@@ -233,6 +234,7 @@ async def lifespan(app: FastAPI):
                 auth_key=_ts_s.tailscale_auth_key,
                 login_server=_ts_s.tailscale_login_server or "",
                 hostname=_ts_s.tailscale_hostname or "",
+                wait=False,
             )
         _ts_db.close()
     except Exception as _ts_e:
@@ -478,6 +480,12 @@ async def lifespan(app: FastAPI):
     _profile_refresh_thread = _threading.Thread(target=_profile_summary_refresh_loop, daemon=True, name="profile-summary-refresh")
     _profile_refresh_thread.start()
 
+    # Local range maps for every bird and bat (services/range_library.py):
+    # drawn a few minutes after startup, then checked daily.
+    from .services import range_library as _range_library
+    _stop_range_library = _threading.Event()
+    _threading.Thread(target=_range_library.loop, args=(_stop_range_library,), daemon=True, name="range-library").start()
+
     # Automatic database backup scheduler — on by default (see
     # AppSettings.auto_backup_enabled's model comment for why this one
     # defaults on unlike the AI-feature schedulers above). Same
@@ -507,7 +515,8 @@ async def lifespan(app: FastAPI):
                 logger.warning("Auto-backup scheduler config error: %s", _be)
                 continue
             now_local_bk = _dt.now(_ZoneInfo("UTC")).astimezone(_tz_bk)
-            if now_local_bk.hour == _hour_bk and now_local_bk.minute == 0:
+            from .services.backup_service import is_due as _bk_due
+            if _bk_due(now_local_bk, _hour_bk, _s_bk.auto_backup_last_run_at):
                 try:
                     from .services.backup_service import record_backup_result
                     from .config import settings as _cfg_bk
@@ -524,7 +533,6 @@ async def lifespan(app: FastAPI):
                                 logger.info("Automatic backup complete: %s", result)
                 except Exception as _be2:
                     logger.warning("Automatic backup failed: %s", _be2)
-                _time.sleep(61)  # skip the rest of this minute
 
     _auto_backup_thread = _threading.Thread(target=_auto_backup_loop, daemon=True, name="auto-backup")
     _auto_backup_thread.start()
@@ -686,7 +694,7 @@ _VIEWER_WRITE_OK = re.compile(
     r"|recordings/[^/]+/(comments(/[^/]+)?|share)"
     r"|birds/([^/]+/comments(/[^/]+)?|ensure/.*)"
     r"|live-detect/(analyze|save-session)"
-    r"|auth/watch-token"
+    r"|auth/watch-token|auth/lite-token"
     r")$"
 )
 
@@ -704,6 +712,19 @@ _WATCH_OK = re.compile(r"^/api/v1/(live-detect/(analyze|save-session)|auth/me|wa
 
 def watch_may_use(path: str) -> bool:
     return bool(_WATCH_OK.match(path))
+
+
+# Chirp Lite iPhone sign-ins (POST /auth/lite-token) only read the Lite
+# screens, play recordings as small AAC files (api/watch.py) and renew.
+# Photos and other media are checked per request, as for the web app.
+_LITE_GET_OK = re.compile(r"^/api/v1/(auth/me|lite/[A-Za-z0-9/_-]+|recordings/statistics/daily-journal"
+                          r"|watch/audio/[0-9A-Za-z-]+)$")
+
+
+def lite_may_use(method: str, path: str) -> bool:
+    if method in ("GET", "HEAD"):
+        return bool(_LITE_GET_OK.match(path))
+    return method == "POST" and path == "/api/v1/auth/lite-token"
 
 
 # Apple TV sign-ins (api/tv.py) read the digest, journal and recent
@@ -786,6 +807,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 return JSONResponse({"detail": "The Apple TV sign-in can't do that."}, status_code=403)
             if scope == "watch" and not watch_may_use(path):
                 return JSONResponse({"detail": "The watch sign-in only works for Live Detect."}, status_code=403)
+            if scope == "lite" and not lite_may_use(request.method, path):
+                return JSONResponse({"detail": "The Chirp Lite sign-in can't do that."}, status_code=403)
             # View-only members of a site on a multi-site server: their role
             # there comes from the registry (sites, sign-ins and global admin
             # pages are per person, not per site, so they're left alone).
@@ -833,6 +856,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
         if cached_user.get("scope") == "watch" and not watch_may_use(path):
             return JSONResponse({"detail": "The watch sign-in only works for Live Detect."}, status_code=403)
+
+        if cached_user.get("scope") == "lite" and not lite_may_use(request.method, path):
+            return JSONResponse({"detail": "The Chirp Lite sign-in can't do that."}, status_code=403)
 
         if cached_user.get("role") == "viewer" and not viewer_may_write(request.method, path):
             return JSONResponse({"detail": "This account is view-only. Ask an admin for submitter access."},
@@ -1002,6 +1028,7 @@ app.include_router(techdocs_router.router, prefix="/api/v1/techdocs", tags=["tec
 app.include_router(live_detect_router.router, prefix="/api/v1/live-detect", tags=["live-detect"])
 app.include_router(watch_router.router, prefix="/api/v1/watch", tags=["watch"])
 app.include_router(tv_router.router, prefix="/api/v1/tv", tags=["tv"])
+app.include_router(lite_router.router, prefix="/api/v1/lite", tags=["lite"])
 app.include_router(near_misses_router.router, prefix="/api/v1/near-misses", tags=["near-misses"])
 from .api import support as support_router
 app.include_router(support_router.router, prefix="/api/v1/support", tags=["support"])
@@ -1110,6 +1137,10 @@ def spa_response(full_path: str, request, static_dir: Path):
     """The file, the app page, or a 404 for the catch-all route."""
     if full_path.strip("/") == "about":   # public promotional page (frontend/public/about.html)
         full_path = "about.html"
+    # Older iOS asks for the "-precomposed" icon name before reading the page.
+    if full_path in ("apple-touch-icon-precomposed.png", "apple-touch-icon-120x120.png",
+                     "apple-touch-icon-120x120-precomposed.png"):
+        full_path = "apple-touch-icon.png"
     # Unknown API addresses are a JSON 404, not the app page.
     if full_path.startswith("api/"):
         return JSONResponse({"detail": "Not Found"}, status_code=404)
@@ -1128,15 +1159,17 @@ def spa_response(full_path: str, request, static_dir: Path):
     # (/recordings/…) get the app page.
     if "." in full_path.rsplit("/", 1)[-1]:
         return PlainTextResponse("Not Found", status_code=404)
-    index = static_dir / "index.html"
+    # Chirp Lite is its own page (frontend/lite.html) with its own routes.
+    page = "lite.html" if full_path.strip("/").split("/", 1)[0] == "lite" else "index.html"
+    index = static_dir / page
     if index.exists():
         return FileResponse(str(index))
     return HTMLResponse("<h1>Chirp</h1>")
 
 
-@app.get("/robots.txt", include_in_schema=False)
-@app.get("/sitemap.xml", include_in_schema=False)
-@app.get("/.well-known/security.txt", include_in_schema=False)
+@app.api_route("/robots.txt", methods=["GET", "HEAD"], include_in_schema=False)
+@app.api_route("/sitemap.xml", methods=["GET", "HEAD"], include_in_schema=False)
+@app.api_route("/.well-known/security.txt", methods=["GET", "HEAD"], include_in_schema=False)
 async def crawler_files(request: Request):
     return _crawler_file(request.url.path.strip("/")) or PlainTextResponse("Not Found", status_code=404)
 
@@ -1148,7 +1181,8 @@ if STATIC_DIR.exists():
     except Exception:
         pass
 
-    @app.get("/{full_path:path}", include_in_schema=False)
+    # HEAD too: link checkers, uptime monitors and `curl -I` ask with HEAD.
+    @app.api_route("/{full_path:path}", methods=["GET", "HEAD"], include_in_schema=False)
     async def serve_spa(full_path: str, request: Request):
         return spa_response(full_path, request, STATIC_DIR)
 else:

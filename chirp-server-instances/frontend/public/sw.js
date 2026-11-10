@@ -21,8 +21,8 @@
 // redeployed. A hard refresh does NOT fix this on its own: it reloads the
 // page, but doesn't bypass an already-active service worker intercepting
 // the asset requests before they'd reach the network.
-const CACHE = 'chirp-v0.5.18.b'
-const SHELL = ['/', '/recordings', '/library', '/regional', '/likely', '/settings']
+const CACHE = 'chirp-v0.5.19.y'
+const SHELL = ['/', '/recordings', '/library', '/regional', '/likely', '/settings', '/lite/']
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -88,7 +88,15 @@ self.addEventListener('fetch', e => {
     return
   }
 
-  // Network-first for HTML pages, fall back to cached shell
+  // Network-first for HTML pages, falling back to the cached app page
+  // (Chirp Lite at /lite has its own).
+  if (request.mode === 'navigate') {
+    const shell = url.pathname.startsWith('/lite') ? '/lite/' : '/'
+    e.respondWith(
+      fetch(request).catch(() => caches.match(shell).then(r => r || fetch(request)))
+    )
+    return
+  }
   e.respondWith(
     fetch(request).catch(() => caches.match('/').then(r => r || fetch(request)))
   )

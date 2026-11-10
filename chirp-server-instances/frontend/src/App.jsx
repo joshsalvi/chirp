@@ -1,6 +1,6 @@
 import { Routes, Route, NavLink, useNavigate, Navigate, useLocation, useNavigationType } from 'react-router-dom'
 import { useState, useEffect, useLayoutEffect, useCallback, useRef, lazy, Suspense } from 'react'
-import { LayoutDashboard, Mic, MapPin, Settings, Activity, BarChart2, Bell, Upload, Award, Users, LogOut, User, Radio, ChevronLeft, ChevronRight, Menu, X, Feather, Terminal, ChevronDown, BookOpen, MessageSquare, GitBranch, FileText, AudioLines, Shield, Moon } from 'lucide-react'
+import { LayoutDashboard, Mic, MapPin, Settings, Activity, BarChart2, Bell, Upload, Award, Users, LogOut, User, Radio, ChevronLeft, ChevronRight, Menu, X, Feather, Terminal, ChevronDown, BookOpen, MessageSquare, GitBranch, FileText, AudioLines, Shield, Moon, RefreshCw } from 'lucide-react'
 import { createWebSocket, api, tokenStore, markNavigation } from './lib/api'
 import { getStoredTheme, applyTheme } from './lib/theme'
 import { native, isNative, otherServerUrl } from './native'
@@ -16,6 +16,7 @@ import WhatsNewModal from './components/WhatsNewModal'
 import HomeIconNotice from './components/HomeIconNotice'
 import AppPermissions from './components/AppPermissions'
 import AppNative from './components/AppNative'
+import { usePageGestures, REFRESH_BAND } from './lib/gestures'
 import { accountLabel, useAccountLabel } from './lib/accountLabel'
 import { WHATS_NEW } from './lib/whatsNew'
 import ScrollToTop from './components/ScrollToTop'
@@ -413,7 +414,7 @@ function MobileNav({ currentUser, location, isGlobalAdmin, nightCallsOn }) {
           <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)}/>
           <div className="fixed right-3 z-50 rounded-xl overflow-hidden shadow-modal animate-slide-up"
                style={{ background: 'var(--bg-card)', border: '1px solid var(--border-default)', minWidth: 172,
-                        bottom: 'calc(56px + max(env(safe-area-inset-bottom), 8px) + 8px)' }}>
+                        bottom: 'calc(var(--nav-clear) + 8px)' }}>
             {menuItems.map(({ to, icon: Icon, label, section }, i) => (
               <NavLink key={to} to={to} onClick={() => setMenuOpen(false)}
                 className={({ isActive }) =>
@@ -431,38 +432,21 @@ function MobileNav({ currentUser, location, isGlobalAdmin, nightCallsOn }) {
         </>
       )}
 
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center"
-           style={{
-             background: 'var(--bg-panel)',
-             borderTop: '1px solid var(--border-subtle)',
-             paddingBottom: 'max(env(safe-area-inset-bottom), 8px)',
-             height: 'calc(56px + max(env(safe-area-inset-bottom), 0px))',
-           }}>
+      {/* Liquid Glass tab bar (index.css .glass-nav), as in Chirp Live and Lite */}
+      <nav className="glass-nav" aria-label="Main">
         {primaryNav.map(({ to, icon: Icon }) => (
           <NavLink key={to} to={to} end={to === '/'}
-            className={({ isActive }) =>
-              `flex-1 flex justify-center items-center py-2 transition-colors ${isActive || (to === '/notifications' && unread) ? '' : 'opacity-40 hover:opacity-70'}`
-            }
-            style={{ position: 'relative' }}
+            className={({ isActive }) => `glass-tab${isActive ? ' on' : ''}${to === '/notifications' && unread ? ' alert' : ''}`}
             aria-label={to === '/notifications' ? `Notifications${unread ? `, ${unread} unread` : ''}` : undefined}>
-            {({ isActive }) => (
-              <span className="flex items-center justify-center rounded-full transition-all"
-                    style={{
-                      width: 40, height: 32,
-                      background: isActive ? 'var(--nav-active-bg)' : 'transparent',
-                      boxShadow: isActive ? '0 0 0 1px var(--border-default), 0 0 12px var(--glow-color, transparent)' : 'none',
-                      color: isActive ? 'var(--accent-400)' : 'var(--text-secondary)',
-                    }}>
-                <Icon size={20}/>
-                {to === '/notifications' && unread > 0 && <UnreadBadge n={unread}/>}
-              </span>
-            )}
+            <span style={{ position: 'relative', display: 'flex' }}>
+              <Icon size={21}/>
+              {to === '/notifications' && unread > 0 && <UnreadBadge n={unread}/>}
+            </span>
           </NavLink>
         ))}
         {hasMenu && (
-          <button onClick={() => setMenuOpen(o => !o)}
-            className="flex-1 flex justify-center items-center py-2 transition-colors"
-            style={{ color: menuOpen ? 'var(--accent-400)' : 'var(--text-secondary)', opacity: menuOpen ? 1 : 0.4 }}>
+          <button onClick={() => setMenuOpen(o => !o)} aria-label="More" aria-expanded={menuOpen}
+            className={`glass-tab${menuOpen ? ' on' : ''}`}>
             <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <circle cx="12" cy="5" r="1.5" fill="currentColor" stroke="none"/>
               <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
@@ -494,6 +478,17 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [showUpload, setShowUpload] = useState(false)
   const [currentUser, setCurrentUser] = useState(null)
+  // Settings → Appearance changes the dashboard view while the Dashboard isn't open.
+  useEffect(() => {
+    const on = e => setCurrentUser(u => {
+      if (!u) return u
+      const next = { ...u, dashboard_mode: e.detail?.mode }
+      writeMeCache({ user: next })   // the next load starts with it, so the picker doesn't flash
+      return next
+    })
+    window.addEventListener('chirp-dashboard-mode', on)
+    return () => window.removeEventListener('chirp-dashboard-mode', on)
+  }, [])
   const [authChecked, setAuthChecked] = useState(false)
   const [requiresAuth, setRequiresAuth] = useState(false)
   const [needsInstance, setNeedsInstance] = useState(false)
@@ -507,6 +502,13 @@ export default function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
+  // Pull to refresh (app only) remounts the page, so it loads everything again.
+  const mainRef = useRef(null)
+  const [refreshCount, setRefreshCount] = useState(0)
+  const { gap, shift, refreshing } = usePageGestures(mainRef, () => {
+    setRefreshCount(n => n + 1)
+    window.dispatchEvent(new Event('chirp-resume'))
+  })
 
   const checkAuth = useCallback(() => {
     // Multi-instance addition (see ARCHITECTURE.md): a stored token
@@ -537,6 +539,8 @@ export default function App() {
         tokenStore.clear(); setAuthChecked(true)
       } else {
         r.json().then(u => {
+          // Chose Chirp Lite (web or app): open it (its menu switches back).
+          if (u?.ui_mode_chosen && u.ui_mode === 'lite') { window.location.replace('/lite/'); return }
           let user, needsAuth
           if (!u || u.auth_required === false) {
             needsAuth = false
@@ -825,7 +829,19 @@ export default function App() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto pb-16 md:pb-0" style={{ overscrollBehavior: 'contain' }} key={location.pathname}>
+        {(gap > 0 || refreshing) && (
+          <div className="ptr" aria-hidden={!refreshing} role={refreshing ? 'status' : undefined}>
+            <div className="ptr-band" style={{ height: refreshing ? REFRESH_BAND : gap }}>
+              <span className="ptr-dot" style={{ transform: `scale(${refreshing ? 1 : Math.min(1, 0.5 + gap / 140)}) rotate(${gap * 3}deg)`, opacity: refreshing ? 1 : Math.min(1, gap / 50) }}>
+                <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''}/>
+              </span>
+            </div>
+            {refreshing && <span className="sr-only">Refreshing</span>}
+          </div>
+        )}
+        <main ref={mainRef} className="flex-1 overflow-y-auto main-clear-nav md:pb-0" key={`${location.pathname}:${refreshCount}`}
+              style={{ overscrollBehavior: 'contain', paddingTop: refreshing ? REFRESH_BAND : 0, transform: shift ? `translateY(${shift}px)` : undefined,
+                       transition: shift ? 'none' : 'padding-top .25s ease, transform .25s ease' }}>
           <ErrorBoundary label="this page">
             <Suspense fallback={
               <div className="flex items-center justify-center py-24">

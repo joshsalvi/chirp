@@ -625,6 +625,7 @@ def _migrate_columns(target_engine=None):
             ("notify_daily_journal_push", "BOOLEAN"),
             ("notify_weekly_journal_push", "BOOLEAN"),
             ("dashboard_mode",       "VARCHAR"),
+            ("ui_mode",              "VARCHAR"),
             ("last_seen_whats_new_version", "VARCHAR"),
             ("photo_url",            "VARCHAR"),
         ],

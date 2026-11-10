@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { User, Lock, Bell, Check, AlertCircle, Eye, EyeOff, Save, Shield, Feather, Leaf, RefreshCw, LogOut, Camera, Trash2, UserX, Server, MessageSquare, Watch, Tv, Smartphone } from 'lucide-react'
+import { User, Lock, Bell, Check, AlertCircle, Eye, EyeOff, Save, Shield, Feather, Leaf, RefreshCw, LogOut, Camera, Trash2, UserX, Server, MessageSquare, Watch, Tv, Smartphone, AudioLines } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { api, mediaUrl } from '../lib/api'
 import { format } from 'date-fns'
@@ -343,6 +343,50 @@ function IPhoneAppSection() {
             : 'Alerts, Live Detect and your recordings on your iPhone, with an Apple Watch app included. Until it’s out, open this site in Safari and choose Share → Add to Home Screen.'}
         </p>
         <StoreBadge kind="iphone"/>
+      </div>
+    </Section>
+  )
+}
+
+// ── Chirp Live ────────────────────────────────────────────────────────────────
+function ChirpLiveSection() {
+  return (
+    <Section id="me:chirplive" fallbackOpen={false} icon={AudioLines} title="Chirp Live" color="#fbbf24">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <img src="/about-img/chirp-live-icon.png" alt="" className="w-11 h-11 rounded-xl flex-shrink-0"/>
+          <p className="text-xs min-w-0" style={{ color: 'var(--text-secondary)' }}>
+            Name birds on walks, even with no signal. Sign in there with this account to keep each walk here too.
+          </p>
+        </div>
+        <StoreBadge kind="live"/>
+      </div>
+    </Section>
+  )
+}
+
+// Chirp Lite (/lite): the simple, picture-first view. Choosing it is saved
+// to the account, so the web app and the iPhone app open Lite until its
+// menu switches back.
+function ChirpLiteSection() {
+  const [busy, setBusy] = useState(false)
+  const open = async () => {
+    setBusy(true)
+    try { await api.auth.updateProfile({ ui_mode: 'lite' }) } catch {}
+    window.location.href = '/lite/'
+  }
+  return (
+    <Section id="me:chirplite" fallbackOpen={false} icon={Leaf} title="Chirp Lite" color="#22B573">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <img src="/lite-icon.svg" alt="" className="w-11 h-11 rounded-xl flex-shrink-0"/>
+          <p className="text-xs min-w-0" style={{ color: 'var(--text-secondary)' }}>
+            A simpler view: today's birds, big photos and one-tap sounds. Same account; switch back from its menu.
+          </p>
+        </div>
+        <button onClick={open} disabled={busy} className="btn-primary text-sm">
+          {busy ? 'Opening…' : 'Use Chirp Lite'}
+        </button>
       </div>
     </Section>
   )
@@ -869,6 +913,8 @@ export default function UserProfile() {
 
       {hasServerPicker() && <ServerSection/>}
       <IPhoneAppSection/>
+      <ChirpLiveSection/>
+      <ChirpLiteSection/>
       <WatchSection/>
       <TVSection/>
       <FeedbackSection/>

@@ -6,6 +6,7 @@ import { WHATS_NEW } from '../lib/whatsNew'
 import { useAppInfo, versionKey } from '../lib/appVersion'
 import { deviceName } from '../native'
 import { noteWhatsNew } from '../lib/diagLog'
+import { chosenMode, localMode } from '../lib/dashboardMode'
 
 const ANON_STORAGE_KEY = 'chirp_whats_new_seen_version'
 const POPUP = WHATS_NEW.popup || WHATS_NEW.version
@@ -50,6 +51,14 @@ export default function WhatsNewModal() {
   const [showHistory, setShowHistory] = useState(false)
 
   useEffect(() => {
+    let waiting = null
+    // Someone who hasn't picked Standard or Advanced sees that picker first;
+    // this waits for their choice instead of opening on top of it.
+    const show = (pickerPending) => {
+      if (!pickerPending) { setVisible(true); return }
+      waiting = () => setVisible(true)
+      window.addEventListener('chirp-dashboard-mode', waiting, { once: true })
+    }
     api.auth.whoami().then(u => {
       if (!u) return
       if (u.username) {
@@ -61,7 +70,7 @@ export default function WhatsNewModal() {
         setMode('user')
         if (needsPopup(u.last_seen_whats_new_version, localSeen())) {
           noteWhatsNew({ popup: POPUP, server: u.last_seen_whats_new_version, local: localSeen(), app: WHATS_NEW.version })
-          setVisible(true)
+          show(!chosenMode(u.dashboard_mode))
         }
       } else {
         // Anon / auth disabled — no real user row to persist to, fall back
@@ -69,10 +78,11 @@ export default function WhatsNewModal() {
         setMode('anon')
         if (needsPopup(localSeen())) {
           noteWhatsNew({ popup: POPUP, local: localSeen(), app: WHATS_NEW.version })
-          setVisible(true)
+          show(!localMode())
         }
       }
     }).catch(() => {})
+    return () => { if (waiting) window.removeEventListener('chirp-dashboard-mode', waiting) }
   }, [])
 
   const dismiss = async () => {

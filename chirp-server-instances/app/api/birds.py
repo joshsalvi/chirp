@@ -574,6 +574,9 @@ def get_ebird_st_range_map(profile_id: str, refresh: bool = False, db: Session =
     logger.info("eBird S&T range map saved for %s: %s", profile.common_name, png_path)
     return FileResponse(png_path, media_type="image/png",
                         headers={"Cache-Control": "public, max-age=3600" if refresh else "public, max-age=86400"})
+
+
+@router.get("/{profile_id}/range-map/birdlife")
 def get_birdlife_range_map(profile_id: str, refresh: bool = False,
                             db: Session = Depends(get_db)):
     """
@@ -2368,6 +2371,99 @@ def delete_bird_photo(photo_id: str, db: Session = Depends(get_db)):
     db.delete(photo)
     db.commit()
     return {"status": "deleted"}
+
+
+_svg_render_lock = __import__("threading").Lock()
+
+
+def svg_to_png(svg: bytes, width: int = 1200) -> Optional[bytes]:
+    """Draw an SVG as a PNG on white with the bundled Chromium (Playwright),
+    for apps that can't draw SVG. One render at a time; None on failure."""
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        return None
+    import base64
+    src = "data:image/svg+xml;base64," + base64.b64encode(svg).decode()
+    html = ("<html><body style='margin:0;background:#fff'>"
+            f"<img id='m' src='{src}' style='display:block;width:{width}px;height:auto'></body></html>")
+    with _svg_render_lock:
+        try:
+            with sync_playwright() as pw:
+                browser = pw.chromium.launch(headless=True, args=["--no-sandbox", "--disable-dev-shm-usage"])
+                try:
+                    page = browser.new_page(viewport={"width": width, "height": 800})
+                    page.set_content(html, wait_until="load", timeout=15_000)
+                    return page.locator("#m").screenshot(type="png", timeout=15_000)
+                finally:
+                    browser.close()
+        except Exception as e:
+            logger.warning("SVG range map render failed: %s", e)
+            return None
+
+
+@router.get("/{profile_id}/range-map/local")
+def get_range_map_local(profile_id: str, db: Session = Depends(get_db)):
+    """This profile's map from the local range library (services/range_library.py);
+    for the generic Bat profile, the bats around this site's location."""
+    from fastapi.responses import FileResponse
+    from ..config import settings as cfg
+    from ..models import AppSettings
+    from ..services import range_library as rl
+    profile = db.query(BirdProfile).filter(BirdProfile.id == profile_id).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Bird profile not found")
+    s = db.query(AppSettings).first()
+    path = rl.map_file(cfg.media_dir, profile, getattr(s, "latitude", None), getattr(s, "longitude", None))
+    if not rl.have_map(path):
+        raise HTTPException(status_code=404, detail="No local range map yet")
+    return FileResponse(path, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
+
+
+@router.get("/{profile_id}/range-map/png")
+def get_range_map_png(profile_id: str, db: Session = Depends(get_db)):
+    """The main range map as a picture (PNG or JPEG), for the Chirp Lite
+    iPhone app, which can't draw the Wikipedia SVGs. SVGs are drawn once
+    and kept beside the bird's other maps (range_map_wikipedia.png)."""
+    from fastapi.responses import FileResponse, Response as _Resp
+    from ..config import settings as cfg
+    profile = db.query(BirdProfile).filter(BirdProfile.id == profile_id).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Bird profile not found")
+    folder = os.path.join(cfg.media_dir, re.sub(r"[^a-zA-Z0-9_-]", "_", (profile.common_name or "").lower()))
+    png_path = os.path.join(folder, "range_map_wikipedia.png")
+    if os.path.exists(png_path) and os.path.getsize(png_path) > 1000:
+        return FileResponse(png_path, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
+    r = get_range_map(profile_id, db=db)
+    body, kind = getattr(r, "body", None), (getattr(r, "media_type", None) or "").lower()
+    if getattr(r, "status_code", 200) in (301, 302, 307, 308):
+        # The map lives elsewhere (usually Wikimedia): fetch it here.
+        import httpx
+        try:
+            got = httpx.get(r.headers["location"], timeout=20, follow_redirects=True,
+                            headers={"User-Agent": "ChirpServer/1 (https://ourchirp.com)"})
+            body, kind = (got.content, got.headers.get("content-type", "").lower()) if got.status_code == 200 else (None, "")
+        except Exception as e:
+            logger.info("Range map fetch for %s failed: %s", profile.common_name, e)
+            body = None
+    elif body is None and getattr(r, "path", None):          # a FileResponse
+        with open(r.path, "rb") as fh:
+            body = fh.read()
+    if not body:
+        raise HTTPException(status_code=404, detail="No range map available")
+    if "svg" not in kind and body.lstrip()[:5] in (b"<?xml", b"<svg "):
+        kind = "image/svg+xml"
+    if "svg" not in kind:
+        return _Resp(content=body, media_type=kind or "image/png", headers={"Cache-Control": "public, max-age=86400"})
+    png = svg_to_png(body)
+    if not png:
+        raise HTTPException(status_code=404, detail="Couldn't draw this range map")
+    os.makedirs(folder, exist_ok=True)
+    tmp = png_path + ".part"
+    with open(tmp, "wb") as fh:
+        fh.write(png)
+    os.replace(tmp, png_path)
+    return _Resp(content=png, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
 
 
 @router.get("/{profile_id}/range-map")

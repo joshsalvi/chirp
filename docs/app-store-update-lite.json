@@ -1,0 +1,27 @@
+{
+  "_comment": "Chirp Lite 1.1 update: BUNDLE_ID=com.joshuasalvimd.chirp.lite python3 scripts/asc.py listing docs/app-store-update-lite.json (no screenshot folder: 1.0's screenshots carry over).",
+  "app_info": {
+    "name": "Chirp Lite: Backyard Birds",
+    "subtitle": "See and hear your yard's birds",
+    "privacy_policy_url": "https://ourchirp.com/privacy.html",
+    "primary_category": "LIFESTYLE",
+    "secondary_category": "REFERENCE"
+  },
+  "version": {
+    "copyright": "2026 Joshua Salvi"
+  },
+  "localization": {
+    "locale": "en-US",
+    "description": "Chirp Lite shows the birds visiting your yard, in big photos and sound. It's the simple, friendly way to enjoy what your Chirp listening station hears, for everyone in the house.\n\nTODAY\nThe latest visitor, front and center: tap play to hear the call your station recorded. See how many birds came by, which are new to you, when your yard was busiest, and a short story of the day.\n\nBIRDS\nEvery bird your Chirp has heard, as a photo collection. Sort by most recent, most heard or newest, or search by name.\n\nLISTEN\nRecordings as cards. Tap one to hear the bird, with a spectrogram that follows along.\n\nGUIDE\nThe birds around you this month, marked common, uncommon or rare, with a check on the ones that have visited your yard. A great list of who to listen for next.\n\nBIRD PAGES\nPhotos, its song, its size next to a robin, when it's around, how often it visits, and a fun fact.\n\nChirp Lite needs an account on a Chirp site: a home station you run yourself, or a site hosted at ourchirp.com. Ask whoever runs your Chirp for an invite. It only reads; nothing you do in Chirp Lite changes your site.\n\nNo ads, no tracking, no purchases.",
+    "promotional_text": "Your backyard birds in big photos and one-tap sounds: today's visitors, your collection, recordings and who to look for this month.",
+    "keywords": "bird,birds,backyard,feeder,birding,birdsong,bird call,nature,wildlife,yard,garden,chirp,songbird",
+    "support_url": "https://ourchirp.com/support.html",
+    "marketing_url": "https://ourchirp.com/about",
+    "whats_new": "• The player now shows a song line: the recording's sound as a row of bars, gold where the bird was identified, with a mark over each of its calls. Tap a mark to hear that call, or anywhere on the line to jump there."
+  },
+  "review": {
+    "demo_account_name": "appreview",
+    "demo_account_required": true,
+    "notes": "Chirp Lite is a simple viewer for a Chirp site. Chirp is a home bird-monitoring system: a listening station records and identifies birds, and the site keeps them. ourchirp.com hosts sites. Chirp Lite shows a site's birds as photos and sounds, for family members and casual watchers who don't need the full Chirp app (statistics, stations, settings).\n\nTo review: sign in with site ourchirp.com (the default), user appreview and the password in the review information. This account belongs to a live site in Natick, Massachusetts, so the Today screen shows the birds heard there today.\n\n- Today: the latest bird (tap the yellow play button to hear its recording), counts, the day's activity chart and today's birds.\n- Birds: every bird heard there, with sorting and search.\n- Listen: recordings as cards; tap play.\n- Guide: birds expected near the site this month.\n- Tap any photo for that bird's page.\n- The round initial button at the top right opens Account (sign out, links).\n\nThe app only reads from the site; it can't change anything. Accounts are created and deleted on the Chirp site, not in the app. No purchases, ads, tracking or user-generated content. Bird photos come from iNaturalist (credited on each photo), and bird text from the site's bird library."
+  }
+}

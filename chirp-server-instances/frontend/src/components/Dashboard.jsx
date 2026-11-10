@@ -7,6 +7,9 @@ import { Mic, Activity, Clock, ArrowRight, Feather, Sparkles, MessageSquare, X, 
 import { BirdIcon, BatIcon } from './BirdBatIcons'
 import { api, mediaUrl } from '../lib/api'
 import { useTz } from '../lib/time'
+import StandardDashboard from './StandardDashboard'
+import DashboardModePicker from './DashboardModePicker'
+import { chosenMode, localMode, setLocalMode } from '../lib/dashboardMode'
 import ChirpLogo from './ChirpLogo'
 import { isCardOpen, setCardOpen } from '../lib/cardState'
 import { AuthorAvatar } from './Comments'
@@ -1079,66 +1082,7 @@ function recHeaderAgo(detail) {
   return `${mins}m ago`
 }
 
-export function DashboardModePicker({ onChoose, onClose }) {
-  const [saving, setSaving] = useState(null)  // which option is being saved, for a brief loading state
-  const pick = async (mode) => {
-    setSaving(mode)
-    await onChoose(mode)
-  }
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,.6)', backdropFilter: 'blur(4px)' }}
-         onClick={e => { if (e.target === e.currentTarget && onClose) onClose() }}>
-      <div className="w-full max-w-lg rounded-2xl p-6 sm:p-8 animate-stagger-1 relative" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-default)' }}>
-        {onClose && (
-          <button onClick={onClose} className="absolute top-4 right-4 p-1 rounded-lg transition-colors hover:opacity-70"
-                  style={{ color: 'var(--text-tertiary)' }} aria-label="Close">
-            <X size={16}/>
-          </button>
-        )}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-3" style={{ background: 'var(--nav-active-bg)' }}>
-            <Sparkles size={26} style={{ color: 'var(--accent-400)' }}/>
-          </div>
-          <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)', fontFamily: "'Lora', serif" }}>
-            How much do you want to see?
-          </h2>
-          <p className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>
-            Pick a starting point for your Dashboard — you can change this anytime.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
-          <button onClick={() => pick('simplified')} disabled={!!saving}
-                  className="text-left p-4 rounded-xl transition-all hover:-translate-y-0.5 disabled:opacity-60"
-                  style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)' }}>
-            <p className="font-semibold text-sm mb-1" style={{ color: 'var(--text-primary)' }}>✨ Simplified</p>
-            <p className="text-xs" style={{ color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              Just the essentials — what's singing right now, what you've seen today, and a quick summary. Clean and calm.
-            </p>
-            {saving === 'simplified' && <p className="text-xs mt-2" style={{ color: 'var(--accent-400)' }}>Saving…</p>}
-          </button>
-
-          <button onClick={() => pick('detailed')} disabled={!!saving}
-                  className="text-left p-4 rounded-xl transition-all hover:-translate-y-0.5 disabled:opacity-60"
-                  style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)' }}>
-            <p className="font-semibold text-sm mb-1" style={{ color: 'var(--text-primary)' }}>📊 Detailed</p>
-            <p className="text-xs" style={{ color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              Everything — streaks, yard diversity, activity charts, top species, recent recordings and notes.
-            </p>
-            {saving === 'detailed' && <p className="text-xs mt-2" style={{ color: 'var(--accent-400)' }}>Saving…</p>}
-          </button>
-        </div>
-
-        <p className="text-xs text-center" style={{ color: 'var(--text-tertiary)', lineHeight: 1.6 }}>
-          Change your mind later — there's a link at the bottom of the Dashboard, or go to{' '}
-          <strong style={{ color: 'var(--text-secondary)' }}>Settings → Appearance</strong>.
-        </p>
-      </div>
-    </div>
-  )
-}
-
-export default function Dashboard({ currentUser, requiresAuth, onDashboardModeChange } = {}) {
+function AdvancedDashboard({ onOpenPicker, onStandard }) {
   const [stats, setStats] = useState(null)
   const [period, setPeriod] = useState('24h')
   const [activityOpen, toggleActivityOpen] = useSectionCollapse('dashboard:activity-chart', true)
@@ -1148,7 +1092,6 @@ export default function Dashboard({ currentUser, requiresAuth, onDashboardModeCh
   const [recentComments, setRecentComments] = useState([])
   const [summary, setSummary] = useState(null)
   const [summaryPeriod, setSummaryPeriod] = useState('daily')   // 'daily' | 'weekly'
-  const [dashboardMode, setDashboardMode] = useState(undefined)  // undefined = not yet loaded, null = never chosen
   const { fmtTs, fmtAgo: fmtRelative, fmtDate, timezone } = useTz()
   const latestId = stats?.latest_recording_id
 
@@ -1166,16 +1109,14 @@ export default function Dashboard({ currentUser, requiresAuth, onDashboardModeCh
     api.settings.dashboardSections().then(setDashboardSectionsConfig).catch(() => setDashboardSectionsConfig(null))
   }, [])
 
-  // Which section ids are on for the CURRENT mode — before
-  // dashboardMode itself resolves, or before the config loads, assume
+  // Which section ids are on — before the config loads, assume
   // everything's enabled (matches this feature's own "null means
   // everything" default) rather than showing nothing while waiting.
   const enabledSections = useMemo(() => {
     if (!dashboardSectionsConfig) return null // null = "not known yet, treat everything as enabled"
-    const key = dashboardMode === 'simplified' ? 'simplified' : 'full'
-    const list = dashboardSectionsConfig[key]
+    const list = dashboardSectionsConfig.full
     return list ? new Set(list) : null
-  }, [dashboardSectionsConfig, dashboardMode])
+  }, [dashboardSectionsConfig])
   const sectionOn = (id) => !enabledSections || enabledSections.has(id)
   // load() below is registered once (in a WebSocket listener and a
   // setInterval callback) and needs to see the LATEST enabledSections on
@@ -1186,26 +1127,6 @@ export default function Dashboard({ currentUser, requiresAuth, onDashboardModeCh
   // settings change just to keep a stale closure fresh.
   const enabledSectionsRef = useRef(enabledSections)
   useEffect(() => { enabledSectionsRef.current = enabledSections }, [enabledSections])
-
-  // App.jsx already fetches this exact same /auth/me data once, at the
-  // top level, before any route even mounts (see its own authChecked
-  // gate) — Dashboard used to redundantly re-fetch it itself on every
-  // single load just to read one field (dashboard_mode), adding a full
-  // network round trip Dashboard's own render was needlessly waiting on.
-  // Derived from props now instead; behaviorally identical to the old
-  // fetch-based check in every case (auth disabled, disabled-
-  // but-still-authenticated, and normal authenticated) — see the prop's
-  // own construction in App.jsx's checkAuth() for how each maps.
-  useEffect(() => {
-    if (!requiresAuth || !currentUser) { setDashboardMode('detailed'); return }
-    setDashboardMode(currentUser.dashboard_mode ?? null)
-  }, [currentUser, requiresAuth])
-
-  const chooseDashboardMode = async (mode) => {
-    setDashboardMode(mode)
-    onDashboardModeChange?.(mode)
-    try { await api.auth.updateProfile({ dashboard_mode: mode }) } catch (e) { /* non-fatal — local state already updated */ }
-  }
 
   useEffect(() => {
     function load() {
@@ -1351,7 +1272,7 @@ export default function Dashboard({ currentUser, requiresAuth, onDashboardModeCh
   return (
     <div className="page-root">
       {/* Hero */}
-      <div className="page-hero"
+      <div className="page-hero flex items-start justify-between gap-4 flex-wrap"
            style={{ background: 'var(--gradient-hero)' }}>
         <div className="flex items-center gap-4 animate-slide-down">
           <ChirpLogo size={48} animate={true}/>
@@ -1383,6 +1304,9 @@ export default function Dashboard({ currentUser, requiresAuth, onDashboardModeCh
             </p>
           </div>
         </div>
+        <button type="button" onClick={onOpenPicker} aria-haspopup="dialog" className="sd-pill animate-slide-down">
+          <span className="sd-pill-label">View:</span> Advanced <ChevronDown size={14} style={{ color: 'var(--text-secondary)' }}/>
+        </button>
       </div>
 
       {isLive && sectionOn('latest_recording') && <LiveDetectionCard recordingId={latestId}/>}
@@ -1395,7 +1319,6 @@ export default function Dashboard({ currentUser, requiresAuth, onDashboardModeCh
       {sectionOn('daily_weekly_summary') &&
         <DailyWeeklySummary summary={summary} summaryPeriod={summaryPeriod} setSummaryPeriod={setSummaryPeriod} timezone={timezone}/>}
 
-      {dashboardMode !== 'simplified' && (
       <>
       {sectionOn('yard_pulse') && <YardPulse/>}
 
@@ -1669,7 +1592,6 @@ export default function Dashboard({ currentUser, requiresAuth, onDashboardModeCh
         </div>
       )}
       </>
-      )}
 
       {/* Tutorial link */}
       <div className="text-center py-6">
@@ -1681,21 +1603,51 @@ export default function Dashboard({ currentUser, requiresAuth, onDashboardModeCh
           </svg>
           New to Chirp? Read the Getting Started guide →
         </Link>
-        {dashboardMode && (
-          <p className="text-xs mt-3" style={{ color: 'var(--text-tertiary)' }}>
-            Showing the <strong>{dashboardMode === 'simplified' ? 'Simplified' : 'Detailed'}</strong> dashboard —{' '}
-            <button onClick={() => chooseDashboardMode(dashboardMode === 'simplified' ? 'detailed' : 'simplified')}
-                    className="underline hover:opacity-80" style={{ color: 'var(--accent-500)' }}>
-              switch to {dashboardMode === 'simplified' ? 'Detailed' : 'Simplified'}
-            </button>
-            {' '}(also in Settings → Appearance)
-          </p>
-        )}
+        <p className="text-xs mt-3" style={{ color: 'var(--text-tertiary)' }}>
+          Showing the <strong>Advanced</strong> dashboard —{' '}
+          <button onClick={onStandard} className="underline hover:opacity-80" style={{ color: 'var(--accent-500)' }}>
+            switch to Standard
+          </button>
+          {' '}(also in Settings → Appearance)
+        </p>
       </div>
 
-      {dashboardMode === null && (
-        <DashboardModePicker onChoose={chooseDashboardMode}/>
-      )}
     </div>
   )
 }
+
+// Standard or Advanced. Signed-in people keep their choice on their account
+// (dashboard_mode); sites without sign-in keep it in this browser. Anyone
+// without a choice (new, or on the old Simplified/Detailed names) sees the
+// picker once, over the Standard view.
+export default function Dashboard({ currentUser, onDashboardModeChange } = {}) {
+  // Hosted sites report auth_required false (sign-in is per site), so a
+  // username, not requiresAuth, says there's an account to keep it on.
+  const signedIn = !!currentUser?.username
+  const stored = signedIn ? chosenMode(currentUser.dashboard_mode) : localMode()
+  const [mode, setMode] = useState(stored)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  useEffect(() => { setMode(signedIn ? chosenMode(currentUser?.dashboard_mode) : localMode()) }, [currentUser])
+
+  const choose = async (m) => {
+    setMode(m)
+    setPickerOpen(false)
+    window.dispatchEvent(new CustomEvent('chirp-dashboard-mode', { detail: { mode: m } }))
+    if (!signedIn) { setLocalMode(m); return }
+    onDashboardModeChange?.(m)
+    try { await api.auth.updateProfile({ dashboard_mode: m }) } catch { /* the view already switched */ }
+  }
+  const open = () => setPickerOpen(true)
+  return (
+    <>
+      {(mode || 'standard') === 'standard'
+        ? <StandardDashboard onOpenPicker={open} onAdvanced={() => choose('advanced')}/>
+        : <AdvancedDashboard onOpenPicker={open} onStandard={() => choose('standard')}/>}
+      {(mode === null || pickerOpen) && (
+        <DashboardModePicker current={mode} onChoose={choose}
+                             onClose={mode ? () => setPickerOpen(false) : undefined}/>
+      )}
+    </>
+  )
+}
+

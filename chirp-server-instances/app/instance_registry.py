@@ -56,6 +56,14 @@ _engine_cache: dict = {}
 _engine_cache_lock = threading.Lock()
 
 
+def new_db_filename(user_id: str) -> str:
+    """Owner prefix, time and a random tail, so two locations made in the
+    same second never share a file."""
+    import secrets
+    from datetime import datetime
+    return f"{user_id[:8]}_{int(datetime.utcnow().timestamp())}_{secrets.token_hex(3)}.db"
+
+
 def _instance_db_path(db_filename: str) -> str:
     return os.path.join(INSTANCES_DIR, db_filename)
 

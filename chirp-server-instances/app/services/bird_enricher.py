@@ -226,6 +226,13 @@ def _upsize_inat_photo_url(url: Optional[str]) -> Optional[str]:
     return url.replace("/large.", "/original.", 1)
 
 
+# The shared species library exists only on the multi-location server.
+try:
+    from . import species_library as _species_library
+except ImportError:
+    _species_library = None
+
+
 class BirdEnricher:
     ENRICH_INTERVAL_DAYS = 30
 
@@ -261,6 +268,8 @@ class BirdEnricher:
             profile = self._create_profile(label, is_bat=is_bat)
             if not profile:
                 return None
+            if not is_bat and self._fill_from_library(profile):
+                return profile
         elif is_bat and not profile.is_bat:
             # Self-heal: a profile created before is_bat existed, or
             # created through a path that didn't know this was a bat
@@ -499,6 +508,38 @@ class BirdEnricher:
         self.db.commit()
         self.db.refresh(profile)
         return profile
+
+    def _fill_from_library(self, profile: BirdProfile) -> bool:
+        """Multi-location server: fills a location's new profile from the
+        shared species library (services/species_library.py) instead of the
+        web; only the regional seasonal chart is fetched here. False when
+        there's no library or no fresh entry, so normal enrichment runs."""
+        if _species_library is None:
+            return False
+        entry = _species_library.get(profile.label)
+        if not entry:
+            return False
+        _species_library.apply(profile, entry)
+        try:
+            self._fetch_and_set_monthly_frequency(profile, _get_ebird_api_key(self.db))
+        except Exception as e:
+            logger.warning("Seasonal chart for %s (from library) failed: %s", profile.common_name, e)
+        profile.enrichment_complete = True
+        profile.last_enriched = entry.enriched_at       # ages with the shared copy
+        self.db.add(profile)
+        self.db.commit()
+        logger.info("Profile from species library: %s", profile.common_name)
+        return True
+
+    def _share_with_library(self, profile: BirdProfile) -> None:
+        if _species_library is None:
+            return
+        try:
+            from ..instance_registry import _current_instance_db_filename
+            source = _current_instance_db_filename.get(None)     # which location's database
+        except Exception:
+            source = None
+        _species_library.put(profile, source)
 
     def enrich_profile(self, profile: BirdProfile, force: bool = False, maps_only: bool = False) -> None:
         key = profile.id
@@ -769,6 +810,7 @@ class BirdEnricher:
             self.db.add(profile)
             self.db.commit()
             logger.info("Range map refresh complete: %s", common_name)
+            self._share_with_library(profile)
             return
 
         # ── Step 4: iNaturalist sounds ────────────────────────────────────────
@@ -792,6 +834,7 @@ class BirdEnricher:
         self.db.add(profile)
         self.db.commit()
         logger.info("Enrichment complete: %s", common_name)
+        self._share_with_library(profile)
 
 
     # ── Range map resolution ──────────────────────────────────────────────────

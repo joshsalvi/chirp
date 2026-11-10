@@ -24,10 +24,11 @@
 #                                  picker (ios-launcher/) instead of opening
 #                                  ourchirp.com; named "Chirp β", uploaded but
 #                                  never handed to external testers
-#   RELEASE=1 WATCH=1 PICKER=1 ./build-ios.sh --testflight
+#   RELEASE=1 PICKER=1 ./build-ios.sh --testflight
 #                                  the App Store build with the picker and the
-#                                  Watch app: named "Chirp" and recorded like a
-#                                  normal build (submit it with asc.py)
+#                                  Watch app (RELEASE=1 implies WATCH=1; WATCH=0
+#                                  leaves it out): named "Chirp" and recorded
+#                                  like a normal build (submit it with asc.py)
 #   WATCH=1 PICKER=1 ./build-ios.sh --testflight   also build the Apple Watch
 #                                  app (ios-watch/: Live Detect, recent recordings). Needs
 #                                  the xcodeproj gem and a paid team
@@ -95,6 +96,9 @@ fi
 # Same app and bundle ID, but Capacitor starts on the bundled picker page and
 # may open any server. capacitor.config.json is put back when the script ends.
 PICKER="${PICKER:-0}"
+# The App Store app ships with the Apple Watch app (since 0.5.16.b); a
+# release build without it would delete the Watch app from people's watches.
+if [[ "${RELEASE:-0}" == "1" && -z "${WATCH:-}" ]]; then WATCH=1; fi
 if [[ "$PICKER" == "1" ]]; then
   cp capacitor.config.json capacitor.config.json.release
   trap 'mv -f capacitor.config.json.release capacitor.config.json' EXIT

@@ -24,6 +24,17 @@ final class LiveSession: ObservableObject {
     @Published private(set) var latest: Heard?
     @Published var error: String?
     @Published private(set) var image: CGImage?
+    /// Across the spectrogram (0 = left edge, 1 = right edge): what's playing
+    /// right now. Audio to its right has arrived but isn't heard yet.
+    @Published private(set) var playheadX: Double?
+    /// The marker ◀ ▶ move; Select listens from it.
+    @Published private(set) var cursorX: Double?
+    /// Seconds the marker sits before what's playing now.
+    @Published private(set) var cursorBack: Double = 0
+    /// The marker is on the newest clip: Select goes back to live.
+    @Published private(set) var cursorAtLive = false
+    /// Seconds behind live after listening back from the marker; 0 when live.
+    @Published private(set) var behind: Double = 0
 
     private let engine = AVAudioEngine()
     private let node = AVAudioPlayerNode()
@@ -31,6 +42,18 @@ final class LiveSession: ObservableObject {
     private var tasks: [Task<Void, Never>] = []
     private let spectro = Spectrogram()
     private var frameTimer: Timer?
+
+    // Timeline. "Stream" samples count the station's audio as it arrives;
+    // "player" samples are the player node's own clock. Each scheduled piece
+    // records both, so the playhead is known exactly, gaps included.
+    private var rate: Double = 48_000
+    private var streamEnd: Int64 = 0
+    private var clips: [(start: Int64, buffer: AVAudioPCMBuffer)] = []
+    private var segments: [(player: Int64, stream: Int64, length: Int64)] = []
+    private var nextPlayer: Int64 = 0
+    private var cursor: Int64?
+    private var shifted = false
+    private static let keepSeconds = 45.0
 
     init() { engine.attach(node) }
 
@@ -53,17 +76,13 @@ final class LiveSession: ObservableObject {
         error = nil
         listening = true
         status = "Listening through \(station.name)…"
-        spectro.reset()
+        resetTimeline()
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {}
         frameTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 15, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                guard let self else { return }
-                self.spectro.advance(by: 1.0 / 15)
-                self.image = self.spectro.render()
-            }
+            Task { @MainActor in self?.frame() }
         }
         tasks = [Task { await audioLoop(station) }, Task { await analyzeLoop(station) }]
     }
@@ -76,7 +95,94 @@ final class LiveSession: ObservableObject {
         node.stop()
         engine.stop()
         listening = false
+        cursor = nil; cursorX = nil; playheadX = nil; behind = 0; shifted = false
         status = heard.isEmpty ? "Pick a station, then Listen." : "Stopped. \(heard.count) species heard."
+    }
+
+    private func resetTimeline() {
+        node.stop()
+        spectro.reset()
+        streamEnd = 0; clips = []; segments = []; nextPlayer = 0
+        cursor = nil; cursorX = nil; playheadX = nil; behind = 0; shifted = false
+    }
+
+    // MARK: Scrubbing
+
+    /// Moves the marker by `seconds` (negative = back), from the playhead the
+    /// first time. It stays within the audio kept (about 45 s).
+    func moveCursor(by seconds: Double) {
+        guard listening, !clips.isEmpty else { return }
+        let base = cursor ?? playheadStream() ?? streamEnd
+        cursor = min(streamEnd, max(clips[0].start, base + Int64(seconds * rate)))
+        frame()
+    }
+
+    func clearCursor() { cursor = nil; frame() }
+
+    /// Select: listen from the marker. At the newest clip, back to live.
+    func listenAtCursor() {
+        guard listening, let c = cursor, let newest = clips.last else { return }
+        cursor = nil
+        if c >= newest.start {
+            replay(from: newest.start)
+            shifted = false
+        } else {
+            replay(from: c)
+            shifted = true
+        }
+        frame()
+    }
+
+    /// Drops what's queued and plays the kept audio from `pos` onward; new
+    /// clips keep queueing after it.
+    private func replay(from pos: Int64) {
+        node.stop()                     // clears the queue; the player clock restarts at 0
+        segments = []
+        nextPlayer = 0
+        if !engine.isRunning { try? engine.start() }
+        node.play()
+        for c in clips where c.start + Int64(c.buffer.frameLength) > pos {
+            let off = max(0, pos - c.start)
+            guard let piece = off == 0 ? c.buffer : c.buffer.tail(from: off) else { continue }
+            schedule(piece, stream: c.start + off)
+        }
+    }
+
+    // MARK: Drawing
+
+    private func frame() {
+        guard listening else { return }
+        let hop = Int64(Spectrogram.hop), span = Int64(Spectrogram.width) * hop
+        let playhead = playheadStream()
+        // The playhead sits three quarters across; arrived-but-unheard audio
+        // fills the rest. Scrubbing far back slides the view to keep the marker on screen.
+        var right = (playhead ?? streamEnd) + span / 4
+        if let c = cursor {
+            if c < right - span * 9 / 10 { right = c + span * 9 / 10 }
+            if c > right - hop * 8 { right = c + hop * 8 }
+        }
+        image = spectro.render(rightColumn: Int(right / hop))
+        func x(_ s: Int64) -> Double { min(1, max(0, 1 - Double(right - s) / Double(span))) }
+        playheadX = playhead.map(x)
+        cursorX = cursor.map(x)
+        cursorBack = cursor.map { Double((playhead ?? streamEnd) - $0) / rate } ?? 0
+        cursorAtLive = cursor.map { $0 >= (clips.last?.start ?? 0) } ?? false
+        behind = shifted ? (playhead.map { Double(streamEnd - $0) / rate } ?? 0) : 0
+    }
+
+    private func playerSample() -> Int64? {
+        guard node.isPlaying, let t = node.lastRenderTime, let p = node.playerTime(forNodeTime: t) else { return nil }
+        return p.sampleTime
+    }
+
+    /// Stream position being heard now (held at the end of the last piece if the queue ran dry).
+    private func playheadStream() -> Int64? {
+        guard let p = playerSample() else { return nil }
+        var at: Int64?
+        for s in segments where p >= s.player {
+            at = p < s.player + s.length ? s.stream + (p - s.player) : s.stream + s.length
+        }
+        return at
     }
 
     // MARK: Audio
@@ -129,13 +235,31 @@ final class LiveSession: ObservableObject {
             engine.disconnectNodeOutput(node)
             engine.connect(node, to: engine.mainMixerNode, format: buffer.format)
             connectedFormat = buffer.format
+            resetTimeline()
+            rate = buffer.format.sampleRate
         }
         if !engine.isRunning { try? engine.start() }
-        spectro.add(buffer)
-        node.scheduleBuffer(buffer, completionHandler: nil)
         if !node.isPlaying { node.play() }
+        let start = streamEnd
+        clips.append((start, buffer))
+        streamEnd += Int64(buffer.frameLength)
+        let keep = Int64(Self.keepSeconds * rate)
+        while let first = clips.first, first.start + Int64(first.buffer.frameLength) < streamEnd - keep { clips.removeFirst() }
+        spectro.add(buffer, at: start, keepSamples: keep)
+        schedule(buffer, stream: start)
         let seconds = Double(buffer.frameLength) / buffer.format.sampleRate
         try? await Task.sleep(for: .seconds(max(0.3, seconds - lead - 0.2)))
+    }
+
+    /// Plays `buffer` right after what's queued (or a moment from now if the
+    /// queue ran dry), and records where it lands on both clocks.
+    private func schedule(_ buffer: AVAudioPCMBuffer, stream: Int64) {
+        let now = playerSample() ?? 0
+        let start = max(nextPlayer, now + Int64(0.05 * rate))
+        node.scheduleBuffer(buffer, at: AVAudioTime(sampleTime: start, atRate: rate), options: [], completionHandler: nil)
+        segments.append((start, stream, Int64(buffer.frameLength)))
+        if segments.count > 64 { segments.removeFirst(segments.count - 64) }
+        nextPlayer = start + Int64(buffer.frameLength)
     }
 
     // MARK: Identification
@@ -174,26 +298,23 @@ final class LiveSession: ObservableObject {
     }
 }
 
-/// Scrolling spectrogram: FFT columns from each clip, revealed at playback speed.
+/// Scrolling spectrogram: FFT columns keyed by where they sit in the
+/// station's audio, so the view can be drawn around the playhead.
 final class Spectrogram {
     static let n = 1024, hop = 512, rows = 128, width = 860   // about 10 s on screen
     private let fft = vDSP.FFT(log2n: 10, radix: .radix2, ofType: DSPSplitComplex.self)!
     private let window = vDSP.window(ofType: Float.self, usingSequence: .hanningDenormalized, count: Spectrogram.n, isHalfWindow: false)
-    private var shown: [[Float]] = []
-    private var pending: [[Float]] = []
-    private var colsPerSecond: Double = 86
-    private var carry: Double = 0
+    private var cols: [Int: [Float]] = [:]   // column index (stream sample / hop) → values
     /// Per-row noise floor in dB: drops quickly to quiet frames, rises slowly,
     /// so steady background noise stays dark and calls stand out.
     private var floor = [Float](repeating: .nan, count: Spectrogram.rows)
     static let span: Float = 30   // dB above the floor that maps to full colour
 
-    func reset() { shown = []; pending = []; carry = 0; floor = [Float](repeating: .nan, count: Self.rows) }
+    func reset() { cols = [:]; floor = [Float](repeating: .nan, count: Self.rows) }
 
-    func add(_ buffer: AVAudioPCMBuffer) {
+    func add(_ buffer: AVAudioPCMBuffer, at streamStart: Int64, keepSamples: Int64) {
         guard let ch = buffer.floatChannelData?[0] else { return }
         let count = Int(buffer.frameLength), sr = buffer.format.sampleRate
-        colsPerSecond = sr / Double(Self.hop)
         let maxBin = min(Self.n / 2, Int(12_000 / (sr / Double(Self.n))))   // up to 12 kHz
         var start = 0
         var real = [Float](repeating: 0, count: Self.n / 2), imag = real, mags = real
@@ -225,31 +346,23 @@ final class Spectrogram {
                 let v = min(1, max(0, (db - f - 6) / Self.span))
                 col[r] = powf(v, 0.8)
             }
-            pending.append(col)
+            // Centre of the FFT window, so a call lines up with the playhead.
+            cols[Int((streamStart + Int64(start + Self.n / 2)) / Int64(Self.hop))] = col
             start += Self.hop
         }
+        let oldest = Int((streamStart + Int64(count) - keepSamples) / Int64(Self.hop))
+        if cols.count > Int(keepSamples) / Self.hop + Self.width { cols = cols.filter { $0.key >= oldest } }
     }
 
-    func advance(by seconds: Double) {
-        carry += seconds * colsPerSecond
-        let take = min(Int(carry), pending.count)
-        guard take > 0 else { return }
-        carry -= Double(take)
-        shown.append(contentsOf: pending.prefix(take))
-        pending.removeFirst(take)
-        if shown.count > Self.width { shown.removeFirst(shown.count - Self.width) }
-        if pending.count > Int(colsPerSecond * 8) { pending.removeFirst(pending.count - Int(colsPerSecond * 8)) }
-    }
-
-    func render() -> CGImage? {
+    /// The `width` columns ending at `rightColumn`.
+    func render(rightColumn: Int) -> CGImage? {
         let w = Self.width, h = Self.rows
-        // Columns not filled yet show the quietest colour, so the panel is full from the start.
+        // Columns with no audio show the quietest colour, so the panel is always full.
         let (br, bg, bb) = Self.color(0)
         var px = [UInt8](repeating: 255, count: w * h * 4)
         for i in stride(from: 0, to: px.count, by: 4) { px[i] = br; px[i + 1] = bg; px[i + 2] = bb }
-        let offset = w - shown.count
-        for (ci, col) in shown.enumerated() {
-            let x = offset + ci
+        for x in 0..<w {
+            guard let col = cols[rightColumn - (w - 1 - x)] else { continue }
             for r in 0..<h {
                 let (cr, cg, cb) = Self.color(col[r])
                 let i = ((h - 1 - r) * w + x) * 4
@@ -273,9 +386,14 @@ final class Spectrogram {
     }
 }
 
+/// Remote: while listening, Down from Listen lands on the spectrogram; ◀ ▶
+/// move a marker back through the last 45 s (1 s a step) and Select listens
+/// from it; the marker at the right end and Select goes back to live.
 struct LiveView: View {
     @EnvironmentObject var live: LiveSession
     @EnvironmentObject var player: Player
+    @FocusState private var focus: Focus?
+    private enum Focus: Hashable { case listen, panel, heard(String) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 30) {
@@ -298,27 +416,9 @@ struct LiveView: View {
                         .font(.title3).padding(.horizontal, 20)
                 }
                 .disabled(live.station == nil)
+                .focused($focus, equals: .listen)
             }
-            ZStack(alignment: .bottomLeading) {
-                Group {
-                    if let img = live.image {
-                        Image(decorative: img, scale: 1).resizable().interpolation(.medium)
-                    } else {
-                        LinearGradient(colors: [Color(red: 0.1, green: 0.05, blue: 0.2), Color(red: 0.25, green: 0.07, blue: 0.3)], startPoint: .top, endPoint: .bottom)
-                    }
-                }
-                .frame(height: 430)
-                .clipShape(RoundedRectangle(cornerRadius: 26))
-                HStack(spacing: 22) {
-                    if let l = live.latest {
-                        BirdPhoto(path: l.photo, size: 110).clipShape(Circle())
-                    }
-                    Text(live.status).font(.title2.weight(.semibold))
-                }
-                .padding(.horizontal, 26).padding(.vertical, 16)
-                .background(.black.opacity(0.55), in: Capsule())
-                .padding(24)
-            }
+            panel
             if let e = live.error { Text(e).foregroundStyle(Theme.rose) }
             if !live.heard.isEmpty {
                 Text("Heard this session").font(.headline).foregroundStyle(Theme.muted)
@@ -333,6 +433,7 @@ struct LiveView: View {
                                 }
                             }
                             .padding(18).background(Theme.card, in: RoundedRectangle(cornerRadius: 20)).focusable()
+                            .focused($focus, equals: .heard(h.name))
                         }
                     }
                     .padding(.vertical, 20)
@@ -348,5 +449,116 @@ struct LiveView: View {
             #endif
         }
         .onDisappear { live.stop() }
+        .onPlayPauseCommand { player.stop(); live.toggle() }
+        .onChange(of: focus) { _, f in if f != .panel { live.clearCursor() } }
+    }
+
+    // MARK: Spectrogram
+
+    private var panel: some View {
+        let focused = focus == .panel
+        return ZStack(alignment: .bottomLeading) {
+            Group {
+                if let img = live.image {
+                    Image(decorative: img, scale: 1).resizable().interpolation(.medium)
+                } else {
+                    LinearGradient(colors: [Color(red: 0.1, green: 0.05, blue: 0.2), Color(red: 0.25, green: 0.07, blue: 0.3)], startPoint: .top, endPoint: .bottom)
+                }
+            }
+            .overlay {
+                GeometryReader { geo in
+                    // Audio right of the playhead has arrived but isn't heard yet: dimmed.
+                    if let x = live.playheadX {
+                        Rectangle().fill(.black.opacity(0.28))
+                            .frame(width: geo.size.width * (1 - x))
+                            .offset(x: geo.size.width * x)
+                        marker(x: geo.size.width * x, height: geo.size.height, color: Theme.amber)
+                            .animation(.linear(duration: 1.0 / 15), value: x)
+                    }
+                    if let c = live.cursorX {
+                        marker(x: geo.size.width * c, height: geo.size.height, color: Theme.ink)
+                    }
+                }
+            }
+            .frame(height: 430)
+            .clipShape(RoundedRectangle(cornerRadius: 26))
+            HStack(spacing: 22) {
+                if let l = live.latest {
+                    BirdPhoto(path: l.photo, size: 110).clipShape(Circle())
+                }
+                Text(live.status).font(.title2.weight(.semibold))
+            }
+            .padding(.horizontal, 26).padding(.vertical, 16)
+            .background(.black.opacity(0.55), in: Capsule())
+            .padding(24)
+        }
+        .frame(height: 430)
+        .overlay(alignment: .topTrailing) {
+            if let hint {
+                Text(hint)
+                    .font(.callout.monospacedDigit())
+                    .foregroundStyle(focused || live.behind > 0 ? Theme.amber : Theme.muted)
+                    .padding(.horizontal, 18).padding(.vertical, 8)
+                    .background(.black.opacity(0.6), in: Capsule())
+                    .padding(24)
+            }
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 26)
+                .stroke(focused ? Theme.amber : .clear, lineWidth: 4)
+        )
+        .scaleEffect(focused ? 1.01 : 1)
+        .animation(.easeOut(duration: 0.18), value: focused)
+        .focusable(live.listening)
+        .focused($focus, equals: .panel)
+        .onMoveCommand { dir in
+            switch dir {
+            case .left: live.moveCursor(by: -1)
+            case .right: live.moveCursor(by: 1)
+            case .up: focus = .listen
+            case .down: focus = live.heard.first.map { .heard($0.name) }
+            @unknown default: break
+            }
+        }
+        .onTapGesture { live.listenAtCursor() }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Live spectrogram")
+        .accessibilityValue(live.cursorX == nil ? (live.behind > 0 ? "\(Int(live.behind)) seconds behind live" : "Live")
+                                                : (live.cursorAtLive ? "Back to live" : "\(Int(live.cursorBack.rounded())) seconds back"))
+        .accessibilityHint("Left and right pick a moment; select listens from it")
+    }
+
+    private var hint: String? {
+        if live.cursorX != nil {
+            if live.cursorAtLive { return "Select: back to live" }
+            let n = Int(live.cursorBack.rounded())
+            return n >= 0 ? "Select: listen from \(n) s back" : "Select: skip ahead \(-n) s"
+        }
+        if live.behind > 0 { return "\(Int(live.behind.rounded())) s behind live · ▶ to the end, then Select" }
+        if focus == .panel { return "◀ ▶ go back · Select listens from there" }
+        return nil
+    }
+
+    private func marker(x: CGFloat, height: CGFloat, color: Color) -> some View {
+        ZStack(alignment: .top) {
+            Rectangle().fill(color).frame(width: 3, height: height)
+                .shadow(color: color.opacity(0.9), radius: 6)
+            Circle().fill(color).frame(width: 16, height: 16).offset(y: -2)
+        }
+        .offset(x: x - 1.5)
+    }
+}
+
+extension AVAudioPCMBuffer {
+    /// A copy from `frame` to the end (float, non-interleaved, as AVAudioFile reads it).
+    func tail(from frame: Int64) -> AVAudioPCMBuffer? {
+        let n = AVAudioFrameCount(max(0, Int64(frameLength) - frame))
+        guard n > 0, let src = floatChannelData,
+              let out = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: n), let dst = out.floatChannelData else { return nil }
+        out.frameLength = n
+        for c in 0..<Int(format.channelCount) {
+            dst[c].update(from: src[c] + Int(frame), count: Int(n))
+        }
+        return out
     }
 }

@@ -1,0 +1,55 @@
+# Tailscale's public relays, so headscale can start when
+# controlplane.tailscale.com/derpmap/default can't be fetched (it shuts down
+# with "initial DERPMap is empty" otherwise). The live map from `urls` is
+# merged on top when it loads.
+regions:
+  901:
+    regionid: 901
+    regioncode: nyc
+    regionname: New York City
+    nodes:
+      - name: 901a
+        regionid: 901
+        hostname: derp1.tailscale.com
+        stunport: 3478
+        derpport: 443
+  902:
+    regionid: 902
+    regioncode: sfo
+    regionname: San Francisco
+    nodes:
+      - name: 902a
+        regionid: 902
+        hostname: derp2.tailscale.com
+        stunport: 3478
+        derpport: 443
+  909:
+    regionid: 909
+    regioncode: dfw
+    regionname: Dallas
+    nodes:
+      - name: 909a
+        regionid: 909
+        hostname: derp9.tailscale.com
+        stunport: 3478
+        derpport: 443
+  910:
+    regionid: 910
+    regioncode: sea
+    regionname: Seattle
+    nodes:
+      - name: 910a
+        regionid: 910
+        hostname: derp10.tailscale.com
+        stunport: 3478
+        derpport: 443
+  912:
+    regionid: 912
+    regioncode: ord
+    regionname: Chicago
+    nodes:
+      - name: 912a
+        regionid: 912
+        hostname: derp12.tailscale.com
+        stunport: 3478
+        derpport: 443

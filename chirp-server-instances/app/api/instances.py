@@ -10,13 +10,13 @@ directly, same reasoning as auth.py's own login endpoint.
 """
 import logging
 from datetime import datetime
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel
 from typing import Optional, List
 
 from ..registry_db import RegistrySessionLocal
 from ..registry_models import Instance, GlobalUser, Membership
-from ..instance_registry import provision_instance_database, provision_instance_database_from_import
+from ..instance_registry import new_db_filename, provision_instance_database, provision_instance_database_from_import
 from .auth import create_access_token, _get_crypt, oauth2_scheme, verify_token
 
 logger = logging.getLogger("chirp.instances")
@@ -147,60 +147,171 @@ def list_my_instances(user: GlobalUser = Depends(get_current_global_user)):
         reg_db.close()
 
 
-@router.post("/create", response_model=TokenOut)
-def create_instance(body: CreateInstanceRequest, user: GlobalUser = Depends(get_current_global_user)):
+def provision_location(reg_db, user: GlobalUser, name: str, location_name: Optional[str] = None,
+                       admin_username: Optional[str] = None) -> Instance:
+    """A new, empty location owned by `user`: its own database, an admin
+    Membership and the synced local admin User row that the instance's
+    own code reads (current user, ownership, notification prefs). Used
+    by self-service create and by approving a location request
+    (website/site_requests.py). Commits."""
+    from sqlalchemy.orm import sessionmaker
+    from ..instance_registry import get_engine_for_instance
+    from ..models import AppSettings, User
+
+    db_filename = new_db_filename(user.id)
+    instance = Instance(name=name, location_name=location_name,
+                        db_filename=db_filename, created_by_user_id=user.id)
+    reg_db.add(instance)
+    reg_db.commit()
+    reg_db.refresh(instance)
+
+    provision_instance_database(db_filename)
+
+    reg_db.add(Membership(user_id=user.id, instance_id=instance.id, role="admin"))
+    reg_db.commit()
+
+    inst_db = sessionmaker(bind=get_engine_for_instance(db_filename))()
+    try:
+        inst_db.add(User(username=admin_username or user.username, email=user.email,
+                         hashed_pw=user.hashed_pw,   # same password as the account
+                         role="admin"))
+        if location_name:
+            s = inst_db.query(AppSettings).filter(AppSettings.id == 1).first()
+            if s and not s.location_name:
+                s.location_name = location_name
+        inst_db.commit()
+    finally:
+        inst_db.close()
+    logger.info("Created instance %s (%s) for user %s", instance.id, instance.name, user.username)
+    return instance
+
+
+def location_approval_required(user: Optional[GlobalUser] = None) -> bool:
+    """On ourchirp.com new locations wait for a global admin (Requests tab)
+    unless that's switched off; joining with an invite code stays instant.
+    Self-hosted servers have no Requests tab, so they never wait.
+    Global admins never wait."""
+    from ..website import HOSTS_WEBSITE
+    from ..registry_models import RegistrySettings
+    if not HOSTS_WEBSITE or (user is not None and user.is_global_admin):
+        return False
+    reg_db = RegistrySessionLocal()
+    try:
+        s = reg_db.query(RegistrySettings).filter(RegistrySettings.id == 1).first()
+        return not (s and s.location_approval is False)
+    finally:
+        reg_db.close()
+
+
+MAX_PENDING_LOCATIONS = 3
+
+
+@router.post("/create")
+def create_instance(body: CreateInstanceRequest, request: Request, user: GlobalUser = Depends(get_current_global_user)):
     """
-    Real self-service "add a location" — provisions a genuinely fresh
-    per-instance database (the exact real chirp-server schema, via
-    provision_instance_database), creates the synced local admin User
-    row inside it, and a real Membership. Returns a fresh token with
-    this new instance already active, so the caller lands directly in
-    their new, empty instance without a separate switch step.
+    "Add a location". Where new locations need approval, this files a
+    location request instead and returns {"pending": true, ...}; the
+    person sees it waiting on their location screen and is emailed when
+    it's approved. Otherwise it provisions the location right away and
+    returns a token with it already active.
     """
-    from ..models import User
+    name = (body.name or "").strip()[:80]
+    if not name:
+        raise HTTPException(400, "Give the location a name.")
+    location_name = (body.location_name or "").strip()[:120] or None
+
+    if location_approval_required(user):
+        from ..registry_models import SiteRequest
+        reg_db = RegistrySessionLocal()
+        try:
+            mine = reg_db.query(SiteRequest).filter(SiteRequest.kind == "location", SiteRequest.user_id == user.id,
+                                                    SiteRequest.status == "pending")
+            if mine.count() >= MAX_PENDING_LOCATIONS:
+                raise HTTPException(429, "You have locations waiting for approval already. You'll hear back soon.")
+            row = SiteRequest(kind="location", user_id=user.id, username=user.username,
+                              full_name=user.username, email=user.email or "",
+                              site_name=name, location_name=location_name)
+            reg_db.add(row)
+            reg_db.commit()
+            reg_db.refresh(row)
+            _notify_admins_of_location(row, request)
+            logger.info("Location request %s (%s) from %s", row.id, name, user.username)
+            return {"pending": True, "request": location_request_out(row)}
+        finally:
+            reg_db.close()
 
     reg_db = RegistrySessionLocal()
     try:
-        db_filename = f"{user.id[:8]}_{int(datetime.utcnow().timestamp())}.db"
-        instance = Instance(name=body.name, location_name=body.location_name,
-                             db_filename=db_filename, created_by_user_id=user.id)
-        reg_db.add(instance)
-        reg_db.commit()
-        reg_db.refresh(instance)
-
-        provision_instance_database(db_filename)
-
-        membership = Membership(user_id=user.id, instance_id=instance.id, role="admin")
-        reg_db.add(membership)
-        reg_db.commit()
-
-        # Real synced local User row — this instance's own unmodified
-        # code (current-user lookups, ownership checks, notification
-        # prefs) reads from here, exactly as it already does for a
-        # normal single-instance chirp-server deployment.
-        from ..instance_registry import get_engine_for_instance
-        from sqlalchemy.orm import sessionmaker
-        engine = get_engine_for_instance(db_filename)
-        InstanceSession = sessionmaker(bind=engine)
-        inst_db = InstanceSession()
-        try:
-            local_user = User(
-                username=body.admin_username or user.username,
-                email=user.email,
-                hashed_pw=user.hashed_pw,   # same password as the account
-                role="admin",
-            )
-            inst_db.add(local_user)
-            inst_db.commit()
-        finally:
-            inst_db.close()
-
+        instance = provision_location(reg_db, user, name, location_name, body.admin_username)
         token = create_access_token({
             "sub": user.username, "global_user_id": user.id,
             "active_instance_id": instance.id,
         })
-        logger.info("Created instance %s (%s) for user %s", instance.id, instance.name, user.username)
-        return TokenOut(access_token=token)
+        return {"access_token": token, "token_type": "bearer"}
+    finally:
+        reg_db.close()
+
+
+def _notify_admins_of_location(row, request: Request):
+    """Emails the global admins that a location is waiting in Requests."""
+    from html import escape
+    try:
+        from ..services.platform_mail import global_admin_emails, public_url, send_platform_email
+        to = global_admin_emails()
+        if not to:
+            return
+        base = public_url(request)
+        place = f" ({row.location_name})" if row.location_name else ""
+        who = row.username + (f", {row.email}" if row.email else "")
+        send_platform_email(to, f"Chirp: {row.username} requests a new location", "New location request",
+                            f"{row.username} requests a new location",
+                            f"<p>{escape(who)} asks for <b>{escape(row.site_name)}</b>{escape(place)}.</p>",
+                            f"{who} asks for {row.site_name}{place}.\n\nReview: {base}/global-admin",
+                            cta_url=f"{base}/global-admin", cta_label="Review request", server_url=base)
+    except Exception as e:
+        logger.warning("Location request %s: admin notice failed: %s", row.id, e)
+
+
+def location_request_out(r) -> dict:
+    return {"id": r.id, "name": r.site_name, "location_name": r.location_name, "status": r.status,
+            "created_at": r.created_at.isoformat() + "Z" if r.created_at else None,
+            "decided_at": r.decided_at.isoformat() + "Z" if r.decided_at else None,
+            "deny_reason": r.deny_reason}
+
+
+@router.get("/requests")
+def my_location_requests(user: GlobalUser = Depends(get_current_global_user)):
+    """The caller's location requests from the last 30 days, for the
+    location screen, plus whether new locations need approval here."""
+    from datetime import timedelta
+    from ..registry_models import SiteRequest
+    reg_db = RegistrySessionLocal()
+    try:
+        rows = (reg_db.query(SiteRequest)
+                .filter(SiteRequest.kind == "location", SiteRequest.user_id == user.id,
+                        SiteRequest.created_at >= datetime.utcnow() - timedelta(days=30))
+                .order_by(SiteRequest.created_at.desc()).all())
+        return {"approval_required": location_approval_required(user),
+                "has_email": bool(user.email),
+                "requests": [location_request_out(r) for r in rows if r.status != "approved"]}
+    finally:
+        reg_db.close()
+
+
+@router.delete("/requests/{request_id}", status_code=204)
+def cancel_location_request(request_id: str, user: GlobalUser = Depends(get_current_global_user)):
+    """Withdraws one of the caller's own pending requests, or clears a denied one from their list."""
+    from ..registry_models import SiteRequest
+    reg_db = RegistrySessionLocal()
+    try:
+        row = reg_db.query(SiteRequest).filter(SiteRequest.id == request_id, SiteRequest.kind == "location",
+                                               SiteRequest.user_id == user.id).first()
+        if not row:
+            raise HTTPException(404, "Request not found")
+        if row.status == "approved":
+            raise HTTPException(409, "That location is already set up.")
+        reg_db.delete(row)
+        reg_db.commit()
     finally:
         reg_db.close()
 
@@ -234,6 +345,10 @@ async def import_instance(
     import sqlite3 as _sqlite3
     import tempfile as _tempfile
 
+    if location_approval_required(user):
+        raise HTTPException(403, "New locations here need approval. Request one with New Location; "
+                                 "once it's ready, restore your database in Settings → Backup.")
+
     # Validate BEFORE touching the registry at all — same checks
     # /backup/restore already applies to an uploaded file, so an
     # invalid upload never gets as far as creating a real Instance row
@@ -257,7 +372,7 @@ async def import_instance(
 
         reg_db = RegistrySessionLocal()
         try:
-            db_filename = f"{user.id[:8]}_{int(datetime.utcnow().timestamp())}.db"
+            db_filename = new_db_filename(user.id)
             instance = Instance(name=name, location_name=location_name,
                                  db_filename=db_filename, created_by_user_id=user.id)
             reg_db.add(instance)

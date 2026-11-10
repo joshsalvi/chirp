@@ -9,6 +9,7 @@ import { hapticEvent } from '../lib/haptics'
 import { SeenTodayModal } from './Dashboard'
 import { api } from '../lib/api'
 import { useTz } from '../lib/time'
+import { LIVE_APP_STORE_URL } from '../lib/appStore'
 
 const SOURCE_KEY = 'chirp:liveDetect:source'
 const DEVICE_KEY = 'chirp:liveDetect:deviceId'
@@ -994,6 +995,7 @@ export default function LiveDetect() {
       <p className="text-sm mb-5" style={{ color: 'var(--text-tertiary)' }}>
         Listen in real time and save what's calling — separate from your device's own always-on recording.
       </p>
+      <ChirpLiveTip/>
 
       {/* Source selector */}
       <div className="flex items-center gap-2 mb-4">
@@ -1199,6 +1201,30 @@ export default function LiveDetect() {
           {listening ? 'Listening\u2026 detections will appear here as they happen.' : 'Press Start to begin listening.'}
         </p>
       )}
+    </div>
+  )
+}
+
+
+// A one-time pointer to Chirp Live, the standalone iPhone app for walks.
+const LIVE_TIP_KEY = 'chirp_live_tip_dismissed'
+function ChirpLiveTip() {
+  const [hidden, setHidden] = useState(() => {
+    try { return localStorage.getItem(LIVE_TIP_KEY) === '1' } catch { return false }
+  })
+  if (hidden || !LIVE_APP_STORE_URL) return null
+  const dismiss = () => {
+    setHidden(true)
+    try { localStorage.setItem(LIVE_TIP_KEY, '1') } catch { /* private mode */ }
+  }
+  return (
+    <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 mb-4" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)' }}>
+      <img src="/about-img/chirp-live-icon.png" alt="" className="w-9 h-9 rounded-lg flex-shrink-0"/>
+      <p className="text-xs flex-1 min-w-0" style={{ color: 'var(--text-secondary)' }}>
+        <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>Chirp Live</span> names birds on your iPhone anywhere, even with no signal.
+      </p>
+      <a href={LIVE_APP_STORE_URL} target="_blank" rel="noopener noreferrer" className="btn-secondary text-xs px-3 py-1.5 flex-shrink-0">Get it</a>
+      <button onClick={dismiss} aria-label="Hide" className="p-1 flex-shrink-0" style={{ color: 'var(--text-tertiary)' }}><X size={14}/></button>
     </div>
   )
 }

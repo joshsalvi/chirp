@@ -1,4 +1,4 @@
-import { IPHONE_APP_STORE_URL, TV_APP_STORE_URL } from '../lib/appStore'
+import { IPHONE_APP_STORE_URL, LIVE_APP_STORE_URL, TV_APP_STORE_URL } from '../lib/appStore'
 
 // Apple's own badge artwork (public/badges), unaltered, 40px tall, as
 // Apple's marketing guidelines ask. Until a link exists the badge shows
@@ -6,6 +6,7 @@ import { IPHONE_APP_STORE_URL, TV_APP_STORE_URL } from '../lib/appStore'
 const BADGES = {
   tv: { url: TV_APP_STORE_URL, src: '/badges/apple-tv.svg', alt: 'Download on Apple TV' },
   iphone: { url: IPHONE_APP_STORE_URL, src: '/badges/app-store.svg', alt: 'Download on the App Store' },
+  live: { url: LIVE_APP_STORE_URL, src: '/badges/app-store.svg', alt: 'Download Chirp Live on the App Store' },
 }
 
 export default function StoreBadge({ kind }) {

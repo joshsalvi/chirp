@@ -66,6 +66,11 @@ export default defineConfig({
       },
     },
     rollupOptions: {
+      // Two apps from one build: Chirp (index.html) and Chirp Lite (lite.html, served at /lite).
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        lite: path.resolve(__dirname, 'lite.html'),
+      },
       output: {
         // Vendor chunks change only with package.json, so browsers keep
         // them cached across releases. Named vendor chunks for the three big dependency groups; the

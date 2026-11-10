@@ -34,49 +34,8 @@ function extractErrorDetail(detail, fallback) {
   return fallback
 }
 
-const TOKEN_KEY = 'chirp_token'
-
-export const tokenStore = {
-  get: () => localStorage.getItem(TOKEN_KEY),
-  set: (t) => localStorage.setItem(TOKEN_KEY, t),
-  clear: () => localStorage.removeItem(TOKEN_KEY),
-  // Multi-instance addition (see ARCHITECTURE.md): reads the
-  // active_instance_id claim straight out of the stored JWT's own
-  // payload, client-side. Deliberately NOT verified here — only the
-  // server's own verification (on every real request) matters for
-  // security; this is purely a UI-routing signal ("do we need to show
-  // the instance picker before calling anything instance-scoped"), and
-  // a tampered value here can't grant access to anything real, since
-  // the server independently re-decodes and re-verifies its own copy
-  // on every request regardless of what the client thinks it says.
-  getActiveInstanceId: () => {
-    const token = tokenStore.get()
-    if (!token) return null
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
-      return payload.active_instance_id || null
-    } catch {
-      return null
-    }
-  },
-}
-
-// Appends the current auth token as a ?token= query param — for the
-// handful of cases where the browser itself makes the request (a plain
-// <img>/<audio> src) and can never attach a custom Authorization
-// header no matter how the surrounding React code is written. Every
-// spectrogram, waveform, and audio-playback URL needs this; a normal
-// api.*() call above does NOT, since fetch() already attaches the real
-// header — adding this there too wouldn't break anything, but doing it
-// only where actually needed keeps the token out of server logs/proxy
-// history for the far more common case of a real API call.
-export function mediaUrl(path) {
-  if (!path) return path
-  const token = tokenStore.get()
-  if (!token) return path
-  const sep = path.includes('?') ? '&' : '?'
-  return `${path}${sep}token=${encodeURIComponent(token)}`
-}
+import { tokenStore, mediaUrl } from './token'
+export { tokenStore, mediaUrl }
 
 // ── GET cache ────────────────────────────────────────────────────────────────
 // Makes going back to a page you just left instant (the iOS tab bar mostly).
@@ -206,11 +165,15 @@ export const api = {
   // actions, work regardless of whether an instance is currently active.
   instances: {
     list: () => request('/instances'),
+    // Where new locations need approval this returns { pending: true, request }
+    // and no token; the request then shows on the location screen.
     create: async (body) => {
       const data = await request('/instances/create', { method: 'POST', body: JSON.stringify(body) })
-      tokenStore.set(data.access_token)
+      if (data.access_token) tokenStore.set(data.access_token)
       return data
     },
+    requests: () => request('/instances/requests'),
+    cancelRequest: (id) => request(`/instances/requests/${id}`, { method: 'DELETE' }),
     join: async (body) => {
       const data = await request('/instances/join', { method: 'POST', body: JSON.stringify(body) })
       tokenStore.set(data.access_token)
@@ -248,6 +211,7 @@ export const api = {
   admin: {
     overview: () => request('/admin/overview'),
     instances: () => request('/admin/instances'),
+    usage: () => request('/admin/usage'),
     instanceMembers: (instanceId) => request(`/admin/instances/${instanceId}/members`),
     addMember: (instanceId, body) => request(`/admin/instances/${instanceId}/members`, { method: 'POST', body: JSON.stringify(body) }),
     updateMembershipRole: (membershipId, role) => request(`/admin/memberships/${membershipId}`, { method: 'PATCH', body: JSON.stringify({ role }) }),
@@ -366,6 +330,10 @@ export const api = {
     dashboardSummary: () => request('/recordings/statistics/dashboard-summary'),
     yardPulse: () => request('/recordings/statistics/yard-pulse'),
     dailyJournal: () => request('/recordings/statistics/daily-journal'),
+    // Today at a glance for the Standard dashboard (the same data Chirp Lite's Today uses).
+    today: () => request('/lite/today'),
+    // Loudness bars, where each bird was identified, and its call marks (SongLine).
+    songline: (id, bird) => request(`/lite/recording/${encodeURIComponent(id)}/songline${bird ? '?bird=' + encodeURIComponent(bird) : ''}`),
     digest:       (date) => request(`/recordings/statistics/digest${date ? `?date=${date}` : ''}`),
     regenerateDailyJournal: () => request('/recordings/statistics/daily-journal/regenerate', { method: 'POST' }),
     weeklyJournal: () => request('/recordings/statistics/weekly-journal'),

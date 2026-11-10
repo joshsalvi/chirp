@@ -30,6 +30,21 @@ FILENAME_PATTERN = "chirp_auto_%Y%m%d_%H%M%S.db"
 GLOB_PATTERN = "chirp_auto_*.db"
 
 
+def is_due(now_local, hour: int, last_run_at) -> bool:
+    """True once the local clock has reached today's backup hour and no backup has
+    run since then. last_run_at is AppSettings.auto_backup_last_run_at (naive UTC).
+    Catches up after a restart or a missed minute; the scheduler used to fire only
+    when its check landed exactly on HH:00, which it often missed."""
+    from datetime import timezone
+    if now_local.hour < hour:
+        return False
+    if last_run_at is None:
+        return True
+    last_local = last_run_at.replace(tzinfo=timezone.utc).astimezone(now_local.tzinfo)
+    slot = now_local.replace(hour=hour, minute=0, second=0, microsecond=0)
+    return last_local < slot
+
+
 def backup_dir_path(data_dir: str) -> str:
     path = os.path.join(data_dir, BACKUP_SUBDIR)
     os.makedirs(path, exist_ok=True)

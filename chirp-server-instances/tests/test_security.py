@@ -48,6 +48,10 @@ def test_spa_404s(tmp_path):
     def spa(p):
         return main.spa_response(p, req("/" + p), tmp_path)
     assert spa("recordings/abc").status_code == 200                 # app route → app page
+    (tmp_path / "lite.html").write_text("<html>lite</html>")
+    for p in ("lite", "lite/", "lite/birds", "lite/bird/bp-1"):       # Chirp Lite routes → its own page
+        assert spa(p).path.endswith("lite.html"), p
+    assert spa("lites").path.endswith("index.html") and spa("recordings/lite").path.endswith("index.html")
     assert spa("logo.svg").status_code == 200
     assert spa("api/v1/nope").status_code == 404 and spa("api/v1/nope").body == b'{"detail":"Not Found"}'
     assert spa("missing.js").status_code == 404                     # missing file, not the app page
@@ -124,3 +128,18 @@ def test_api_docs_flag(monkeypatch):
     assert 'openapi_url="/openapi.json" if _API_DOCS else None' in src
     assert '"0" if os.environ.get("CHIRP_WEBSITE") == "1" else "1"' in src
     importlib.import_module("app.main")
+
+
+def test_head_and_touch_icon(tmp_path):
+    from starlette.requests import Request
+    from app import main
+    (tmp_path / "index.html").write_text("<html>app</html>")
+    (tmp_path / "apple-touch-icon.png").write_bytes(b"\x89PNG")
+    req = Request({"type": "http", "method": "GET", "path": "/apple-touch-icon-precomposed.png", "headers": [],
+                   "query_string": b"", "client": ("203.0.113.5", 1)})
+    r = main.spa_response("apple-touch-icon-precomposed.png", req, tmp_path)
+    assert r.status_code == 200 and r.path.endswith("apple-touch-icon.png")
+    c = _client()
+    assert c.head("/robots.txt").status_code == 200
+    src = open(main.__file__).read()
+    assert 'methods=["GET", "HEAD"], include_in_schema=False)\n    async def serve_spa' in src

@@ -62,7 +62,7 @@ export default function ScrollToTop() {
     <button
       onClick={() => document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' })}
       aria-label="Scroll to top"
-      className="fixed right-4 md:right-6 bottom-28 md:bottom-6 z-40 flex items-center justify-center rounded-full tactile-press animate-fade-in"
+      className="fixed right-4 md:right-6 bottom-[calc(var(--nav-clear)+14px)] md:bottom-6 z-40 flex items-center justify-center rounded-full tactile-press animate-fade-in"
       style={{
         width: 44,
         height: 44,

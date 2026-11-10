@@ -49,6 +49,15 @@ class OverviewOut(BaseModel):
     total_instances: int
     total_users: int
     total_global_admins: int
+    library_species: int = 0          # shared species library (services/species_library.py)
+
+
+def _library_species() -> int:
+    try:
+        from ..services.species_library import stats
+        return stats()["species"]
+    except Exception:
+        return 0
 
 
 @router.get("/overview", response_model=OverviewOut)
@@ -59,6 +68,7 @@ def get_overview(admin: GlobalUser = Depends(get_current_global_admin)):
             total_instances=reg_db.query(Instance).count(),
             total_users=reg_db.query(GlobalUser).count(),
             total_global_admins=reg_db.query(GlobalUser).filter(GlobalUser.is_global_admin == True).count(),  # noqa: E712
+            library_species=_library_species(),
         )
     finally:
         reg_db.close()
@@ -94,6 +104,13 @@ def list_all_instances(admin: GlobalUser = Depends(get_current_global_admin)):
         return out
     finally:
         reg_db.close()
+
+
+@router.get("/usage")
+def usage_by_instance(admin: GlobalUser = Depends(get_current_global_admin)):
+    """Activity, people, stations and storage for every location (services/usage.py)."""
+    from ..services.usage import all_usage
+    return all_usage()
 
 
 class MembershipOut(BaseModel):

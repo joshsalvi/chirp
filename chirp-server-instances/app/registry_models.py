@@ -121,6 +121,8 @@ class RegistrySettings(RegistryBase):
 
     id = Column(Integer, primary_key=True, default=1)
     tailscale_enabled = Column(Boolean, default=False)
+    # ourchirp.com: new locations wait for a global admin (None = on).
+    location_approval = Column(Boolean, nullable=True)
     tailscale_auth_key = Column(String, nullable=True)
     tailscale_login_server = Column(String, nullable=True)
     tailscale_hostname = Column(String, nullable=True)
@@ -145,13 +147,17 @@ class SiteRequest(RegistryBase):
       approval creates the account, the site and a device key.
     kind "relay": a self-hosted Chirp server that wants iPhone pushes;
       approval issues a push relay token (RelayServer).
+    kind "location": a signed-in account asking for a new location
+      (api/instances.py create, where approval is on); approval
+      provisions it for that account.
     Either way the setup instructions are emailed to the requester."""
     __tablename__ = "site_requests"
 
     id = Column(String, primary_key=True, default=new_uuid)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     status = Column(String, default="pending", index=True)   # pending | approved | denied
-    kind = Column(String, default="hosted")                   # hosted | relay
+    kind = Column(String, default="hosted")                   # hosted | relay | location
+    user_id = Column(String, nullable=True, index=True)       # location only: the existing account asking for another location
     full_name = Column(String, nullable=False)
     email = Column(String, nullable=False)
     username = Column(String, nullable=True)                  # hosted only

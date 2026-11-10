@@ -18,31 +18,50 @@
 // it back with the same text. WhatsNewModal shows it only when `popup` is
 // newer than the version last dismissed.
 export const WHATS_NEW = {
-  version: '0.5.18.b',
+  version: '0.5.19.y',
   // The release whose `latest` text this is. The popup shows once per value,
   // so small fixes that don't change `latest` don't bring it back.
-  popup: '0.5.17.a',
+  popup: '0.5.19.l',
   title: "What's new in Chirp",
   latest: {
-    intro: 'BirdWeather stations, an app diagnostics file for problem reports, and a page for testing the apps early.',
+    intro: 'A new, simpler dashboard.',
     sections: [
       {
-        heading: '🌦️ BirdWeather',
-        body: 'Admins can bring in the sound from a BirdWeather station (PUC, BirdNET-Pi or BirdNET-Go) in Settings → Integrations. Chirp runs it through BirdNET like an upload, with spectrograms and playback.',
+        heading: '🐦 Standard dashboard',
+        body: "The latest bird and its song, today's birds as photos, three facts and a line from the journal. It's the new default.",
       },
       {
-        heading: '🩺 App diagnostics',
-        body: 'Account → Help & Feedback can export a text file about this app and device, or add it to your message, to help sort out problems.',
-      },
-      {
-        heading: '📱 Test the apps early',
-        body: 'Request a TestFlight invite for the iPhone, iPad, Apple TV or Chirp Live app at ourchirp.com/testflight.html.',
+        heading: '📊 Advanced is one tap away',
+        body: 'The full dashboard is now called Advanced. Switch with the button at the top of the Dashboard or in Settings → Appearance.',
       },
     ],
   },
   recent: [
-    { version: '0.5.18.b', summary: 'Web framework pinned to the tested versions.' },
-    { version: '0.5.18.a', summary: 'Security headers, sign-in limits and faster builds; ourchirp.com admins get reachability and security events.' },
+    { version: '0.5.19.y', summary: 'Liquid Glass tab bar on phones, a tap of haptics when pulling to refresh, and song lines that highlight where the bird sang.' },
+    { version: '0.5.19.x', summary: 'Multi-location servers share one species library, so a location\'s new birds load without fetching from the web.' },
+    { version: '0.5.19.w', summary: 'Global Admin: usage for each location. ourchirp.com: new locations wait for approval.' },
+    { version: '0.5.19.v', summary: 'Song line: the latest bird\'s player shows the recording\'s sound, where the bird is, and a mark per call to tap.' },
+    { version: '0.5.19.u', summary: 'Chirp Live 1.3: level bars, running spectrogram, waveform or live spectrum while listening.' },
+    { version: '0.5.19.t', summary: 'Pull to refresh: the indicator sits in the space above the page; long bird names no longer break mid-word.' },
+    { version: '0.5.19.s', summary: 'iPhone and iPad app: swipe from the edge to go back or forward, pull down to refresh, tap the status bar to scroll up.' },
+    { version: '0.5.19.r', summary: 'The latest-bird photo takes the photo\'s shape, so tall birds are shown head to toe.' },
+    { version: '0.5.19.q', summary: 'The dashboard view button reads "View: Standard" or "View: Advanced".' },
+    { version: '0.5.19.p', summary: 'Standard dashboard: tall photos of the latest bird are shown whole.' },
+    { version: '0.5.19.o', summary: 'Standard dashboard photos keep the bird\'s head in view.' },
+    { version: '0.5.19.n', summary: 'Website, user guide and App Store show the Standard dashboard.' },
+    { version: '0.5.19.m', summary: 'Standard dashboard: all of today\'s birds in one tap, a by-hour chart, a picker that fits on phones.' },
+    { version: '0.5.19.l', summary: 'New Standard dashboard; the full one is now Advanced.' },
+    { version: '0.5.19.k', summary: 'Hosted site media moved to NVMe for faster pages and audio.' },
+    { version: '0.5.19.j', summary: 'Chirp for iPhone and iPad is on the App Store; Chirp Lite in the iPhone app.' },
+    { version: '0.5.19.i', summary: 'A local range map for every bird and bat, including the Bat profile.' },
+    { version: '0.5.19.h', summary: 'Chirp Lite Today shows the first song of the day; swipe back on iPhone.' },
+    { version: '0.5.19.g', summary: 'Range map pictures for maps hosted on Wikimedia.' },
+    { version: '0.5.19.f', summary: 'Chirp Lite iPhone shows Wikipedia range maps.' },
+    { version: '0.5.19.e', summary: 'Chirp Lite range maps (eBird Status & Trends first); the BirdLife map tab works again.' },
+    { version: '0.5.19.d', summary: 'Chirp Lite iPhone: the sign-in screen fits the screen.' },
+    { version: '0.5.19.c', summary: 'Chirp Lite photo credits; the Chirp Lite iPhone app (source, icon set, listing).' },
+    { version: '0.5.19.b', summary: 'Chirp Lite: the playing bar stays small; sign-ins for the Chirp Lite iPhone app.' },
+    { version: '0.5.19.a', summary: 'Chirp Lite: a simple, picture-first view at /lite.' },
   ],
 }
 
@@ -56,7 +75,8 @@ export const ERA_SUMMARIES = {
 }
 
 export const GROUP_SUMMARIES = {
-  '0.5.18': 'Security headers and sign-in limits, reachability and security events, faster builds.',
+  '0.5.19': 'Chirp Lite, a simple picture-first view, and Chirp for iPhone and iPad on the App Store.',
+  '0.5.18': 'Security headers and sign-in limits, Apple TV listen-back, backups fixed, faster pages and Chirp Live on the App Store.',
   '0.5.17': 'BirdWeather stations, app diagnostics, Chirp Live picture packs, smoother ChirpPi Live Detect and an optional Ollama key.',
   '0.5.16': 'Apple TV app, iPad support, theme-matched app icon, night flight call filters, TestFlight sign-up, site traffic, safer hosted sites and the website moved to ourchirp.com only.',
   '0.5.15': 'Troubleshooting page and recent recordings on Apple Watch.',

@@ -69,7 +69,8 @@ derp:
     enabled: false
   urls:
     - https://controlplane.tailscale.com/derpmap/default
-  paths: []
+  paths:
+    - /etc/headscale/derp-fallback.yaml
   auto_update_enabled: true
   update_frequency: 24h
 

@@ -78,7 +78,7 @@ struct ListenView: View {
                     SourcePicker()
                 }
 
-                LevelBars(levels: listener.levels, active: listener.listening)
+                ScopeCard(active: listener.listening)
 
                 if case .failed(let why) = listener.state {
                     Text(why).foregroundStyle(Theme.orange).font(.callout)
@@ -253,8 +253,9 @@ struct SingingCard: View {
 struct LevelBars: View {
     let levels: [Float]
     let active: Bool
+    var framed = true          // false inside ScopeCard, which has its own card
     var body: some View {
-        HStack(alignment: .bottom, spacing: 3) {
+        let bars = HStack(alignment: .bottom, spacing: 3) {
             ForEach(levels.indices, id: \.self) { i in
                 let v = CGFloat(levels[i])
                 RoundedRectangle(cornerRadius: 2)
@@ -263,10 +264,14 @@ struct LevelBars: View {
             }
         }
         .frame(height: 100, alignment: .bottom)
-        .padding(14)
-        .background(Theme.card, in: RoundedRectangle(cornerRadius: 16))
-        .opacity(active ? 1 : 0.5)
         .accessibilityHidden(true)
+        if framed {
+            bars.padding(14)
+                .background(Theme.card, in: RoundedRectangle(cornerRadius: 16))
+                .opacity(active ? 1 : 0.5)
+        } else {
+            bars
+        }
     }
 }
 
@@ -572,6 +577,7 @@ struct SettingsView: View {
                 Text("Lower finds more birds, and more mistakes.")
             }
             .listRowBackground(Theme.card)
+            ScopeSettings()
             BirdPackSection()
             Section {
                 Link(destination: URL(string: "https://ourchirp.com/privacy.html")!) {

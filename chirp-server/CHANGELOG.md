@@ -1,3 +1,196 @@
+## 0.5.19.y — 2026-11-10 — ENHANCEMENT — Glass tab bar, refresh haptics, song-line ranges
+
+- Phones: the bottom tab bar is a floating Liquid Glass bar, as in Chirp Live and Chirp Lite; pages scroll beneath it.
+- iPhone app: pulling to refresh taps once when letting go will refresh, and again lightly when it's done.
+- Song line: the stretches where the bird was identified are highlighted; the per-call ticks are gone, since they could land on the wrong sound. Chirp Lite for iPhone drops them too, with no update needed.
+- Support, Guide, Privacy and Troubleshooting pages: "My Profile" is now "Account", with the full steps for deleting an account.
+
+## 0.5.19.x — 2026-11-08 — FEATURE — Shared species library
+
+- Multi-location servers keep one copy of each species' profile (description, photos, sounds, range maps, All About Birds facts, eBird code) in the registry.
+- When a location hears a species for the first time, its profile is filled from the library instead of the web; only its regional seasonal chart is fetched.
+- Every full enrichment or range-map refresh writes back, so a refresh in one location freshens all of them. Copies older than 30 days, or with a missing photo, are skipped.
+- Notes, AI presence summaries and seasonal charts stay per location; bats are left out.
+- Seeded at startup from profiles locations already have. Global Admin → Instances shows the species count.
+- Single-location servers are unchanged.
+
+## 0.5.19.w — 2026-11-08 — FEATURE — Location usage and approval
+
+- Global Admin → Instances: each location shows last activity, recordings this week and storage; open it for recordings today/7/30 days/total, detections, species, stations, members' last sign-in and what its storage covers.
+- GET /admin/usage (services/usage.py); storage is measured in the background at most hourly.
+- ourchirp.com: a new location from a signed-in account becomes a request in Global Admin → Requests; approving creates it and emails the person. Joining with an invite code stays instant.
+- The location screen shows requests as "Waiting for approval" (or why one wasn't approved), checks every 30 s and opens the location once approved; withdraw or dismiss with ×.
+- Requests → "Approve new locations" switches this off; global admins and self-hosted servers never wait. Import from a database file waits for approval too.
+- Fix: two locations made by one account in the same second no longer collide on a database file name.
+
+## 0.5.19.v — 2026-11-08 — FEATURE — Song line
+
+- Standard dashboard and Chirp Lite players show a song line: the clip's loudness (1.5–9 kHz) as bars, gold where the bird was identified (overlapping detection windows merged), and a mark over each of its calls.
+- Call marks sit on the loudest moments inside the bird's stretches, from the audio, not on window edges; tap one to hear that call from its start, or tap the bars to jump.
+- GET /lite/recording/{id}/songline (services/songline.py); computed from the WAV and kept in memory.
+- Chirp Lite 1.1 (iPhone) shows it in the now-playing bar.
+
+## 0.5.19.u — 2026-11-08 — FEATURE — Chirp Live sound display views
+
+- Chirp Live 1.3: while listening, show level bars, a running spectrogram (0–12 kHz), a running waveform or a live spectrum; tap the display or use its menu to switch.
+- Settings → Sound display: the view and how many seconds the running views show (3–30).
+- Works for the iPhone microphone and for listening through a station.
+
+## 0.5.19.t — 2026-11-08 — BUGFIX — Pull-to-refresh indicator, long bird names
+
+- Pull to refresh: the indicator sits in the space that opens above the page and moves with it, then holds a band at the top while the page reloads.
+- Standard dashboard: long bird names (Downy Woodpecker, Common Yellowthroat) wrap between words; the busiest-bird column is wider on phones.
+
+## 0.5.19.s — 2026-11-07 — ENHANCEMENT — Gestures in the iPhone and iPad app
+
+- Swipe in from the left edge to go back, from the right edge to go forward (needs app 1.19.19).
+- Pull down at the top of any page to refresh it (app and home-screen web app).
+- Tap the status bar to scroll the page to the top.
+
+## 0.5.19.r — 2026-11-06 — ENHANCEMENT — Latest-bird photo shaped to the photo
+
+- The latest-bird photo fills its box again, and the box follows the photo's shape within limits: a tall photo gets a narrow, tall box on wider screens and a square one on phones, so the head stays in view. Replaces 0.5.19.p's blurred backdrop.
+
+## 0.5.19.q — 2026-11-06 — ENHANCEMENT — View label on the dashboard button
+
+- The dashboard's view button reads "View: Standard" or "View: Advanced".
+
+## 0.5.19.p — 2026-11-06 — BUGFIX — Tall latest-bird photos shown whole
+
+- A tall photo of the latest bird is shown whole over a blurred copy of itself instead of being cropped; 0.5.19.o's top-weighted crop still cut off some heads.
+- Photo tiles crop nearer the top.
+
+## 0.5.19.o — 2026-11-06 — BUGFIX — Standard dashboard photo framing
+
+- Latest-bird photo and photo tiles crop toward the top of the picture, so portrait photos (an owl on a branch) keep the head in view.
+
+## 0.5.19.n — 2026-11-06 — DEVELOPER — Standard dashboard on the website and App Store
+
+- Website gallery and user guide: Standard dashboard screenshots; the guide explains Standard and Advanced.
+- App Store listing for Chirp 1.19: Standard dashboard screenshots first (iPhone and iPad) and new What's New.
+- Unused website images removed.
+
+## 0.5.19.m — 2026-11-06 — ENHANCEMENT — Standard dashboard fixes
+
+- "All N birds" opens every bird heard today in the photo grid; "Show fewer" closes it.
+- Today-by-hour chart under the photos.
+- The last row of photos ends flush.
+- View picker fits on phones: compact cards, button always visible, above the tab bar; labels wrap inside their cards.
+
+## 0.5.19.l — 2026-11-06 — FEATURE — Standard dashboard
+
+- New Standard dashboard: the latest bird with its song, today's birds as photo tiles, first song, busiest bird, recordings, and a line from the journal.
+- The full dashboard is now Advanced; Simplified and Detailed are gone.
+- Everyone picks Standard or Advanced once after this update; Standard is the default. Switch from the Dashboard's view button or Settings → Appearance.
+- Settings → Appearance → Dashboard Sections now applies to Advanced only.
+- GET /lite/today adds the latest journal line (today's or yesterday's) and a larger photo of the latest bird.
+
+## 0.5.19.k — 2026-11-04 — ENHANCEMENT — Media on NVMe
+
+- Unraid: CHIRP_HOST_DATA_DIR in .env puts recordings, photos and spectrograms on an SSD pool; ourchirp.com's now run from NVMe instead of the array.
+
+## 0.5.19.j — 2026-11-03 — FEATURE — Chirp on the App Store
+- Chirp for iPhone and iPad is on the App Store; the website and Account link to it, and the "coming soon" notes are gone.
+- Account → Chirp Lite works in the iPhone app too, with the status bar matched to Lite's theme.
+
+## 0.5.19.i — 2026-11-03 — FEATURE — Local range maps for every bird and bat
+
+- Every bird and bat gets a local range map from the iNaturalist Open Range Map Dataset (CC BY), drawn once by a background job and redrawn after the monthly data refresh.
+- The generic Bat profile's map shows every bat species whose range covers the site.
+- The Mammalia range file and taxonomy are downloaded alongside the bird files; all are refreshed when over 35 days old.
+- Chirp Lite shows the local map first; eBird Status & Trends, Cornell, BirdLife and Wikipedia fill in for birds without one.
+
+## 0.5.19.h — 2026-11-03 — ENHANCEMENT — Chirp Lite Today tiles
+
+- Chirp Lite Today: the middle tile shows the day's first song (its time) and switches to "new to you" only on days with a new bird.
+- Chirp Lite iPhone: swiping from the left edge goes back again.
+
+## 0.5.19.g — 2026-11-03 — BUGFIX — Range map pictures for Wikimedia maps
+
+- The range map picture route also fetches maps that live on Wikimedia before drawing them; most birds' maps are there.
+
+## 0.5.19.f — 2026-11-03 — BUGFIX — Wikipedia range maps on iPhone
+
+- Chirp Lite iPhone shows Wikipedia range maps too: the server draws each SVG map to a PNG once and keeps it (GET /birds/{id}/range-map/png).
+
+## 0.5.19.e — 2026-11-03 — BUGFIX — Range maps in Chirp Lite and the BirdLife tab
+
+- Chirp Lite bird pages show the best range map on hand: eBird Status & Trends, then Cornell (All About Birds or Macaulay), iNaturalist, BirdLife, then Wikipedia, with its source named.
+- Chirp Lite iPhone: picture maps only (it can't draw Wikipedia's SVGs), and no empty placeholder when there's none.
+- Bird profile: the BirdLife range map tab loads again on hosted sites; its route had gone missing.
+
+## 0.5.19.d — 2026-11-03 — BUGFIX — Chirp Lite iPhone sign-in screen
+
+- Chirp Lite iPhone: the sign-in screen fits the screen; the hills behind the bird made the page wider than the phone, so it looked zoomed in.
+- build-lite.sh --shots also captures the sign-in screen.
+
+## 0.5.19.c — 2026-11-03 — DEVELOPER — Chirp Lite iPhone app
+
+- Chirp Lite iPhone app (ios-lite/, build-lite.sh): native SwiftUI on the Lite routes, read-only sign-in, light and dark themes, unit tests.
+- Chirp Lite icon set: light, dark and tinted App Store icons; listing in docs/app-store-metadata-lite.json with screenshots.
+- Chirp Lite web: photo credits no longer show "© (c)".
+
+## 0.5.19.b — 2026-11-03 — BUGFIX — Chirp Lite playing bar
+
+- Chirp Lite: the "now playing" bar keeps its small photo; the bird's photo filled the screen after tapping play.
+- Read-only, 90-day sign-ins for the Chirp Lite iPhone app (POST /auth/lite-token); they open only the Lite screens and recordings.
+- Chirp Lite's Guide leaves out bats.
+- Chirp Lite's web icon refined to match the app.
+
+## 0.5.19.a — 2026-11-03 — FEATURE — Chirp Lite
+
+- Chirp Lite at /lite: Today (latest visitor, day chart, today's birds), Birds (photo collection), Listen (tap-to-play recordings), Guide (this month's local birds) and simple bird pages.
+- Same sign-in as Chirp; multi-site accounts pick a site. Light and dark themes; installable with its own Meadow icon.
+- Account → Chirp Lite opens it and remembers the choice on the web; Lite's menu switches back to full Chirp.
+- One build makes both apps; each page has its own size budget.
+
+## 0.5.18.k — 2026-10-31 — ENHANCEMENT — Chirp Live on the App Store
+
+- Website: Chirp Live section with its App Store badge, a "New" link at the top of the home page, and mentions in the user guide and support page.
+- Account → Chirp Live, with its App Store badge.
+- Live Detect: a one-time note pointing to Chirp Live for walks without signal.
+- Emails link to Chirp Live in their footer; What's New announces it.
+
+## 0.5.18.j — 2026-10-31 — DEVELOPER — Chirp Lite groundwork
+
+- New /api/v1/lite routes for the upcoming Chirp Lite app: today, birds, listen, guide and a simple bird profile, one request per screen.
+- Each account stores Lite or full Chirp per site (viewers default to Lite once the switch ships); nothing changes in the app yet.
+
+## 0.5.18.i — 2026-10-31 — ENHANCEMENT — Apple TV: playhead and listen-back in Live
+
+- Apple TV Live: an amber line marks the sound you're hearing; audio to its right has arrived but isn't played yet.
+- Apple TV Live: on the spectrogram, ◀ ▶ move a marker back through the last 45 s and Select listens from it; at the right end, Select goes back to live.
+- Apple TV recording screen: ◀ ▶ move a marker without interrupting playback; Select plays from it.
+- Apple TV recording screen: a Recent button, and Menu, go back to the list.
+
+## 0.5.18.h — 2026-10-31 — CRITICAL — Daily backups run again
+
+- Automatic database backups run once a day at the set hour, catching up after a restart; they fired only when the scheduler's check landed exactly on the hour, and none had run since Oct 26.
+- Unraid: the location databases can live on an SSD pool (CHIRP_HOST_INSTANCES_DIR in .env); ourchirp.com's now run from NVMe instead of the array, with a nightly copy back to the array.
+
+## 0.5.18.g — 2026-10-30 — CRITICAL — Startup no longer waits on the private network
+
+- Server startup connects to the private network (Tailscale/Headscale) in the background; with the control server unreachable it used to block startup for minutes, so the site returned 502.
+- Bundled Headscale starts with a built-in relay list when controlplane.tailscale.com can't be reached; it used to exit and restart every few seconds.
+
+## 0.5.18.f — 2026-10-30 — BUGFIX — Traffic cards on iPhone
+
+- Global Admin → Traffic: the reachability and security cards could fail to draw under the floating time range on iPhone; the bar now has a solid background, and the tab reloads its data when the app comes back to the front.
+
+## 0.5.18.e — 2026-10-30 — BUGFIX — iPhone app picks up server updates sooner
+## 0.5.18.e — 2026-10-30 — BUGFIX — iPhone app picks up server updates sooner
+
+- iPhone and iPad app: checks for a newer server version on every return to the app (at most once a minute) and every 10 minutes while open, and reloads into it; it used to need 10 minutes in the background, so pages could miss what an update added until the app was force-quit. Not while typing or in Live Detect.
+
+## 0.5.18.d — 2026-10-30 — BUGFIX — HEAD requests, iPhone icon, failing addresses
+
+- Pages and robots.txt answer HEAD requests (link checkers, uptime monitors); they returned 405.
+- Older iPhones asking for apple-touch-icon-precomposed.png get the app icon instead of a 404.
+
+## 0.5.18.c — 2026-10-29 — ENHANCEMENT — Floating time range on Traffic
+
+- Global Admin → Traffic (ourchirp.com): the time range (Today, 7, 30, 90 days) floats at the top while scrolling and applies to the whole tab, security events included.
+
 ## 0.5.18.b — 2026-10-29 — DEVELOPER — Pinned web framework versions
 
 - FastAPI and Starlette are pinned to the tested versions (0.143, 1.6); the 0.5.18.a image had picked up untested FastAPI 0.162.

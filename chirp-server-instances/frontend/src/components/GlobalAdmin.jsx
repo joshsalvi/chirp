@@ -104,13 +104,79 @@ function AddMemberForm({ instanceId, onAdded, onCancel }) {
   )
 }
 
-function InstanceCard({ instance, onDeleted }) {
+// ── Usage per location (GET /admin/usage, services/usage.py) ──
+const ago = (iso) => {
+  if (!iso) return null
+  const m = Math.max(0, (Date.now() - new Date(iso).getTime()) / 60000)
+  if (m < 1) return 'just now'
+  if (m < 60) return `${Math.round(m)} min ago`
+  if (m < 48 * 60) return `${Math.round(m / 60)} h ago`
+  return `${Math.round(m / 1440)} days ago`
+}
+const bytes = (n) => {
+  if (n == null) return null
+  const u = ['B', 'KB', 'MB', 'GB', 'TB']
+  let i = 0
+  while (n >= 1024 && i < u.length - 1) { n /= 1024; i++ }
+  return `${n >= 10 || i === 0 ? Math.round(n) : n.toFixed(1)} ${u[i]}`
+}
+const num = (n) => (n ?? 0).toLocaleString()
+
+function usageLine(u) {
+  if (!u) return null
+  if (u.error) return u.error
+  const latest = [u.last_recording, u.last_sign_in].filter(Boolean).sort().pop()
+  return [
+    latest ? `Active ${ago(latest)}` : 'No activity yet',
+    `${num(u.recordings?.d7)} recordings this week`,
+    u.storage?.bytes != null && bytes(u.storage.bytes),
+  ].filter(Boolean).join(' · ')
+}
+
+function UsagePanel({ usage: u }) {
+  if (u === null) return <div className="skeleton h-20 rounded-lg"/>
+  if (!u) return null
+  if (u.error) return <p className="text-xs" style={{ color: 'var(--pastel-red)' }}>{u.error}</p>
+  const cells = [
+    ['Today', num(u.recordings.today)], ['7 days', num(u.recordings.d7)],
+    ['30 days', num(u.recordings.d30)], ['All time', num(u.recordings.total)],
+    ['Detections, 7 days', num(u.detections_7d)], ['Species, 30 days', num(u.species_30d)],
+    ['Storage', u.storage?.bytes != null ? bytes(u.storage.bytes) : 'Measuring…'],
+    ['Last recording', ago(u.last_recording) || 'None'],
+  ]
+  return (
+    <div className="rounded-lg p-2.5 space-y-2" style={{ background: 'var(--bg-raised)' }}>
+      <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>Usage</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-1.5">
+        {cells.map(([k, v]) => (
+          <div key={k} className="min-w-0">
+            <p className="text-[11px] truncate" style={{ color: 'var(--text-tertiary)' }}>{k}</p>
+            <p className="text-sm font-semibold tabular-nums truncate" style={{ color: 'var(--text-primary)' }}>{v}</p>
+          </div>
+        ))}
+      </div>
+      {u.stations?.length > 0 && (
+        <p className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>
+          Stations: {u.stations.map(d => `${d.name} (${d.last_seen ? `seen ${ago(d.last_seen)}` : 'never seen'})`).join(', ')}
+        </p>
+      )}
+      {u.storage?.measured_at && (
+        <p className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>
+          Storage covers this location's database, recordings and spectrograms, {u.storage.files.toLocaleString()} files, measured {ago(u.storage.measured_at)}.
+        </p>
+      )}
+    </div>
+  )
+}
+
+function InstanceCard({ instance, usage, onDeleted }) {
   const [expanded, setExpanded] = useState(false)
   const [members, setMembers] = useState(null)
   const [loadingMembers, setLoadingMembers] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const signIns = Object.fromEntries((usage?.members || []).map(m => [m.username, m.last_login]))
 
   const loadMembers = async () => {
     setLoadingMembers(true)
@@ -165,6 +231,7 @@ function InstanceCard({ instance, onDeleted }) {
               {instance.location_name || 'No location set'} · {instance.member_count} member{instance.member_count === 1 ? '' : 's'}
               {instance.created_by_username && <> · created by {instance.created_by_username}</>}
             </p>
+            {usage && <p className="text-[11px] leading-snug" style={{ color: 'var(--text-tertiary)' }}>{usageLine(usage)}</p>}
           </div>
           <ChevronDown size={16} style={{ color: 'var(--text-tertiary)', transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform .15s', flexShrink: 0 }}/>
         </button>
@@ -186,6 +253,7 @@ function InstanceCard({ instance, onDeleted }) {
 
       {expanded && (
         <div className="mt-3 pt-3 space-y-1.5" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+          <UsagePanel usage={usage}/>
           {loadingMembers ? (
             <div className="skeleton h-10 rounded-lg"/>
           ) : (
@@ -194,7 +262,9 @@ function InstanceCard({ instance, onDeleted }) {
                    style={{ background: 'var(--bg-raised)' }}>
                 <div className="min-w-0">
                   <p className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>{m.username}</p>
-                  {m.email && <p className="text-[11px] truncate" style={{ color: 'var(--text-tertiary)' }}>{m.email}</p>}
+                  <p className="text-[11px] truncate" style={{ color: 'var(--text-tertiary)' }}>
+                    {[m.email, signIns[m.username] !== undefined && (signIns[m.username] ? `signed in ${ago(signIns[m.username])}` : 'never signed in')].filter(Boolean).join(' · ')}
+                  </p>
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <RoleBadgeDropdown role={m.role} onChange={(r) => changeRole(m.membership_id, r)}/>
@@ -375,13 +445,26 @@ function InstanceDiagnosticsPanel({ instanceId }) {
   )
 }
 
-function InstancesTab() {
+function InstancesTab({ librarySpecies = 0 }) {
   const [instances, setInstances] = useState(null)
   const [error, setError] = useState(null)
   const [showNew, setShowNew] = useState(false)
 
+  const [usage, setUsage] = useState(null)   // null while loading; {} if it couldn't load
+
+  // Usage loads after the list so a slow count never holds the cards back.
+  // Storage is measured in the background on first request, so ask once more.
+  const loadUsage = (again) => {
+    api.admin.usage()
+      .then(rows => {
+        setUsage(Object.fromEntries(rows.map(r => [r.id, r])))
+        if (again && rows.some(r => r.storage?.bytes == null)) setTimeout(() => loadUsage(false), 8000)
+      })
+      .catch(() => setUsage(prev => prev || {}))
+  }
   const load = () => {
     api.admin.instances().then(setInstances).catch(e => setError(e.message))
+    loadUsage(true)
   }
   useEffect(load, [])
 
@@ -406,7 +489,12 @@ function InstancesTab() {
       {error && <p className="text-sm" style={{ color: 'var(--pastel-red)' }}>{error}</p>}
       {!error && instances === null && <div className="space-y-2">{[0,1].map(i => <div key={i} className="skeleton h-16 rounded-xl"/>)}</div>}
       {!error && instances?.length === 0 && <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>No instances exist on this server yet.</p>}
-      {!error && instances?.length > 0 && instances.map(inst => <InstanceCard key={inst.id} instance={inst} onDeleted={handleDeleted}/>)}
+      {!error && instances?.length > 0 && instances.map(inst => <InstanceCard key={inst.id} instance={inst} usage={usage ? (usage[inst.id] || false) : null} onDeleted={handleDeleted}/>)}
+      {librarySpecies > 0 && (
+        <p className="text-[11px] pt-1" style={{ color: 'var(--text-tertiary)' }}>
+          Shared species library: {librarySpecies.toLocaleString()} species. A location's new bird is filled from it instead of the web; seasonal charts stay local.
+        </p>
+      )}
     </div>
   )
 }
@@ -552,7 +640,7 @@ export default function GlobalAdmin() {
         ))}
       </div>
 
-      {(() => { const Tab = (TABS.find(t => t[0] === tab) || TABS[1])[3]; return <Tab/> })()}
+      {(() => { const Tab = (TABS.find(t => t[0] === tab) || TABS[1])[3]; return <Tab librarySpecies={overview?.library_species || 0}/> })()}
     </div>
   )
 }

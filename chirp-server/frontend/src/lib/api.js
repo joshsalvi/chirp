@@ -34,17 +34,8 @@ function extractErrorDetail(detail, fallback) {
   return fallback
 }
 
-const TOKEN_KEY = 'chirp_token'
-
-export const tokenStore = {
-  get: () => localStorage.getItem(TOKEN_KEY),
-  set: (t) => localStorage.setItem(TOKEN_KEY, t),
-  clear: () => localStorage.removeItem(TOKEN_KEY),
-}
-
-// Media URLs (<img>/<audio> src). This server authenticates media like any
-// other request, so the path is used as is (the instances fork adds a token).
-export function mediaUrl(path) { return path }
+import { tokenStore, mediaUrl } from './token'
+export { tokenStore, mediaUrl }
 
 // ── GET cache ────────────────────────────────────────────────────────────────
 // Makes going back to a page you just left instant (the iOS tab bar mostly).
@@ -257,6 +248,10 @@ export const api = {
     dashboardSummary: () => request('/recordings/statistics/dashboard-summary'),
     yardPulse: () => request('/recordings/statistics/yard-pulse'),
     dailyJournal: () => request('/recordings/statistics/daily-journal'),
+    // Today at a glance for the Standard dashboard (the same data Chirp Lite's Today uses).
+    today: () => request('/lite/today'),
+    // Loudness bars, where each bird was identified, and its call marks (SongLine).
+    songline: (id, bird) => request(`/lite/recording/${encodeURIComponent(id)}/songline${bird ? '?bird=' + encodeURIComponent(bird) : ''}`),
     digest:       (date) => request(`/recordings/statistics/digest${date ? `?date=${date}` : ''}`),
     regenerateDailyJournal: () => request('/recordings/statistics/daily-journal/regenerate', { method: 'POST' }),
     weeklyJournal: () => request('/recordings/statistics/weekly-journal'),

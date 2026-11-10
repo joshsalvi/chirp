@@ -89,17 +89,21 @@ struct RecentView: View {
 
 /// One recording: its spectrogram with a scrubbable playhead, play/stop, and
 /// every bird found in it (GET /recordings/{id}). Remote: Down from the tabs
-/// lands on Play; on the spectrogram ◀ ▶ move the playhead (5 s a step) and
-/// Select plays from it; Play/Pause works anywhere on the screen.
+/// lands on Play; on the spectrogram ◀ ▶ move a marker (5 s a step) without
+/// interrupting what's playing, and Select plays from it; Play/Pause works
+/// anywhere on the screen; Menu or the Recent button goes back to the list.
 struct RecordingView: View {
     let item: RecentView.Item
     @EnvironmentObject var account: Account
     @EnvironmentObject var player: Player
+    @Environment(\.dismiss) private var dismiss
     @State private var detections: [Detection] = []
     @State private var fullDuration: Double?
     @State private var cursor: Double = 0
+    /// Where ◀ ▶ have moved the marker; Select plays from here.
+    @State private var scrubbing: Double?
     @FocusState private var focus: Focus?
-    private enum Focus: Hashable { case play, scrubber, species(String) }
+    private enum Focus: Hashable { case back, play, scrubber, species(String) }
 
     struct Detail: Decodable { let durationSeconds: Double?; let detections: [Detection] }
     struct Detection: Decodable, Identifiable {
@@ -128,6 +132,7 @@ struct RecordingView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 30) {
             header.focusSection()
+                .defaultFocus($focus, item.hasAudio ? .play : .back, priority: .userInitiated)
             scrubber
             if let e = player.error { Text(e).foregroundStyle(Theme.rose) }
             speciesRow.focusSection()
@@ -136,6 +141,8 @@ struct RecordingView: View {
         .background(backdrop)
         .defaultFocus($focus, item.hasAudio ? .play : grouped.first.map { .species($0.name) })
         .onPlayPauseCommand { Task { await togglePlay() } }
+        .onExitCommand { dismiss() }
+        .onChange(of: focus) { _, f in if f != .scrubber { scrubbing = nil } }
         .task { await load() }
         .onAppear { player.onScreenID = item.id }
         .onDisappear {
@@ -148,6 +155,10 @@ struct RecordingView: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: 34) {
+            Button { dismiss() } label: {
+                Label("Recent", systemImage: "chevron.left").font(.callout)
+            }
+            .focused($focus, equals: .back)
             BirdPhoto(path: item.photoUrl, size: 170)
                 .clipShape(Circle())
                 .overlay(Circle().stroke(Theme.amber.opacity(0.55), lineWidth: 3))
@@ -202,8 +213,11 @@ struct RecordingView: View {
                                        startPoint: .leading, endPoint: .trailing)
                             .frame(width: max(0, x))
                     }
-                    if isPlaying || focused || cursor > 0 {
+                    if isPlaying || (focused && scrubbing == nil) || cursor > 0 {
                         playhead(x: x, height: geo.size.height, live: isPlaying)
+                    }
+                    if let s = scrubbing {
+                        playhead(x: w * min(s, total) / total, height: geo.size.height, live: false)
                     }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 22))
@@ -222,8 +236,8 @@ struct RecordingView: View {
             .onTapGesture { Task { await playFromCursor() } }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Spectrogram")
-            .accessibilityValue("\(Theme.clock(now)) of \(Theme.clock(total))")
-            .accessibilityHint("Left and right move the playhead; select plays from it")
+            .accessibilityValue("\(Theme.clock(scrubbing ?? now)) of \(Theme.clock(total))")
+            .accessibilityHint("Left and right move the marker; select plays from it")
 
             timeline
         }
@@ -259,7 +273,7 @@ struct RecordingView: View {
             HStack {
                 Spacer()
                 Text(focus == .scrubber
-                     ? "◀ ▶ move · Select plays from \(Theme.clock(now))"
+                     ? "◀ ▶ move · Select plays from \(Theme.clock(scrubbing ?? now))"
                      : (isPlaying ? "\(Theme.clock(now)) / \(Theme.clock(audible))" : "Select the spectrogram to pick a spot"))
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(isPlaying || focus == .scrubber ? Theme.amber : Theme.muted)
@@ -332,10 +346,9 @@ struct RecordingView: View {
     private func move(_ dir: MoveCommandDirection) {
         switch dir {
         case .left, .right:
+            // Only the marker moves; what's playing carries on until Select.
             let delta = dir == .right ? Self.step : -Self.step
-            let to = min(max(0, now + delta), max(0, audible - 0.5))
-            cursor = to
-            if isPlaying { player.seek(to: to) }
+            scrubbing = min(max(0, (scrubbing ?? now) + delta), max(0, audible - 0.5))
         case .up: focus = item.hasAudio ? .play : nil
         case .down: focus = grouped.first.map { .species($0.name) }
         @unknown default: break
@@ -348,8 +361,11 @@ struct RecordingView: View {
     }
 
     private func playFromCursor() async {
-        if isPlaying { player.seek(to: cursor) }
-        else { await player.play(id: item.id, title: item.species, at: cursor) }
+        let at = scrubbing ?? (isPlaying ? now : cursor)
+        cursor = at
+        scrubbing = nil
+        if isPlaying { player.seek(to: at) }
+        else { await player.play(id: item.id, title: item.species, at: at) }
     }
 
     private struct Group { let name: String; let count: Int; let best: Double; let photo: String?; let start: Double }

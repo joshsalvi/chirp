@@ -1042,7 +1042,8 @@ class User(Base):
     notify_device_offline_email = Column(Boolean, default=False)
     notify_daily_journal_push = Column(Boolean, default=True)  # 6 pm push with the Daily Journal
     notify_weekly_journal_push = Column(Boolean, default=True) # Sunday noon push with the Weekly Journal
-    dashboard_mode = Column(String, nullable=True)  # 'simplified' | 'detailed' | None (not yet chosen — triggers the first-login picker)
+    dashboard_mode = Column(String, nullable=True)  # 'standard' | 'advanced'; None or an old name (simplified, detailed) shows the picker once
+    ui_mode = Column(String, nullable=True)  # 'lite' | 'pro' | None (default by role: viewers Lite, others Pro); api/auth.py ui_mode_for
     last_seen_whats_new_version = Column(String, nullable=True)  # last app version this user has dismissed the "What's New" popup for — shows again whenever it doesn't match the current version
     photo_url            = Column(String, nullable=True)  # profile photo (uploaded or set by URL)
 

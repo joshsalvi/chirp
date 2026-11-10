@@ -39,7 +39,13 @@ services:
       - "net.unraid.docker.name=Chirp (Instances - TESTING)"
       - "com.centurylinklabs.watchtower.enable=false"
     volumes:
-      - /mnt/user/data/media/miscellaneous/chirp-instances-data:/app/data
+      # Recordings, photos, spectrograms. CHIRP_HOST_DATA_DIR in .env puts them on an SSD pool,
+      # e.g. /mnt/cache_secondary/chirp/instances-data: array disks spin down and slow media.
+      - ${CHIRP_HOST_DATA_DIR:-/mnt/user/data/media/miscellaneous/chirp-instances-data}:/app/data
+      # The databases (registry, one per location, their auto-backups). CHIRP_HOST_INSTANCES_DIR
+      # in .env puts them on an SSD pool directly, e.g. /mnt/cache_secondary/chirp/instances-data/instances:
+      # through the array (where the mover leaves them) every page is slow.
+      - ${CHIRP_HOST_INSTANCES_DIR:-/mnt/user/data/media/miscellaneous/chirp-instances-data/instances}:/app/data/instances
       - headscale-shared:/shared:ro
     depends_on:
       headscale:

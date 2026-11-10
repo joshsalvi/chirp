@@ -59,6 +59,48 @@ final class FocusTests: XCTestCase {
         remote.press(.left)
         remote.press(.down)
         XCTAssertTrue(play.hasFocus, "Down from any tab should focus Play")
+
+        // Menu goes back to the list.
+        remote.press(.menu)
+        XCTAssertTrue(app.staticTexts["Recent recordings"].waitForExistence(timeout: 5), "Menu should go back to Recent")
+    }
+
+    func testLiveScrub() throws {
+        let env = ProcessInfo.processInfo.environment
+        guard let token = env["CHIRP_TOKEN"], let server = env["CHIRP_SERVER"] else {
+            throw XCTSkip("CHIRP_TOKEN and CHIRP_SERVER not set")
+        }
+        let app = XCUIApplication()
+        app.launchArguments = ["-ChirpScreenshots", "listen", "-ChirpServer", server,
+                               "-ChirpToken", token, "-ChirpUser", env["CHIRP_USER"] ?? ""]
+        app.launch()
+        let remote = XCUIRemote.shared
+        var n = 100
+        XCTAssertTrue(app.buttons["Stop"].waitForExistence(timeout: 20))
+        sleep(12)   // a few clips arrive
+
+        // Down from the tabs reaches Stop, then the spectrogram.
+        let panel = app.descendants(matching: .any)["Live spectrogram"]
+        for _ in 0..<3 where !panel.hasFocus { remote.press(.down) }
+        XCTAssertTrue(panel.hasFocus, "Down should reach the live spectrogram")
+
+        // ◀ ×4: the marker is a few seconds back.
+        for _ in 0..<4 { remote.press(.left) }
+        XCTAssertTrue((panel.value as? String)?.hasSuffix("seconds back") == true, "value: \(String(describing: panel.value))")
+        shot(app, &n)
+
+        // Select listens from there: behind live.
+        remote.press(.select)
+        sleep(2)
+        XCTAssertTrue((panel.value as? String)?.contains("behind live") == true, "value: \(String(describing: panel.value))")
+        shot(app, &n)
+
+        // ▶ to the end and Select: live again.
+        for _ in 0..<30 { remote.press(.right) }
+        remote.press(.select)
+        sleep(2)
+        XCTAssertEqual(panel.value as? String, "Live")
+        shot(app, &n)
     }
 
     /// Attaches the screen, and saves it to CHIRP_SHOTS when set.

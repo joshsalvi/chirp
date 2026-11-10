@@ -2449,3 +2449,143 @@ html.vp-shift { --inset-top: calc(max(env(safe-area-inset-top, 0px) - var(--vp-s
    them over the bottom tab bar and header. A stacking context keeps them
    inside the map. */
 .leaflet-container { position: relative; z-index: 0; isolation: isolate; }
+
+/* ── Standard dashboard (StandardDashboard.jsx) and the view picker ───────── */
+.sd-root { background: var(--gradient-hero) no-repeat; }
+.sd-wrap { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 36px; }
+.sd-eyebrow { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-secondary); }
+.sd-headline { font-family: 'Lora', Georgia, serif; font-weight: 500; font-size: clamp(30px, 5vw, 44px); line-height: 1.15; letter-spacing: -.01em; color: var(--text-primary); max-width: 18ch; }
+.sd-h2 { font-family: 'Lora', Georgia, serif; font-weight: 500; font-size: 24px; color: var(--text-primary); }
+.sd-pill { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px 0 16px; border-radius: 999px;
+  border: 1px solid var(--border-default); background: var(--bg-card); color: var(--text-primary); font-size: 14px; font-weight: 500; transition: border-color .15s; }
+.sd-pill:hover { border-color: var(--border-focus); }
+.sd-pill-label { color: var(--text-secondary); font-weight: 400; margin-right: -3px; }
+.sd-hero { display: grid; grid-template-columns: auto minmax(0, 1fr); border-radius: 22px; overflow: hidden;
+  background: var(--bg-card); border: 1px solid var(--border-subtle); box-shadow: var(--shadow-card), 0 12px 40px rgba(0,0,0,.22); }
+.sd-hero-photo { display: block; position: relative; overflow: hidden; height: 380px; width: min(560px, 42vw, calc(380px * var(--hero-ratio, 1.3))); }
+.sd-hero-photo img { object-position: 50% 20%; }
+.sd-hero-photo img, .sd-hero-photo > div { position: absolute; inset: 0; transition: transform .6s cubic-bezier(.16,1,.3,1); }
+/* Tiles crop toward the top, where a portrait photo has the bird's head. */
+.sd-tile img { object-position: 50% 12%; }
+.sd-hero-photo:hover img { transform: scale(1.03); }
+.sd-hero-body { padding: 36px; display: flex; flex-direction: column; justify-content: space-between; gap: 28px; min-width: 0; }
+.sd-hero-name { font-family: 'Lora', Georgia, serif; font-weight: 500; font-size: clamp(28px, 4vw, 38px); line-height: 1.1; color: var(--text-primary); }
+@media (hover: hover) { .sd-hero-name:hover { color: var(--accent-300); } }
+.sd-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-400); box-shadow: 0 0 0 4px rgb(var(--accent-500-rgb) / .18); flex-shrink: 0; }
+.sd-play { border-radius: 50%; display: grid; place-items: center; background: var(--accent-400); color: #071009;
+  box-shadow: 0 6px 20px rgb(var(--accent-500-rgb) / .28); transition: transform .15s; }
+.sd-play:hover { transform: scale(1.05); }
+.sd-play:active { transform: scale(.96); }
+.sd-track { height: 6px; border-radius: 3px; background: var(--bg-raised); overflow: hidden; cursor: pointer; }
+.sd-track-fill { height: 100%; border-radius: 3px; background: var(--accent-400); transition: width .2s linear; }
+.sd-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--border-default); border-bottom: 1px solid var(--border-default); }
+.sd-fact { padding: 22px 20px; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.sd-fact:first-child { padding-left: 0; }
+.sd-fact + .sd-fact { border-left: 1px solid var(--border-default); }
+.sd-fact-label { font-size: 12px; letter-spacing: .07em; text-transform: uppercase; color: var(--text-secondary); }
+.sd-fact-value { font-family: 'Lora', Georgia, serif; font-size: 24px; color: var(--text-primary); overflow-wrap: break-word; hyphens: manual; text-wrap: balance; line-height: 1.2; }
+.sd-fact-sub { font-size: 14px; color: var(--text-secondary); }
+.sd-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: 168px; grid-auto-flow: dense; gap: 12px; }
+.sd-tile { position: relative; border-radius: 16px; overflow: hidden; display: block; background: var(--bg-card); isolation: isolate; }
+.sd-tile img { transition: transform .6s cubic-bezier(.16,1,.3,1); }
+.sd-tile:hover img { transform: scale(1.05); }
+.sd-tile-big { grid-column: span 2; grid-row: span 2; }
+.sd-tile-wide { grid-column: span 2; }
+.sd-tile-full { grid-column: 1 / -1; }
+.sd-tile-caption { position: absolute; left: 0; right: 0; bottom: 0; padding: 40px 14px 12px; display: flex; justify-content: space-between; align-items: flex-end; gap: 8px;
+  background: linear-gradient(to top, rgba(3,8,5,.92), rgba(3,8,5,0)); }
+.sd-tile-name { font-family: 'Lora', Georgia, serif; font-size: 16px; line-height: 1.2; color: #f5f0e8; }
+.sd-tile-big .sd-tile-name { font-size: 28px; }
+.sd-tile-wide .sd-tile-name { font-size: 21px; }
+.sd-count { flex-shrink: 0; font-size: 13px; padding: 3px 9px; border-radius: 999px; background: rgba(5,12,8,.72); color: var(--accent-300); }
+.sd-new { position: absolute; top: 10px; left: 10px; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--accent-400); color: #071009; }
+.sd-journal { border-radius: 20px; background: var(--bg-card); border: 1px solid var(--border-subtle); padding: 28px 32px; display: flex; flex-direction: column; gap: 12px; }
+.sd-quote { font-family: 'Lora', Georgia, serif; font-style: italic; font-size: 20px; line-height: 1.55; color: var(--text-primary); }
+.sd-day { margin-top: 8px; display: flex; flex-direction: column; gap: 10px; }
+.sd-bars { height: 72px; display: flex; align-items: flex-end; gap: 3px; }
+.sd-bar { flex: 1; border-radius: 3px 3px 1px 1px; background: var(--accent-500); opacity: .7; }
+.sd-bar.now { background: var(--accent-300); opacity: 1; }
+.sd-bar.later { background: var(--bg-raised); opacity: 1; }
+.sd-bar-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-secondary); }
+/* Above the phone tab bar (z-50); fits between the notch and the home bar. */
+.mode-picker-backdrop { z-index: 70; padding: calc(env(safe-area-inset-top, 0px) + 12px) 12px calc(env(safe-area-inset-bottom, 0px) + 12px); }
+.mode-picker { max-width: 640px; max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px); }
+.mode-picker-foot { position: sticky; bottom: -20px; margin: 0 -20px -20px; padding: 12px 20px 20px; background: var(--bg-card); }
+@media (min-width: 640px) { .mode-picker-foot { bottom: -32px; margin: 0 -32px -32px; padding: 12px 32px 32px; } }
+.mode-card { display: flex; flex-direction: column; gap: 14px; }
+.mode-card-text { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.mode-sketch { height: 132px; border-radius: 12px; background: var(--bg-base); padding: 12px; display: flex; flex-direction: column; gap: 9px; }
+@media (max-width: 760px) {
+  .sd-wrap { gap: 28px; }
+  .sd-hero { grid-template-columns: 1fr; }
+  .sd-hero-photo { width: 100%; height: auto; aspect-ratio: var(--hero-ratio-phone, 1.4); }
+  .sd-hero-body { padding: 20px 20px 22px; gap: 18px; }
+  .sd-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 150px; gap: 10px; }
+  .sd-tile-big .sd-tile-name { font-size: 24px; }
+  .sd-tile-name { font-size: 15px; }
+  .mode-card { flex-direction: row; align-items: center; gap: 14px; }
+  .mode-card .mode-sketch { width: 104px; height: 84px; flex-shrink: 0; padding: 8px; gap: 6px; }
+  .mode-card-text { gap: 4px; }
+  .sd-facts { grid-template-columns: minmax(0, .9fr) minmax(0, 1.3fr) minmax(0, .8fr); }
+  .sd-fact { padding: 16px 10px; }
+  .sd-fact-value { font-size: clamp(15px, 4.6vw, 18px); }
+  .sd-fact-sub { font-size: 12px; }
+  .sd-fact-label { font-size: 11px; }
+  .sd-journal { padding: 22px; }
+  .sd-quote { font-size: 17px; }
+}
+
+/* Pull to refresh (lib/gestures.js): a small dot that follows the pull. */
+.ptr { position: relative; height: 0; z-index: 30; pointer-events: none; }
+.ptr-band { position: absolute; top: 0; left: 0; right: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+.ptr-dot { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--bg-raised);
+  color: var(--accent-400); border: 1px solid var(--border-default); box-shadow: 0 6px 18px rgba(0,0,0,.35); flex-shrink: 0; }
+
+/* ── Mobile tab bar: Liquid Glass, as in Chirp Live and Chirp Lite ──────
+   A floating pill over the page: blurred, saturated and see-through, with
+   a bright top edge; the current tab sits in a raised lens. --nav-clear is
+   the height it covers from the bottom of the screen, for anything that
+   must sit above it (the ⋮ menu, Settings' save bar, page padding). */
+:root {
+  --nav-gap: max(calc(env(safe-area-inset-bottom, 0px) - 6px), 10px);
+  --nav-h: 60px;
+  --nav-clear: calc(var(--nav-gap) + var(--nav-h));
+  --glass-fill: rgb(28 30 26 / .55);
+  --glass-edge: rgb(255 255 255 / .14);
+  --glass-shine: rgb(255 255 255 / .16);
+  --glass-shadow: 0 12px 32px rgb(0 0 0 / .42), 0 2px 6px rgb(0 0 0 / .25);
+  --glass-lens: rgb(255 255 255 / .10);
+}
+[data-theme="paper"], [data-theme="plate"] {
+  --glass-fill: rgb(255 255 255 / .62);
+  --glass-edge: rgb(0 0 0 / .08);
+  --glass-shine: rgb(255 255 255 / .9);
+  --glass-shadow: 0 12px 30px rgb(0 0 0 / .14), 0 2px 6px rgb(0 0 0 / .08);
+  --glass-lens: rgb(0 0 0 / .06);
+}
+.glass-nav {
+  position: fixed; left: 50%; transform: translateX(-50%); z-index: 50;
+  bottom: var(--nav-gap); height: var(--nav-h);
+  width: min(460px, calc(100% - 24px));
+  display: flex; align-items: stretch; padding: 5px; border-radius: 30px;
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(22px) saturate(1.8);
+  backdrop-filter: blur(22px) saturate(1.8);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-shine);
+}
+.glass-tab {
+  position: relative; flex: 1; display: flex; align-items: center; justify-content: center;
+  border-radius: 25px; color: var(--text-secondary); transition: background .2s, color .2s, transform .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.glass-tab:active { transform: scale(.94); }
+.glass-tab.on {
+  color: var(--accent-400);
+  background: var(--glass-lens);
+  box-shadow: inset 0 1px 0 var(--glass-shine), 0 0 0 1px var(--glass-edge);
+}
+.glass-tab:not(.on) { opacity: .62; }
+.glass-tab.alert:not(.on) { opacity: 1; }
+@media (min-width: 768px) { .glass-nav { display: none; } }
+@media (max-width: 767px) { .main-clear-nav { padding-bottom: calc(var(--nav-clear) + 16px) !important; } }

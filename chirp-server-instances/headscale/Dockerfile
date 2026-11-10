@@ -25,5 +25,6 @@ RUN HS_BIN=$(find /headscale-src -maxdepth 6 -type f -iname "headscale" | head -
 COPY entrypoint.sh /etc/headscale/entrypoint.sh
 RUN chmod +x /etc/headscale/entrypoint.sh
 COPY api-wrapper.py /etc/headscale/api-wrapper.py
+COPY derp-fallback.yaml /etc/headscale/derp-fallback.yaml
 
 ENTRYPOINT ["/bin/sh", "/etc/headscale/entrypoint.sh"]

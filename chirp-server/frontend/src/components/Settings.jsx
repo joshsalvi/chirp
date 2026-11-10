@@ -27,7 +27,8 @@ const NearMisses = lazy(() => import('./NearMisses'))
 const NightThresholds = lazy(() => import('./NightThresholds'))
 const MyNotifications = lazy(() => import('./MyNotifications'))
 import { getGlobalDefault, setGlobalDefault, resetAllCardOverrides, GLOBAL_DEFAULTS } from '../lib/cardState'
-import { DashboardModePicker } from './Dashboard'
+import DashboardModePicker from './DashboardModePicker'
+import { chosenMode, localMode, setLocalMode } from '../lib/dashboardMode'
 import { SpectrogramIcon, MigrationIcon, RoostIcon, EchoCaveIcon,
          PaperIcon, MonoIcon, TerminalIcon, PlateIcon, OscilloscopeIcon,
          AviaryIcon, CornellIcon, FieldNotebookIcon, DraculaIcon,
@@ -145,15 +146,15 @@ function DashboardSectionsSettings() {
   return (
     <Section icon={LayoutDashboard} title="Dashboard Sections" id="settings-appearance-dashboard-sections">
       <p className="text-xs mb-4" style={{ color: 'var(--text-secondary)' }}>
-Choose which Dashboard cards to show in Detailed and Simplified mode. A hidden card's data isn't loaded, so turning off cards you don't use makes the Dashboard faster.
+Choose which cards the Advanced dashboard shows. A hidden card's data isn't loaded, so turning off cards you don't use makes it faster. The Standard dashboard has a fixed, simple layout.
 </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {['full', 'simplified'].map(which => (
+      <div className="grid grid-cols-1 gap-4">
+        {['full'].map(which => (
           <div key={which}>
             <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--text-tertiary)' }}>
-              {which === 'full' ? 'Detailed mode' : 'Simplified mode'}
+              Advanced dashboard
             </p>
-            <div className="space-y-1.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
               {sections.map(s => {
                 const checked = (which === 'full' ? full : simplified).has(s.id)
                 return (
@@ -183,41 +184,50 @@ Choose which Dashboard cards to show in Detailed and Simplified mode. A hidden c
 
 function DashboardStyleSection() {
   const [mode, setMode] = useState(null)
+  const [signedIn, setSignedIn] = useState(false)
   const [saving, setSaving] = useState(false)
   const [showPicker, setShowPicker] = useState(false)
 
   useEffect(() => {
-    api.auth.whoami().then(u => setMode(u?.dashboard_mode || 'detailed')).catch(() => setMode('detailed'))
+    api.auth.whoami()
+      .then(u => {
+        const mine = !!u?.username
+        setSignedIn(!!mine)
+        setMode((mine ? chosenMode(u.dashboard_mode) : localMode()) || 'standard')
+      })
+      .catch(() => setMode(localMode() || 'standard'))
   }, [])
 
   const choose = async (m) => {
     setMode(m)
+    setShowPicker(false)
+    window.dispatchEvent(new CustomEvent('chirp-dashboard-mode', { detail: { mode: m } }))
+    if (!signedIn) { setLocalMode(m); return }
     setSaving(true)
     try { await api.auth.updateProfile({ dashboard_mode: m }) } catch (e) {}
     setSaving(false)
-    setShowPicker(false)
   }
 
   if (mode === null) return null
 
   return (
-    <Section icon={LayoutDashboard} title="Dashboard Style" id="settings-appearance-dashboard">
+    <Section icon={LayoutDashboard} title="Dashboard" id="settings-appearance-dashboard">
       <p className="text-xs mb-4" style={{ color: 'var(--text-secondary)' }}>
-        How much shows up on your Dashboard. This is personal to your account, not this browser.
+        {signedIn ? 'Personal to your account, on every device.' : 'Kept in this browser.'}
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
         {[
-          { id: 'simplified', emoji: '✨', label: 'Simplified', desc: "Just the essentials — what's singing now, today's activity, and a quick summary." },
-          { id: 'detailed', emoji: '📊', label: 'Detailed', desc: 'Everything — streaks, yard diversity, activity charts, top species, recordings and notes.' },
+          { id: 'standard', label: 'Standard', desc: "The latest bird, today's birds as photos, three facts and a line from the journal." },
+          { id: 'advanced', label: 'Advanced', desc: 'Everything: activity charts, diversity scores, stat cards, journals and comments.' },
         ].map(opt => (
-          <button key={opt.id} onClick={() => choose(opt.id)} disabled={saving}
+          <button key={opt.id} onClick={() => choose(opt.id)} disabled={saving} aria-pressed={mode === opt.id}
                   className="text-left p-4 rounded-xl transition-all disabled:opacity-60"
                   style={{
                     background: mode === opt.id ? 'var(--nav-active-bg)' : 'var(--bg-raised)',
                     border: `1px solid ${mode === opt.id ? 'var(--border-focus)' : 'var(--border-subtle)'}`,
                   }}>
             <p className="font-semibold text-sm mb-1" style={{ color: mode === opt.id ? 'var(--accent-400)' : 'var(--text-primary)' }}>
-              {opt.emoji} {opt.label} {mode === opt.id && '· current'}
+              {opt.label} {mode === opt.id && '· current'}
             </p>
             <p className="text-xs" style={{ color: 'var(--text-secondary)', lineHeight: 1.5 }}>{opt.desc}</p>
           </button>
@@ -225,10 +235,10 @@ function DashboardStyleSection() {
       </div>
       <button onClick={() => setShowPicker(true)}
               className="text-xs underline hover:opacity-80" style={{ color: 'var(--text-tertiary)' }}>
-        View the original picker again
+        Show the picker
       </button>
       {showPicker && (
-        <DashboardModePicker onChoose={choose} onClose={() => setShowPicker(false)}/>
+        <DashboardModePicker current={mode} onChoose={choose} onClose={() => setShowPicker(false)}/>
       )}
     </Section>
   )
@@ -2637,7 +2647,7 @@ const CARD_KEYWORDS = {
   'settings-experimental': 'experimental, Nighthawk, night flight calls, range maps, heatmap',
   'settings-appearance-theme': 'theme, colors, dark mode, light mode, custom theme',
   'settings-appearance-icon': 'app icon, home screen icon, icon color',
-  'settings-appearance-dashboard': 'dashboard style, simplified, detailed',
+  'settings-appearance-dashboard': 'dashboard style, standard, advanced, simplified, detailed',
   'settings-appearance-dashboard-sections': 'dashboard sections, cards shown',
   'settings-appearance-layout': 'cards expanded by default, collapsed cards, layout',
   'settings-detection': 'BirdNET 2.4, minimum confidence, min. detection confidence, window overlap, detection sensitivity, station threshold',
@@ -2805,7 +2815,7 @@ function SettingsSearch({ containerRef, tabs, tabForElement, onPick }) {
 function SaveBar({ dirty, saving, saved, onSave, onDiscard }) {
   if (!dirty && !saved) return null
   return (
-    <div className="fixed left-0 right-0 z-40 flex justify-center pointer-events-none bottom-[calc(56px+max(env(safe-area-inset-bottom),8px)+10px)] md:bottom-5 px-3">
+    <div className="fixed left-0 right-0 z-40 flex justify-center pointer-events-none bottom-[calc(var(--nav-clear)+10px)] md:bottom-5 px-3">
       <div className="pointer-events-auto flex items-center gap-2 pl-4 pr-2 py-2 rounded-2xl w-full max-w-md animate-slide-up"
            style={{ background: 'var(--bg-card)', border: '1px solid var(--border-default)', boxShadow: '0 8px 28px rgba(0,0,0,.4)' }}>
         <span className="flex-1 text-sm" style={{ color: saved && !dirty ? '#4ade80' : 'var(--text-primary)' }}>

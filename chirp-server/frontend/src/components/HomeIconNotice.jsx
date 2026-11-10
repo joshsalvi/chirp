@@ -97,7 +97,7 @@ export default function HomeIconNotice({ version }) {
   return (
     <div role="dialog" aria-labelledby="home-icon-title"
          className="fixed left-3 right-3 z-40 mx-auto max-w-md rounded-2xl p-4 animate-fade-in"
-         style={{ bottom: 'calc(env(safe-area-inset-bottom) + 76px)', background: 'var(--bg-raised)',
+         style={{ bottom: 'calc(var(--nav-clear) + 12px)', background: 'var(--bg-raised)',
                   border: '1px solid var(--border-default)', boxShadow: '0 10px 30px rgba(0,0,0,.45)' }}>
       <div className="flex items-start gap-3">
         <img src={`/apple-touch-icon.png?v=${ICON_VERSION}`} alt="" width="48" height="48"

@@ -100,6 +100,7 @@ final class Listener: ObservableObject {
         guard !listening else { return }
         state = .starting
         heard = []; singing = nil; clips = [:]; levels = Array(repeating: 0, count: 48); placeName = nil
+        ScopeFeed.shared.reset(); ScopeFeed.shared.run(true)
         remoteIDs = []; sentToSite = 0; distance = 0; lastFix = nil
         if case .station(let st) = source {
             startStation(st)
@@ -138,6 +139,7 @@ final class Listener: ObservableObject {
             engine.stop()
         }
         ClipPlayer.listenerActive = false
+        ScopeFeed.shared.run(false)
         trackTask?.cancel(); trackTask = nil
         let audio = recorder.finish()
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
@@ -187,6 +189,7 @@ final class Listener: ObservableObject {
             let samples = Array(UnsafeBufferPointer(start: ch, count: Int(out.frameLength)))
             ring.append(samples)
             recorder.write(out)
+            ScopeFeed.shared.append(samples)
             sinceLast += samples.count
             var rms: Float = 0
             for s in samples { rms += s * s }
@@ -245,6 +248,8 @@ final class Listener: ObservableObject {
                 playEngine.mainMixerNode.removeTap(onBus: 0)
                 playEngine.mainMixerNode.installTap(onBus: 0, bufferSize: 2048, format: nil) { [weak self] buffer, _ in
                     guard let ch = buffer.floatChannelData?[0], buffer.frameLength > 0 else { return }
+                    ScopeFeed.shared.append(Array(UnsafeBufferPointer(start: ch, count: Int(buffer.frameLength))),
+                                            sampleRate: buffer.format.sampleRate)
                     var sum: Float = 0
                     for i in 0..<Int(buffer.frameLength) { sum += ch[i] * ch[i] }
                     let rms = (sum / Float(buffer.frameLength)).squareRoot()
@@ -467,6 +472,7 @@ extension Listener {
             let burst = (i % 11 > 5) ? Float.random(in: 0.55...0.92, using: &r) : Float.random(in: 0.18...0.42, using: &r)
             return burst
         }
+        ScopeFeed.shared.show(levels: levels)
     }
 }
 #endif
