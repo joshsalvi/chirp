@@ -32,7 +32,6 @@ function InputField({ label, type = 'text', value, onChange, placeholder, requir
 function LoginForm({ onLogin }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [remember, setRemember] = useState(true)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
 
@@ -40,7 +39,7 @@ function LoginForm({ onLogin }) {
     e.preventDefault()
     setLoading(true); setError(null)
     try {
-      const data = await api.auth.login(username.trim(), password, remember)
+      const data = await api.auth.login(username.trim(), password, true)
       hapticEvent('success')
       onLogin(data)
     } catch (e) {
@@ -58,11 +57,6 @@ function LoginForm({ onLogin }) {
     <form onSubmit={submit} className="space-y-4">
       <InputField label="Username" value={username} onChange={e => setUsername(e.target.value)} placeholder="username" required autoFocus autoComplete="username"/>
       <InputField label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required autoComplete="current-password"/>
-      <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: 'var(--text-secondary)' }}>
-        <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)}
-               className="w-4 h-4 accent-chirp-500"/>
-        Stay signed in for 7 days
-      </label>
       {error && (
         <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.25)', color: 'var(--pastel-red)' }}>
           {error}

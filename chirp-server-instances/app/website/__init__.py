@@ -18,7 +18,7 @@ import os
 
 HOSTS_WEBSITE = os.environ.get("CHIRP_WEBSITE", "0") == "1"
 WEBSITE_URL = "https://ourchirp.com"
-WEBSITE_PAGES = {"about", "about.html", "setup.html", "guide.html", "troubleshooting.html", "support.html", "testflight.html",
+WEBSITE_PAGES = {"about", "about.html", "apps", "apps.html", "setup.html", "guide.html", "troubleshooting.html", "support.html", "testflight.html",
                  "privacy.html", "docs.css", "site.js"}
 
 

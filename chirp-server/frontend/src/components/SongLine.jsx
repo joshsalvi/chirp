@@ -1,6 +1,6 @@
-// The song line: a recording's loudness as one row of bars, with the
-// stretches where the bird was identified highlighted (a soft band behind
-// gold bars). Tap anywhere to jump there. No per-call marks: detections are
+// The song line: a recording's loudness as one row of bars; bars are gold
+// where the bird was identified (its detection windows, merged), dim
+// elsewhere. Tap anywhere to jump there. No per-call marks: detections are
 // 3–5 s windows, so a mark placed from loudness can point at the wrong sound.
 // Used by the Standard dashboard's player and Chirp Lite's now-playing bar.
 // Data: GET /lite/recording/{id}/songline (services/songline.py).
@@ -35,13 +35,6 @@ export default function SongLine({
            if (e.key === 'ArrowLeft') onSeek?.(Math.max(0, pos - 2))
          }}
          style={{ position: 'relative', width: '100%', height, cursor: onSeek ? 'pointer' : 'default' }}>
-      {/* The bird's stretches: a soft band the full height of the line. */}
-      {spans.map(([a, b]) => (
-        <span key={`band-${a}`} aria-hidden="true"
-              style={{ position: 'absolute', top: -3, bottom: -3, left: `${(100 * a) / duration}%`,
-                       width: `${(100 * (b - a)) / duration}%`, borderRadius: 4,
-                       background: accentSoft, opacity: 0.35 }}/>
-      ))}
       <div style={{ position: 'relative', height: '100%', display: 'flex', alignItems: 'center', gap: 2 }}>
         {bars.length ? bars.map((v, i) => {
           const t = ((i + 0.5) * duration) / bars.length

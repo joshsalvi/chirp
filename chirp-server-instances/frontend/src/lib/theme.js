@@ -283,9 +283,12 @@ function _applyCustomThemeStyle(themeId, colors) {
   // id means switching to a built-in theme is automatically correct with
   // no cleanup needed: the selector just stops matching anything.
   tag.textContent = `html[data-theme="${themeId}"] { color-scheme: ${scheme}; ${declarations} }`
+  // Light custom themes get the light tab-bar glass (index.css).
+  document.documentElement.classList.toggle('glass-light', scheme === 'light')
 }
 
 function _clearCustomThemeStyle() {
+  document.documentElement.classList.remove('glass-light')
   const tag = document.getElementById(CUSTOM_STYLE_TAG_ID)
   if (tag) tag.textContent = ''
 }

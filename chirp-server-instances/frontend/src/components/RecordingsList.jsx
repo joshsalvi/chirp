@@ -4,7 +4,7 @@ import { useTz } from '../lib/time'
 import { Search, Mic, Activity, Upload, Trash2, SlidersHorizontal, X, LayoutGrid, List as ListIcon, ChevronDown, ChevronUp, Play, Pause, Sparkles, Archive, CheckSquare, Square, MoreHorizontal, RefreshCw, AudioLines, Bookmark } from 'lucide-react'
 import ManualUpload from './ManualUpload'
 import { confBadgeClass } from '../lib/detectionColors'
-import { api, mediaUrl, clearApiCache } from '../lib/api'
+import { api, mediaUrl, clearApiCache, tokenStore } from '../lib/api'
 import { savePageState, loadPageState } from '../lib/pageState'
 import { useDateRangeFilter, DateRangeFilter } from './DateRangeFilter'
 import { BirdIcon, BatIcon } from './BirdBatIcons'
@@ -490,9 +490,11 @@ export default function RecordingsList() {
             style={showFilters ? { borderColor: 'var(--border-focus)', color: 'var(--accent-400)' } : {}}>
             <SlidersHorizontal size={15}/>
           </button>
-          <button onClick={() => setShowUpload(true)} className="btn-primary">
-            <Upload size={13}/> <span className="hidden sm:inline">Upload</span>
-          </button>
+          {!tokenStore.isDemo() && (
+            <button onClick={() => setShowUpload(true)} className="btn-primary">
+              <Upload size={13}/> <span className="hidden sm:inline">Upload</span>
+            </button>
+          )}
         </div>
       </div>
 

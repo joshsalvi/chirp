@@ -7,6 +7,7 @@ struct SignInView: View {
     @State private var password = ""
     @State private var otherSite = false
     @State private var busy = false
+    @State private var demoBusy = false
     @State private var error: String?
     @FocusState private var focus: Field?
     enum Field { case server, user, pass }
@@ -47,6 +48,17 @@ struct SignInView: View {
                     Text("Use the same account as Chirp. No account? Ask whoever runs your Chirp for an invite.")
                         .font(.lite(13, .semibold)).foregroundStyle(Theme.muted).multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
+                    if !otherSite {
+                        Button { Task { await demo() } } label: {
+                            if demoBusy { ProgressView() } else { Text("Try the demo") }
+                        }
+                        .buttonStyle(MainButton(soft: true))
+                        .disabled(busy || demoBusy)
+                        .padding(.top, 6)
+                        Text("Look around a real yard's birds. No account needed.")
+                            .font(.lite(13, .semibold)).foregroundStyle(Theme.muted).multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
+                    }
                 }
                 .padding(.horizontal, 22).padding(.top, 28).padding(.bottom, 30)
                 .background(Theme.card, in: UnevenRoundedRectangle(topLeadingRadius: 32, topTrailingRadius: 32, style: .continuous))
@@ -65,7 +77,7 @@ struct SignInView: View {
             .ignoresSafeArea()
         }
         .onAppear {
-            username = account.username
+            username = account.isDemo ? "" : account.username
             if account.server != Account.defaultServer { server = account.siteName; otherSite = true }
         }
         .sheet(isPresented: Binding(get: { !account.sites.isEmpty }, set: { if !$0 { account.cancelSitePick() } })) {
@@ -114,6 +126,12 @@ struct SignInView: View {
             .background(Theme.bg, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(focus == f ? Theme.green : Theme.line, lineWidth: 2))
         }
+    }
+
+    private func demo() async {
+        demoBusy = true; error = nil
+        defer { demoBusy = false }
+        do { try await account.tryDemo() } catch { self.error = error.localizedDescription }
     }
 
     private func go() async {
@@ -173,6 +191,7 @@ struct AccountSheet: View {
     @EnvironmentObject var player: Player
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
+    @AppStorage(Haptics.offKey) private var hapticsOff = false
 
     var body: some View {
         NavigationStack {
@@ -190,7 +209,7 @@ struct AccountSheet: View {
                 }
                 Section {
                     row("Open Chirp", "Statistics, stations, settings and more", "square.grid.2x2.fill", Theme.green) {
-                        openURL(account.server)
+                        openURL(account.isDemo ? URL(string: "https://www.ourchirp.com/login?demo=1")! : account.server)
                     }
                     row("Get Chirp Live", "Name birds by sound, anywhere", "mic.fill", Theme.sky) {
                         openURL(URL(string: "https://apps.apple.com/us/app/chirp-live-bird-sound-id/id6827668744")!)
@@ -203,8 +222,17 @@ struct AccountSheet: View {
                     }
                 }
                 Section {
+                    Toggle(isOn: Binding(get: { !hapticsOff }, set: { hapticsOff = !$0; Haptics.tap() })) {
+                        Label("Haptics", systemImage: "iphone.radiowaves.left.and.right")
+                            .font(.lite(16, .bold))
+                    }
+                    .tint(Theme.green)
+                } footer: {
+                    Text("A light tap when a sound starts or you scrub through it.")
+                }
+                Section {
                     Button(role: .destructive) { player.stop(); account.signOut(); dismiss() } label: {
-                        Label("Sign out", systemImage: "rectangle.portrait.and.arrow.right")
+                        Label(account.isDemo ? "Leave the demo" : "Sign out", systemImage: "rectangle.portrait.and.arrow.right")
                     }
                 } footer: {
                     Text("Chirp Lite \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")")

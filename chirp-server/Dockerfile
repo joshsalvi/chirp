@@ -41,7 +41,7 @@ COPY VERSION ./VERSION
 # ourchirp.com's build sets CHIRP_WEBSITE=1 (its .env, via docker-compose.yml).
 ARG CHIRP_WEBSITE=0
 RUN if [ "$CHIRP_WEBSITE" != "1" ]; then \
-      cd public && rm -rf about.html about-img setup.html guide.html troubleshooting.html support.html testflight.html \
+      cd public && rm -rf about.html apps.html about-img setup.html guide.html troubleshooting.html support.html testflight.html \
         privacy.html docs.css site.js && cd .. && \
       if [ -d src/website ]; then rm -rf src/website && mkdir src/website && \
         printf '// Not in this build: ourchirp.com only.\nexport const websiteTabsFirst = []\nexport const websiteTabsLast = []\n' \

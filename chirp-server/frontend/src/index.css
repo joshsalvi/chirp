@@ -2225,6 +2225,18 @@
     cursor: zoom-out;
     animation: fadeIn .18s ease;
   }
+  .pinch-zoom {
+    position: relative; width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none;
+  }
+  .pinch-zoom img { transform-origin: center center; will-change: transform; }
+  .pinch-zoom-reset {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+    padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 600;
+    background: rgba(255,255,255,.14); color: #fff; backdrop-filter: blur(8px);
+  }
   .spectrogram-modal-img {
     max-width: 100%; max-height: 90vh;
     object-fit: contain; border-radius: 12px;
@@ -2555,13 +2567,19 @@ html.vp-shift { --inset-top: calc(max(env(safe-area-inset-top, 0px) - var(--vp-s
   --glass-shine: rgb(255 255 255 / .16);
   --glass-shadow: 0 12px 32px rgb(0 0 0 / .42), 0 2px 6px rgb(0 0 0 / .25);
   --glass-lens: rgb(255 255 255 / .10);
+  --glass-lens-held: rgb(255 255 255 / .16);
 }
-[data-theme="paper"], [data-theme="plate"] {
+/* Light themes (and light custom ones, see lib/theme.js): pale glass tinted
+   by the theme's own background, so a warm theme gets a warm bar. */
+[data-theme="paper"], [data-theme="plate"], [data-theme="aviary"], [data-theme="cornell"],
+[data-theme="fieldnotebook"], html.glass-light {
   --glass-fill: rgb(255 255 255 / .62);
+  --glass-fill: color-mix(in srgb, var(--bg-base) 72%, rgb(255 255 255 / 0));
   --glass-edge: rgb(0 0 0 / .08);
   --glass-shine: rgb(255 255 255 / .9);
   --glass-shadow: 0 12px 30px rgb(0 0 0 / .14), 0 2px 6px rgb(0 0 0 / .08);
   --glass-lens: rgb(0 0 0 / .06);
+  --glass-lens-held: rgb(255 255 255 / .75);
 }
 .glass-nav {
   position: fixed; left: 50%; transform: translateX(-50%); z-index: 50;
@@ -2573,19 +2591,59 @@ html.vp-shift { --inset-top: calc(max(env(safe-area-inset-top, 0px) - var(--vp-s
   backdrop-filter: blur(22px) saturate(1.8);
   border: 1px solid var(--glass-edge);
   box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-shine);
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  transition: transform .25s cubic-bezier(.3,1.4,.5,1);
 }
-.glass-tab {
-  position: relative; flex: 1; display: flex; align-items: center; justify-content: center;
-  border-radius: 25px; color: var(--text-secondary); transition: background .2s, color .2s, transform .15s;
-  -webkit-tap-highlight-color: transparent;
-}
-.glass-tab:active { transform: scale(.94); }
-.glass-tab.on {
-  color: var(--accent-400);
+.glass-nav.pressed { transform: translateX(-50%) scale(1.02); }
+/* The lens: one piece of glass that slides to the current tab, follows the
+   finger while dragging, and swells while held. */
+.glass-lens {
+  position: absolute; top: 5px; bottom: 5px; border-radius: 25px; pointer-events: none;
   background: var(--glass-lens);
   box-shadow: inset 0 1px 0 var(--glass-shine), 0 0 0 1px var(--glass-edge);
+  transition: left .38s cubic-bezier(.3,1.35,.5,1), transform .25s cubic-bezier(.3,1.4,.5,1), background .2s;
 }
+.glass-lens.dragging {
+  transition: transform .25s cubic-bezier(.3,1.4,.5,1), background .2s;
+  transform: scale(1.12, 1.18);
+  background: var(--glass-lens-held);
+  box-shadow: inset 0 1px 0 var(--glass-shine), 0 0 0 1px var(--glass-edge), 0 6px 18px rgb(0 0 0 / .25);
+}
+.glass-tab {
+  position: relative; z-index: 1; flex: 1; display: flex; align-items: center; justify-content: center;
+  border-radius: 25px; color: var(--text-secondary); background: none; border: 0; padding: 0;
+  transition: color .2s, opacity .2s, transform .2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.glass-tab.on { color: var(--accent-400); }
 .glass-tab:not(.on) { opacity: .62; }
 .glass-tab.alert:not(.on) { opacity: 1; }
+.glass-tab:focus-visible { outline: 2px solid var(--accent-400); outline-offset: -4px; }
 @media (min-width: 768px) { .glass-nav { display: none; } }
 @media (max-width: 767px) { .main-clear-nav { padding-bottom: calc(var(--nav-clear) + 16px) !important; } }
+
+/* Standard dashboard: the toggle under the bird grid */
+.sd-more { align-self: center; display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: 999px;
+  border: 1px solid var(--border-subtle); background: var(--bg-raised); color: var(--accent-400); font-size: 14px; font-weight: 600; }
+.sd-more:hover { filter: brightness(1.1); }
+.sd-more svg { transition: transform .2s; }
+
+/* ── Photo carousel (components/PhotoCarousel.jsx) ─────────────────────── */
+.photo-carousel { position: relative; }
+.photo-carousel-track {
+  display: flex; width: 100%; height: 100%;
+  overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain; scrollbar-width: none; outline: none;
+}
+.photo-carousel-track::-webkit-scrollbar { display: none; }
+.photo-carousel-slide { position: relative; flex: 0 0 100%; height: 100%; scroll-snap-align: center; scroll-snap-stop: always; }
+.photo-carousel-dots {
+  position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%);
+  display: flex; gap: 6px; padding: 5px 8px; border-radius: 999px;
+  background: rgba(0,0,0,.35); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  opacity: 0; transition: opacity .35s ease; pointer-events: none;
+}
+.photo-carousel-dots.on { opacity: 1; transition-duration: .15s; }
+.photo-carousel-dots span { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.45); transition: background .2s, transform .2s; }
+.photo-carousel-dots span.cur { background: #fff; transform: scale(1.2); }
+@media (prefers-reduced-motion: reduce) { .photo-carousel-track { scroll-behavior: auto; } }

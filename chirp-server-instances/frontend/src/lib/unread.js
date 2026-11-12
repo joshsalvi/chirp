@@ -3,6 +3,7 @@
 // to the foreground, and when a push arrives ('chirp-notification').
 import { useEffect, useState } from 'react'
 import { api } from './api'
+import { whenVisible } from './visible'
 
 let count = 0
 let started = false
@@ -24,7 +25,7 @@ function start() {
   if (started) return
   started = true
   refreshUnread()
-  setInterval(refreshUnread, 60000)
+  setInterval(whenVisible(refreshUnread), 60000)
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshUnread() })
   window.addEventListener('chirp-notification', refreshUnread)
 }

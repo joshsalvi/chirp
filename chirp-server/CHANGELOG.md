@@ -1,3 +1,60 @@
+## 0.5.19.aj — 2026-11-12 — ENHANCEMENT — Tighter website header
+
+- About and Apps pages: less empty space above the first line on phones.
+- Bird profile photos load together, so swiping never lands on a blank one.
+- The demo doesn't show the no-station card.
+
+## 0.5.19.ai — 2026-11-12 — ENHANCEMENT — Photo swiping, pinch zoom, staying signed in
+
+- Bird profile header and the dashboard's latest bird: swipe through photos; dots show while you swipe.
+- Expanded spectrogram: pinch, double-tap, scroll or trackpad to zoom; drag to pan.
+- Sign-ins last 30 days and renew each time the app opens, so regular users stay signed in.
+- Switching location keeps the sign-in instead of starting a 12-hour one.
+- No Chirp station yet: the dashboards, Devices and Live Detect link to the setup guide.
+- User guide: new Integrations section.
+- Aviary, Cornell Lab and Field Notebook themes: light tab bar.
+
+## 0.5.19.ah — 2026-11-12 — ENHANCEMENT — Cleaner Enhanced audio
+
+- Enhanced and Rumble removed + Enhanced: hiss ends up about 30 dB quieter, with calls 10–20 dB clearer of it.
+- Noise profile from the recording's quietest moments; a gentle expander lowers what's left between calls.
+- Level rises only as far as the cleaned noise floor allows, instead of every peak going to full scale.
+
+## 0.5.19.ag — 2026-11-11 — ENHANCEMENT — Haptics setting
+
+- iPhone app: Account → Haptics turns vibration on or off on this device.
+- Dashboards, Devices and the unread count stop polling while the app or tab is hidden.
+
+## 0.5.19.af — 2026-11-11 — DEVELOPER — Version sync
+
+- Version kept in step with the multi-site server.
+
+## 0.5.19.ae — 2026-11-11 — DEVELOPER — Version sync
+
+- Version kept in step with the multi-site server.
+
+## 0.5.19.ad — 2026-11-11 — ENHANCEMENT — Demo links
+
+- About and Apps pages link to the ourchirp.com demo.
+
+## 0.5.19.ac — 2026-11-11 — ENHANCEMENT — Bird grid toggle
+
+- Standard dashboard: a Show all / Show fewer button under the bird grid; Show fewer scrolls back to the top of the list.
+
+## 0.5.19.ab — 2026-11-11 — ENHANCEMENT — Apps page and new screenshots
+
+- New Apps page (ourchirp.com/apps): Chirp, Chirp Lite, Chirp Live and the web, each with screenshots and a quick comparison.
+- Support lists every app; the site's menus link to the Apps page.
+- Website screenshots retaken with the glass tab bar.
+
+## 0.5.19.aa — 2026-11-11 — ENHANCEMENT — Song line bars only
+
+- Song line: the bird's stretches show as gold bars only; the shaded band behind them is gone.
+
+## 0.5.19.z — 2026-11-10 — ENHANCEMENT — Draggable glass tab bar
+
+- Phones: press and drag along the tab bar; the glass lens follows your finger, ticks as it crosses each tab, and opens the tab you let go on. The lens also slides between tabs when you tap.
+
 ## 0.5.19.y — 2026-11-10 — ENHANCEMENT — Glass tab bar, refresh haptics, song-line ranges
 
 - Phones: the bottom tab bar is a floating Liquid Glass bar, as in Chirp Live and Chirp Lite; pages scroll beneath it.

@@ -6221,7 +6221,8 @@ def dashboard_summary(db: Session = Depends(get_db)):
     daily = _period_summary(db, today_start, "%Y-%m-%dT%H:00", 24, timedelta(hours=1), app_settings=_app_settings)
     weekly = _period_summary(db, week_start, "%Y-%m-%d", 7, timedelta(days=1), app_settings=_app_settings)
 
-    result = {"daily": daily, "weekly": weekly}
+    from .lite import has_station
+    result = {"daily": daily, "weekly": weekly, "has_station": has_station(db)}
     statistics_cache.set(_dash_cache_key, result)
     return result
 

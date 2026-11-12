@@ -15,16 +15,19 @@ export const tokenStore = {
   // a tampered value here can't grant access to anything real, since
   // the server independently re-decodes and re-verifies its own copy
   // on every request regardless of what the client thinks it says.
-  getActiveInstanceId: () => {
+  getActiveInstanceId: () => tokenStore.claims()?.active_instance_id || null,
+  // The token's unverified payload, for UI only (as above).
+  claims: () => {
     const token = tokenStore.get()
     if (!token) return null
     try {
-      const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
-      return payload.active_instance_id || null
+      return JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
     } catch {
       return null
     }
   },
+  // Signed in through "Try the demo" (api/auth.py): read-only.
+  isDemo: () => tokenStore.claims()?.scope === 'demo',
 }
 
 // Appends the current auth token as a ?token= query param — for the

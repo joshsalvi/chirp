@@ -34,7 +34,7 @@ find "$S" \( -name '.DS_Store' -o -name '*.p8' -o -name '.env' -o -name '*.db' \
 # hosted-site, push-relay, traffic and bird-pack modules. The flags in
 # app/website/__init__.py stay, so other servers link to ourchirp.com.
 for fork in chirp-server-instances chirp-server; do
-  (cd "$S/$fork/frontend/public" && rm -rf about.html about-img setup.html guide.html troubleshooting.html \
+  (cd "$S/$fork/frontend/public" && rm -rf about.html apps.html about-img setup.html guide.html troubleshooting.html \
      support.html testflight.html privacy.html docs.css site.js)
 done
 W="$S/chirp-server-instances"
@@ -43,7 +43,7 @@ rm -rf "$W/frontend/src/website" && mkdir "$W/frontend/src/website"
 printf '// Not in this build: ourchirp.com only.\nexport const websiteTabsFirst = []\nexport const websiteTabsLast = []\n' \
   > "$W/frontend/src/website/WebsiteAdmin.jsx"
 rm -f "$W"/tests/test_live_pack.py "$W"/tests/test_site_requests.py "$W"/tests/test_traffic.py "$W"/tests/test_monitor.py "$W"/tests/test_website_split.py
-for gone in live_pack.py push_relay.py site_requests.py traffic.py TrafficTab.jsx about.html; do
+for gone in live_pack.py push_relay.py site_requests.py traffic.py TrafficTab.jsx about.html apps.html; do
   if find "$S" -path '*/node_modules' -prune -o -name "$gone" -print | grep -q .; then
     echo "Website file $gone still in the public copy; nothing published." >&2; exit 1
   fi

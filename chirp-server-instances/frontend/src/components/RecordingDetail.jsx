@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react'
+import PinchZoom from './PinchZoom'
 import { createPortal } from 'react-dom'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
@@ -1212,17 +1213,20 @@ function SpectrogramImage({ recordingId, isBat = false, enhanced = false, aiEnha
       {expanded && createPortal(
         <div
           className="spectrogram-modal-backdrop"
+          role="dialog" aria-label={`${altText}: pinch or double-tap to zoom`}
           onClick={() => setExpanded(false)}
         >
-          <img
+          <PinchZoom
             src={src}
             alt={`${altText} (expanded)`}
             className="spectrogram-modal-img"
-            onClick={e => e.stopPropagation()}
+            onTap={() => setExpanded(false)}
           />
           <button
             onClick={() => setExpanded(false)}
-            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+            className="absolute right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+            style={{ top: 'calc(env(safe-area-inset-top, 0px) + 16px)', zIndex: 2 }}
+            aria-label="Close"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M18 6 6 18M6 6l12 12"/>

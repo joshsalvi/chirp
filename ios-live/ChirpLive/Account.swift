@@ -19,6 +19,9 @@ final class Account: ObservableObject {
     @Published private(set) var expires: Date?
 
     var signedIn: Bool { token != nil && (expires ?? .distantFuture) > Date() }
+    /// Signed in through "Try the demo": ourchirp.com's demo yard, whose
+    /// station replays a recording. Nothing is sent to or saved on the site.
+    var isDemo: Bool { signedIn && defaults.bool(forKey: "demo") }
     /// "ourchirp.com", or a server's own address with its port ("192.168.1.50:8768").
     var siteName: String {
         guard let host = server.host else { return server.absoluteString }
@@ -80,6 +83,7 @@ final class Account: ObservableObject {
         self.expires = Date().addingTimeInterval(TimeInterval(days) * 86_400 - 3_600)
         defaults.set(url.absoluteString, forKey: "server")
         defaults.set(self.username, forKey: "username")
+        defaults.removeObject(forKey: "demo")
         defaults.set(expires, forKey: "tokenExpires")
         Keychain.set("token", live)
     }
@@ -91,7 +95,32 @@ final class Account: ObservableObject {
     }
     #endif
 
+    /// "Try the demo" (POST /auth/demo): a few hours with the demo yard's station.
+    func tryDemo() async throws {
+        let url = Self.defaultServer
+        var req = URLRequest(url: url.appendingPathComponent("api/v1/auth/demo"))
+        req.httpMethod = "POST"
+        let data: Data, resp: URLResponse
+        do { (data, resp) = try await URLSession.shared.data(for: req) } catch {
+            throw Failure.server("Can't reach ourchirp.com. Check your connection.")
+        }
+        let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
+        guard code == 200, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let t = json["access_token"] as? String else {
+            throw Failure.server(Self.detail(data) ?? "The demo isn't available right now.")
+        }
+        let minutes = (json["expires_minutes"] as? Int) ?? 360
+        server = url; username = "Demo"; token = t
+        expires = Date().addingTimeInterval(TimeInterval(minutes - 5) * 60)
+        defaults.set(url.absoluteString, forKey: "server")
+        defaults.set(expires, forKey: "tokenExpires")
+        defaults.set(true, forKey: "demo")
+        Keychain.set("token", t)
+    }
+
     func signOut() {
+        if defaults.bool(forKey: "demo") { username = defaults.string(forKey: "username") ?? "" }
+        defaults.removeObject(forKey: "demo")
         token = nil; expires = nil
         Keychain.set("token", nil)
         defaults.removeObject(forKey: "tokenExpires")

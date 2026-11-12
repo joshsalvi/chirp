@@ -193,7 +193,7 @@ final class SessionStore: ObservableObject {
     /// Signed in: saves the session to the site as one recording. Needs at
     /// least one clip the site heard a bird in.
     func upload(_ s: Session) {
-        guard s.savedToSite != true, let ids = s.remoteIDs else { return }
+        guard s.savedToSite != true, let ids = s.remoteIDs, !Account.shared.isDemo else { return }
         var s = s
         guard let name = s.audio else {
             if !preparing.contains(s.id) {

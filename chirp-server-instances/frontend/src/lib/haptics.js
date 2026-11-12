@@ -18,12 +18,22 @@ const TAP = 'button, a[href], [role="button"], [role="tab"], summary'
 const DESTRUCTIVE = /^\s*(delete|remove|purge|discard|sign out|log out|clear|revoke|empty)\b/i
 const KINDS = new Set(['light', 'medium', 'heavy', 'success', 'warning', 'error', 'selection'])
 
+// Settings → Haptics turns them off on this device.
+const OFF_KEY = 'chirp_haptics_off'
+let off = (() => { try { return localStorage.getItem(OFF_KEY) === '1' } catch { return false } })()
+export const hapticsEnabled = () => !off
+export function setHapticsEnabled(on) {
+  off = !on
+  try { on ? localStorage.removeItem(OFF_KEY) : localStorage.setItem(OFF_KEY, '1') } catch { /* private mode */ }
+}
+
 export function hapticEvent(kind) {
   window.dispatchEvent(new CustomEvent('chirp-haptic', { detail: kind }))
 }
 
 let lastAt = 0
 function fire(kind, { force = false } = {}) {
+  if (off) return
   const now = Date.now()
   if (!force && now - lastAt < 60) return // a label click also fires its input's change
   lastAt = now

@@ -10,6 +10,7 @@ import { appPath } from './lib/appPath'
 import Dashboard from './components/Dashboard'
 import ErrorBoundary from './components/ErrorBoundary'
 import ChirpLogo from './components/ChirpLogo'
+import GlassTabBar from './components/GlassTabBar'
 import Login from './components/Login'
 import InstancePicker from './components/InstancePicker'
 import WhatsNewModal from './components/WhatsNewModal'
@@ -84,6 +85,17 @@ function prefetchPages() {
 // while /auth/me confirms it in the background. Tied to the token: a new
 // sign-in or another site never reuses it.
 const ME_CACHE_KEY = 'chirp_me_cache'
+// Shown while signed in through "Try the demo" (api/auth.py).
+function DemoBanner() {
+  return (
+    <div className="flex items-center justify-center gap-2 px-3 py-1.5 text-xs flex-wrap text-center"
+         style={{ background: 'var(--nav-active-bg)', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border-subtle, var(--border-default))' }}>
+      <span><strong style={{ color: 'var(--accent-400)' }}>Demo</strong> · a real yard's birds, read-only</span>
+      <a href="https://ourchirp.com/about#start" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)', fontWeight: 600 }}>Get your own ↗</a>
+    </div>
+  )
+}
+
 const tokenTag = () => (tokenStore.get() || '').slice(-24)
 function readMeCache() {
   try {
@@ -362,11 +374,15 @@ function SidebarUnread() {
   return <span className="absolute -top-1 -right-1.5 w-2 h-2 rounded-full" style={{ background: 'var(--accent-400)' }}/>
 }
 
+const NAV_LABELS = { '/': 'Dashboard', '/recordings': 'Recordings', '/live-detect': 'Live Detect', '/library': 'Life List', '/notifications': 'Notifications' }
+
 function MobileNav({ currentUser, location, isGlobalAdmin, nightCallsOn }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const isAdmin      = currentUser?.role === 'admin'
   const hasMenu      = !!currentUser  // all logged-in users get triple-dot
   const unread       = useUnread()
+  const navigate     = useNavigate()
+  const onTab = (to) => to === '/' ? location.pathname === '/' : location.pathname === to || location.pathname.startsWith(to + '/')
 
   // Primary 5 tabs visible in bottom bar for all users
   // Primary 5 tabs visible in bottom bar for all users. Notes/Comments
@@ -432,29 +448,29 @@ function MobileNav({ currentUser, location, isGlobalAdmin, nightCallsOn }) {
         </>
       )}
 
-      {/* Liquid Glass tab bar (index.css .glass-nav), as in Chirp Live and Lite */}
-      <nav className="glass-nav" aria-label="Main">
-        {primaryNav.map(({ to, icon: Icon }) => (
-          <NavLink key={to} to={to} end={to === '/'}
-            className={({ isActive }) => `glass-tab${isActive ? ' on' : ''}${to === '/notifications' && unread ? ' alert' : ''}`}
-            aria-label={to === '/notifications' ? `Notifications${unread ? `, ${unread} unread` : ''}` : undefined}>
-            <span style={{ position: 'relative', display: 'flex' }}>
-              <Icon size={21}/>
-              {to === '/notifications' && unread > 0 && <UnreadBadge n={unread}/>}
-            </span>
-          </NavLink>
-        ))}
-        {hasMenu && (
-          <button onClick={() => setMenuOpen(o => !o)} aria-label="More" aria-expanded={menuOpen}
-            className={`glass-tab${menuOpen ? ' on' : ''}`}>
+      {/* Liquid Glass tab bar (components/GlassTabBar.jsx), as in Chirp Live and Lite */}
+      <GlassTabBar items={[
+        ...primaryNav.map(({ to, icon: Icon }) => ({
+          key: to,
+          label: NAV_LABELS[to] + (to === '/notifications' && unread ? `, ${unread} unread` : ''),
+          icon: <Icon size={21}/>,
+          active: !menuOpen && onTab(to),
+          alert: to === '/notifications' && unread > 0,
+          badge: to === '/notifications' && unread > 0 ? <UnreadBadge n={unread}/> : null,
+          onSelect: () => { setMenuOpen(false); if (location.pathname !== to) navigate(to) },
+        })),
+        ...(hasMenu ? [{
+          key: 'more', label: 'More', active: menuOpen || !primaryNav.some(p => onTab(p.to)),
+          icon: (
             <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <circle cx="12" cy="5" r="1.5" fill="currentColor" stroke="none"/>
               <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
               <circle cx="12" cy="19" r="1.5" fill="currentColor" stroke="none"/>
             </svg>
-          </button>
-        )}
-      </nav>
+          ),
+          onSelect: () => setMenuOpen(o => !o),
+        }] : []),
+      ]}/>
     </>
   )
 }
@@ -478,6 +494,15 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [showUpload, setShowUpload] = useState(false)
   const [currentUser, setCurrentUser] = useState(null)
+  // Keep the sign-in fresh: on opening and coming back to the app.
+  useEffect(() => {
+    if (!currentUser) return
+    const renew = () => api.auth.renew()
+    renew()
+    window.addEventListener('chirp-resume', renew)
+    return () => window.removeEventListener('chirp-resume', renew)
+  }, [currentUser])
+  const isDemo = !!currentUser && tokenStore.isDemo()
   // Settings → Appearance changes the dashboard view while the Dashboard isn't open.
   useEffect(() => {
     const on = e => setCurrentUser(u => {
@@ -723,7 +748,7 @@ export default function App() {
     const lastShown = parseInt(localStorage.getItem('chirp_tutorial_shown') || '0', 10)
     const twelveHours = 12 * 60 * 60 * 1000
 
-    if (disabled) return
+    if (disabled || tokenStore.isDemo()) return
     if (Date.now() - lastShown < twelveHours) return
 
     localStorage.setItem('chirp_tutorial_shown', String(Date.now()))
@@ -822,11 +847,15 @@ export default function App() {
                 Listening
               </button>
             )}
-            <button onClick={() => setShowUpload(true)} className="btn-primary" style={{ padding: '7px 14px', fontSize: 13 }}>
-              <Upload size={13}/> <span className="hidden sm:inline">Upload</span>
-            </button>
+            {!isDemo && (
+              <button onClick={() => setShowUpload(true)} className="btn-primary" style={{ padding: '7px 14px', fontSize: 13 }}>
+                <Upload size={13}/> <span className="hidden sm:inline">Upload</span>
+              </button>
+            )}
           </div>
         </header>
+
+        {isDemo && <DemoBanner/>}
 
         {/* Page content */}
         {(gap > 0 || refreshing) && (

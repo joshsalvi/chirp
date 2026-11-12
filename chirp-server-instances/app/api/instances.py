@@ -17,7 +17,7 @@ from typing import Optional, List
 from ..registry_db import RegistrySessionLocal
 from ..registry_models import Instance, GlobalUser, Membership
 from ..instance_registry import new_db_filename, provision_instance_database, provision_instance_database_from_import
-from .auth import create_access_token, _get_crypt, oauth2_scheme, verify_token
+from .auth import carried_minutes, create_access_token, _get_crypt, oauth2_scheme, verify_token
 
 logger = logging.getLogger("chirp.instances")
 router = APIRouter(tags=["instances"])
@@ -246,7 +246,7 @@ def create_instance(body: CreateInstanceRequest, request: Request, user: GlobalU
         token = create_access_token({
             "sub": user.username, "global_user_id": user.id,
             "active_instance_id": instance.id,
-        })
+        }, expires_minutes=carried_minutes(request))
         return {"access_token": token, "token_type": "bearer"}
     finally:
         reg_db.close()
@@ -323,6 +323,7 @@ async def import_instance(
     location_name: Optional[str] = Form(None),
     admin_username: Optional[str] = Form(None),
     admin_password: Optional[str] = Form(None),   # ignored; the site uses the account password
+    request: Request = None,
     user: GlobalUser = Depends(get_current_global_user),
 ):
     """
@@ -434,7 +435,7 @@ async def import_instance(
             token = create_access_token({
                 "sub": user.username, "global_user_id": user.id,
                 "active_instance_id": instance.id,
-            })
+            }, expires_minutes=carried_minutes(request))
             logger.info("Imported instance %s (%s) for user %s from an uploaded database", instance.id, instance.name, user.username)
             return TokenOut(access_token=token)
         finally:
@@ -452,7 +453,7 @@ _bad_invites: dict = {}
 
 
 @router.post("/join", response_model=TokenOut)
-def join_instance(body: JoinInstanceRequest, user: GlobalUser = Depends(get_current_global_user)):
+def join_instance(body: JoinInstanceRequest, request: Request, user: GlobalUser = Depends(get_current_global_user)):
     from ..models import User
 
     reg_db = RegistrySessionLocal()
@@ -463,6 +464,8 @@ def join_instance(body: JoinInstanceRequest, user: GlobalUser = Depends(get_curr
         if len(tries) >= 20:
             raise HTTPException(status_code=429, detail="Too many invalid invite codes. Try again in an hour.")
         instance = reg_db.query(Instance).filter(Instance.invite_code == body.invite_code.strip().upper()).first()
+        if instance and getattr(instance, "is_demo", False):
+            instance = None           # the demo is open to everyone through "Try the demo" only
         if not instance:
             _bad_invites[user.id] = tries + [now]
             from ..security import note
@@ -497,7 +500,7 @@ def join_instance(body: JoinInstanceRequest, user: GlobalUser = Depends(get_curr
         token = create_access_token({
             "sub": user.username, "global_user_id": user.id,
             "active_instance_id": instance.id,
-        })
+        }, expires_minutes=carried_minutes(request))
         logger.info("User %s joined instance %s via invite code", user.username, instance.id)
         return TokenOut(access_token=token)
     finally:
@@ -505,7 +508,7 @@ def join_instance(body: JoinInstanceRequest, user: GlobalUser = Depends(get_curr
 
 
 @router.post("/switch", response_model=TokenOut)
-def switch_instance(body: SwitchInstanceRequest, user: GlobalUser = Depends(get_current_global_user)):
+def switch_instance(body: SwitchInstanceRequest, request: Request, user: GlobalUser = Depends(get_current_global_user)):
     reg_db = RegistrySessionLocal()
     try:
         membership = reg_db.query(Membership).filter(
@@ -516,7 +519,7 @@ def switch_instance(body: SwitchInstanceRequest, user: GlobalUser = Depends(get_
         token = create_access_token({
             "sub": user.username, "global_user_id": user.id,
             "active_instance_id": body.instance_id,
-        })
+        }, expires_minutes=carried_minutes(request))
         return TokenOut(access_token=token)
     finally:
         reg_db.close()

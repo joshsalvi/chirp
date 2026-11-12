@@ -166,7 +166,7 @@ async def lifespan(app: FastAPI):
     # full reasoning on why this needs to be forced true here.
     from .instance_registry import iter_instance_sessions
     from .models import AppSettings
-    for _inst, _idb in iter_instance_sessions():
+    for _inst, _idb in iter_instance_sessions(include_demo=True):
         try:
             _s = _idb.query(AppSettings).filter(AppSettings.id == 1).first()
             if _s is None:
@@ -695,7 +695,7 @@ async def lifespan(app: FastAPI):
             from .instance_registry import iter_instance_sessions
             from .services.live_detect_cleanup import cleanup_orphaned_live_detect_clips
             from .config import settings as _cfg_ld
-            for _instance_ld, _db_ld in iter_instance_sessions():
+            for _instance_ld, _db_ld in iter_instance_sessions(include_demo=True):
                 try:
                     removed = cleanup_orphaned_live_detect_clips(
                         _db_ld, _cfg_ld.recordings_dir, _cfg_ld.spectrograms_dir, _cfg_ld.clips_dir,
@@ -707,6 +707,24 @@ async def lifespan(app: FastAPI):
 
     _live_detect_cleanup_thread = _threading.Thread(target=_live_detect_cleanup_loop, daemon=True, name="live-detect-cleanup")
     _live_detect_cleanup_thread.start()
+
+    # The public demo's dates roll forward every hour (services/demo.py).
+    # Its stations stay online every minute.
+    def _demo_roll_loop():
+        tick = 0
+        while not _stop_ld_cleanup.wait(60):
+            try:
+                from .services.demo import roll, touch_devices
+                if tick % 60 == 0:
+                    r = roll()
+                    if r.get("moved"):
+                        logger.info("Demo roll moved %d recording(s)", r["moved"])
+                touch_devices()
+            except Exception as _de:
+                logger.warning("Demo roll failed: %s", _de)
+            tick += 1
+
+    _threading.Thread(target=_demo_roll_loop, daemon=True, name="demo-roll").start()
 
     # Auto-purge sweep: with Auto-purge on, recordings that show nothing
     # (the list's "Unknown" cards) are deleted every 15 minutes, not only
@@ -834,6 +852,7 @@ UNPROTECTED = {
     "/api/v1/site-requests",      # public sign-up form on /about (rate-limited), see api/site_requests.py
     "/api/v1/push-relay/send",    # relay token, see api/push_relay.py
     "/api/v1/live-pack",          # Chirp Live bird picture packs (rate-limited), see website/live_pack.py
+    "/api/v1/auth/demo",          # "Try the demo" sign-in (rate-limited), see api/auth.py
 }
 
 def _is_media_path(path: str) -> bool:
@@ -928,6 +947,38 @@ def tv_may_use(method: str, path: str) -> bool:
     return method == "POST" and bool(_TV_POST_OK.match(path))
 
 
+# The public demo sign-in (POST /auth/demo, services/demo.py) looks around
+# and tries Live Detect with the phone's microphone; nothing it does is kept.
+_DEMO_WRITE_OK = re.compile(r"^/api/v1/(auth/(logout|activity/ping|me/profile)|diagnostics/client"
+                            r"|live-detect/analyze|recordings/ai-warm)$")
+DEMO_DENIED = "This is the demo, so changes are off. Get started with your own station at ourchirp.com."
+
+
+_demo_analyze: dict = {}
+
+
+def demo_analyze_ok(ip: str, now: float = None) -> bool:
+    """Live Detect from the demo: up to 60 analyses a minute per address
+    (about three times what one listening phone sends)."""
+    now = now or time.time()
+    recent = [t for t in _demo_analyze.get(ip, []) if now - t < 60]
+    if len(recent) >= 60:
+        _demo_analyze[ip] = recent
+        return False
+    _demo_analyze[ip] = recent + [now]
+    if len(_demo_analyze) > 5000:
+        _demo_analyze.clear()
+    return True
+
+
+def demo_may_use(method: str, path: str) -> bool:
+    if path.startswith(("/api/v1/admin/", "/api/v1/devices/terminal", "/api/v1/backup")):
+        return False
+    if method in ("GET", "HEAD", "OPTIONS"):
+        return True
+    return bool(_DEMO_WRITE_OK.match(path))
+
+
 _site_roles: dict = {}
 
 
@@ -961,6 +1012,14 @@ def _site_role(claims: dict):
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
+        # The demo sign-in stays read-only on media and device paths too,
+        # which otherwise check sign-ins themselves.
+        if (path.startswith("/api/v1/") and request.method not in ("GET", "HEAD", "OPTIONS")
+                and request.headers.get("Authorization", "").startswith("Bearer ")):
+            from .api.auth import verify_token as _vt
+            if ((_vt(request.headers["Authorization"][7:]) or {}).get("scope") == "demo"
+                    and not demo_may_use(request.method, path)):
+                return JSONResponse({"detail": DEMO_DENIED}, status_code=403)
         if (not path.startswith("/api/v1/")
                 or path in UNPROTECTED
                 or path.startswith("/assets/")
@@ -995,6 +1054,13 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 return JSONResponse({"detail": "The watch sign-in only works for Live Detect."}, status_code=403)
             if scope == "lite" and not lite_may_use(request.method, path):
                 return JSONResponse({"detail": "The Chirp Lite sign-in can't do that."}, status_code=403)
+            if scope == "demo" and not demo_may_use(request.method, path):
+                return JSONResponse({"detail": DEMO_DENIED}, status_code=403)
+            if scope == "demo" and path == "/api/v1/live-detect/analyze":
+                from .api.auth import client_address
+                if not demo_analyze_ok(client_address(request)):
+                    return JSONResponse({"detail": "Live Detect is busy in the demo. Try again in a minute."},
+                                        status_code=429)
             # View-only members of a site on a multi-site server: their role
             # there comes from the registry (sites, sign-ins and global admin
             # pages are per person, not per site, so they're left alone).
@@ -1045,6 +1111,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
         if cached_user.get("scope") == "lite" and not lite_may_use(request.method, path):
             return JSONResponse({"detail": "The Chirp Lite sign-in can't do that."}, status_code=403)
+
+        if cached_user.get("scope") == "demo" and not demo_may_use(request.method, path):
+            return JSONResponse({"detail": DEMO_DENIED}, status_code=403)
 
         if cached_user.get("role") == "viewer" and not viewer_may_write(request.method, path):
             return JSONResponse({"detail": "This account is view-only. Ask an admin for submitter access."},
@@ -1291,7 +1360,7 @@ STATIC_DIR = Path(__file__).parent / "static"
 from fastapi.responses import PlainTextResponse  # noqa: E402
 from . import security as _security  # noqa: E402
 
-_SITEMAP_PAGES = ["about", "setup.html", "guide.html", "troubleshooting.html", "support.html",
+_SITEMAP_PAGES = ["about", "apps", "setup.html", "guide.html", "troubleshooting.html", "support.html",
                   "testflight.html", "privacy.html"]
 
 
@@ -1323,8 +1392,8 @@ def _crawler_file(name: str):
 
 def spa_response(full_path: str, request, static_dir: Path):
     """The file, the app page, or a 404 for the catch-all route."""
-    if full_path.strip("/") == "about":   # public promotional page (frontend/public/about.html)
-        full_path = "about.html"
+    if full_path.strip("/") in ("about", "apps"):   # public pages (frontend/public/about.html, apps.html)
+        full_path = full_path.strip("/") + ".html"
     # Older iOS asks for the "-precomposed" icon name before reading the page.
     if full_path in ("apple-touch-icon-precomposed.png", "apple-touch-icon-120x120.png",
                      "apple-touch-icon-120x120-precomposed.png"):

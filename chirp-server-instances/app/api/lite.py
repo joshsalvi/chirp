@@ -59,6 +59,31 @@ def photo_of(p: Optional[BirdProfile]) -> Optional[str]:
     return p.photo_url or None
 
 
+def profile_photos(db, p: BirdProfile, extra: int = 5, yours: int = 4) -> list:
+    """A bird's photos, main one first: the profile's, up to `extra` more from
+    iNaturalist/Wikipedia, then up to `yours` uploaded at this site."""
+    photos = []
+    main = photo_of(p)
+    if main:
+        photos.append({"url": main, "credit": p.photo_credit})
+    for x in (p.extra_photos or [])[:extra]:
+        if x.get("url") and x["url"] != main:
+            photos.append({"url": x["url"], "credit": x.get("credit")})
+    if yours:
+        for bp in (db.query(BirdPhoto).filter(BirdPhoto.bird_profile_id == p.id, BirdPhoto.ai_match.isnot(False))
+                   .order_by(BirdPhoto.uploaded_at.desc()).limit(yours).all()):
+            photos.append({"url": f"/api/v1/birds/photos/{bp.id}/file", "credit": bp.uploaded_by, "yours": True})
+    return photos
+
+
+def has_station(db) -> bool:
+    """Whether this site has a Chirp station of its own (a paired Pi), as
+    opposed to only Haikubox, Bird Buddy or BirdWeather. Without one the
+    dashboards point to the setup guide."""
+    from ..models import Device
+    return db.query(Device.id).filter(Device.api_key_id.isnot(None)).first() is not None
+
+
 def _bird_filters(s):
     """Recordings a Lite screen counts: birds (not bats), not deleted, not Haikubox
     imports or Live Detect clips, at or above the site's display confidence."""
@@ -178,6 +203,8 @@ def today(db: Session = Depends(get_db)):
         hero["profile_id"] = p.id if p else None
         hero["photo"] = photo_of(p)
         hero["photo_large"] = larger_photo(hero["photo"])
+        # The dashboard's hero swipes through a few of them.
+        hero["photos"] = [larger_photo(x["url"]) for x in profile_photos(db, p, extra=4, yours=0)] if p else []
 
     # One line from today's Daily Journal, when it's been written today.
     summary = None
@@ -208,6 +235,7 @@ def today(db: Session = Depends(get_db)):
         "summary": summary,
         "journal": journal,
         "can_listen_live": bool(stations(db)),
+        "has_station": has_station(db),
     }
 
 
@@ -491,16 +519,7 @@ def bird(profile_id: str, db: Session = Depends(get_db)):
                         "credit": c.get("credit") or c.get("attribution")}
                 break
 
-    photos = []
-    main = photo_of(p)
-    if main:
-        photos.append({"url": main, "credit": p.photo_credit})
-    for x in (p.extra_photos or [])[:5]:
-        if x.get("url"):
-            photos.append({"url": x["url"], "credit": x.get("credit")})
-    for bp in (db.query(BirdPhoto).filter(BirdPhoto.bird_profile_id == p.id, BirdPhoto.ai_match.isnot(False))
-               .order_by(BirdPhoto.uploaded_at.desc()).limit(4).all()):
-        photos.append({"url": f"/api/v1/birds/photos/{bp.id}/file", "credit": bp.uploaded_by, "yours": True})
+    photos = profile_photos(db, p)
 
     tags = [{"kind": k, "label": v} for k, v in (("habitat", p.aab_habitat), ("food", p.aab_food),
             ("nesting", p.aab_nesting), ("behavior", p.aab_behavior)) if v]

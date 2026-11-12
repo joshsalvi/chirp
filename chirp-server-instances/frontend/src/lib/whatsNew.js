@@ -18,7 +18,7 @@
 // it back with the same text. WhatsNewModal shows it only when `popup` is
 // newer than the version last dismissed.
 export const WHATS_NEW = {
-  version: '0.5.19.y',
+  version: '0.5.19.aj',
   // The release whose `latest` text this is. The popup shows once per value,
   // so small fixes that don't change `latest` don't bring it back.
   popup: '0.5.19.l',
@@ -37,6 +37,17 @@ export const WHATS_NEW = {
     ],
   },
   recent: [
+    { version: '0.5.19.aj', summary: 'Tighter website header on phones; bird photos load together.' },
+    { version: '0.5.19.ai', summary: 'Swipe through bird photos, pinch to zoom spectrograms, and stay signed in.' },
+    { version: '0.5.19.ah', summary: 'Enhanced audio: much less hiss, especially with Rumble removed.' },
+    { version: '0.5.19.ag', summary: 'iPhone app: Account → Haptics turns vibration on or off.' },
+    { version: '0.5.19.af', summary: 'Demo: Live Detect through the station plays back a recording from the yard.' },
+    { version: '0.5.19.ae', summary: 'The demo shows its daily and weekly journals.' },
+    { version: '0.5.19.ad', summary: 'Try the demo: a read-only look at a real yard, no account needed.' },
+    { version: '0.5.19.ac', summary: 'Standard dashboard: a Show all / Show fewer button under the bird grid.' },
+    { version: '0.5.19.ab', summary: 'A new Apps page describes Chirp, Chirp Lite and Chirp Live, with fresh screenshots across the website.' },
+    { version: '0.5.19.aa', summary: 'Song line: only the bars light up where the bird was heard.' },
+    { version: '0.5.19.z', summary: 'Press and drag along the tab bar: the glass lens follows your finger and opens the tab you let go on.' },
     { version: '0.5.19.y', summary: 'Liquid Glass tab bar on phones, a tap of haptics when pulling to refresh, and song lines that highlight where the bird sang.' },
     { version: '0.5.19.x', summary: 'Multi-location servers share one species library, so a location\'s new birds load without fetching from the web.' },
     { version: '0.5.19.w', summary: 'Global Admin: usage for each location. ourchirp.com: new locations wait for approval.' },

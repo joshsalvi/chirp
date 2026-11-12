@@ -84,6 +84,7 @@ class AdminInstanceOut(BaseModel):
     created_at: datetime
     created_by_username: Optional[str]
     member_count: int
+    is_demo: bool = False
 
 
 @router.get("/instances", response_model=List[AdminInstanceOut])
@@ -99,7 +100,7 @@ def list_all_instances(admin: GlobalUser = Depends(get_current_global_admin)):
                 id=inst.id, name=inst.name, location_name=inst.location_name,
                 invite_code=inst.invite_code, created_at=inst.created_at,
                 created_by_username=creator.username if creator else None,
-                member_count=member_count,
+                member_count=member_count, is_demo=bool(getattr(inst, "is_demo", False)),
             ))
         return out
     finally:

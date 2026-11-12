@@ -247,7 +247,7 @@ struct ScopeCard: View {
         let all = ScopeStyle.allCases
         let i = all.firstIndex(of: style) ?? 0
         withAnimation(.easeInOut(duration: 0.2)) { styleRaw = all[(i + 1) % all.count].rawValue }
-        UISelectionFeedbackGenerator().selectionChanged()
+        Haptics.select()
     }
 
     /// Column levels → `count` bars (the loudest column in each group).

@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// A recording's loudness as one row of bars, with the stretches where the
-/// bird was identified highlighted (a soft band behind sun-gold bars). Tap to
+/// A recording's loudness as one row of bars; bars are sun-gold where the
+/// bird was identified (its detection windows, merged), dim elsewhere. Tap to
 /// jump there. No per-call marks: detections are 3–5 s windows, so a mark
 /// placed from loudness can point at the wrong sound (the server sends
 /// `calls` empty). Drawn for the dark now-playing bar.
@@ -18,11 +18,6 @@ struct SongLineView: View {
                 guard d > 0 else { return }
                 let spans = line.spans
                 let inside = { (t: Double) in spans.contains { $0.contains(t) } }
-                for s in spans {          // the bird's stretches: a band the full height
-                    ctx.fill(Path(roundedRect: CGRect(x: size.width * s.lowerBound / d, y: 0,
-                                                      width: size.width * (s.upperBound - s.lowerBound) / d, height: size.height),
-                                  cornerRadius: 4), with: .color(Theme.sun.opacity(0.16)))
-                }
                 let n = line.bars.count
                 if n > 0 {
                     let step = size.width / CGFloat(n), bw = max(1, step - 1.5), barH = size.height - 4

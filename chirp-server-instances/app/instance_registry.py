@@ -300,7 +300,7 @@ def provision_instance_database_from_import(db_filename: str, source_db_path: st
     logger.info("Provisioned instance database %s from imported file %s", db_filename, source_db_path)
 
 
-def iter_instance_sessions():
+def iter_instance_sessions(include_demo: bool = False):
     """
     Real, shared helper for background/scheduled jobs — the one class of
     code get_instance_db's own per-request resolution can't help at all,
@@ -322,6 +322,9 @@ def iter_instance_sessions():
     caller's own per-instance logic raised — one instance's failure
     (a locked database, a config error) must not prevent the loop from
     continuing to the next instance.
+
+    The demo location (services/demo.py) is left out unless include_demo:
+    journals, AI, email, syncs, backups and cleanup must not run on it.
     """
     from .registry_db import RegistrySessionLocal
     from .registry_models import Instance
@@ -334,6 +337,8 @@ def iter_instance_sessions():
         reg_db.close()
 
     for instance in instances:
+        if getattr(instance, "is_demo", False) and not include_demo:
+            continue
         try:
             engine = get_engine_for_instance(instance.db_filename)
             SessionForInstance = sessionmaker(bind=engine)

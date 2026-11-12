@@ -6194,7 +6194,8 @@ def dashboard_summary(db: Session = Depends(get_db)):
     daily = _period_summary(db, today_start, "%Y-%m-%dT%H:00", 24, timedelta(hours=1), app_settings=_app_settings)
     weekly = _period_summary(db, week_start, "%Y-%m-%d", 7, timedelta(days=1), app_settings=_app_settings)
 
-    result = {"daily": daily, "weekly": weekly}
+    from .lite import has_station
+    result = {"daily": daily, "weekly": weekly, "has_station": has_station(db)}
     statistics_cache.set(_dash_cache_key, result)
     return result
 
@@ -6272,6 +6273,9 @@ def get_daily_journal(db: Session = Depends(get_db)):
     from ..services.ai_providers import get_feature_config
     s = db.query(AppSettings).filter(AppSettings.id == 1).first()
     enabled = get_feature_config("daily_summary", db) is not None
+    if not enabled and s and s.daily_summary_text:
+        from ..services.demo import is_demo_db       # the demo shows its copied journal (no AI there)
+        enabled = is_demo_db()
     return {
         "enabled": enabled,
         "text": s.daily_summary_text if s else None,
@@ -6301,6 +6305,9 @@ def get_weekly_journal(db: Session = Depends(get_db)):
     from ..services.ai_providers import get_feature_config
     s = db.query(AppSettings).filter(AppSettings.id == 1).first()
     enabled = get_feature_config("weekly_summary", db) is not None
+    if not enabled and s and s.weekly_summary_text:
+        from ..services.demo import is_demo_db       # the demo shows its copied journal (no AI there)
+        enabled = is_demo_db()
     return {
         "enabled": enabled,
         "text": s.weekly_summary_text if s else None,

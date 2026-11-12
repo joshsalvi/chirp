@@ -61,7 +61,7 @@ final class Player: NSObject, ObservableObject, AVAudioPlayerDelegate {
                 p.play()
                 playing = true
                 startTimer()
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                Haptics.tap()
             } catch API.Failure.signedOut {
                 loading = false; account.signOut()
             } catch {
@@ -84,7 +84,7 @@ final class Player: NSObject, ObservableObject, AVAudioPlayerDelegate {
         p.currentTime = min(max(0, seconds), p.duration - 0.05)
         progress = p.currentTime / p.duration
         if !p.isPlaying { p.play(); playing = true; startTimer() }
-        UISelectionFeedbackGenerator().selectionChanged()
+        Haptics.select()
     }
 
     private func startTimer() {

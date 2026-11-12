@@ -74,6 +74,10 @@ def create_access_token(data: dict, expires_minutes: int = 720) -> str:
     return jwt.encode(payload, settings.secret_key, algorithm="HS256")
 
 
+REMEMBER_DAYS = 30          # a sign-in lasts this long, and renews itself while in use
+SESSION_MINUTES = 720       # when a client asks not to stay signed in
+
+
 def verify_token(token: str) -> Optional[dict]:
     jwt, JWTError = _get_jwt()
     try:
@@ -295,12 +299,29 @@ def login(request: Request, form: OAuth2PasswordRequestForm = Depends(),
     user.last_login = datetime.utcnow()
     db.commit()
     log_activity(db, "login", user=user, request=request)
-    expires = 10080 if remember_me else 720  # 7 days vs 12h
+    expires = REMEMBER_DAYS * 1440 if remember_me else SESSION_MINUTES
     token = create_access_token({"sub": user.username, "role": user.role}, expires_minutes=expires)
     return TokenOut(access_token=token, username=user.username, role=user.role)
 
 
 WATCH_TOKEN_DAYS = 30
+
+
+@router.post("/me/renew")
+def renew_sign_in(request: Request, db: Session = Depends(get_db)):
+    """A fresh REMEMBER_DAYS sign-in for the same person. The app calls this
+    as it opens, so anyone who uses it at least once a month stays signed in.
+    Only full sign-ins renew (not watch, TV or Lite ones), and only while the
+    account is still active."""
+    h = request.headers.get("Authorization", "")
+    p = verify_token(h[7:]) if h.startswith("Bearer ") else None
+    if not p or p.get("scope"):
+        raise HTTPException(401, "Not signed in")
+    user = db.query(User).filter(User.username == p.get("sub")).first()
+    if not user or not user.active:
+        raise HTTPException(401, "Not signed in")
+    token = create_access_token({"sub": user.username, "role": user.role}, expires_minutes=REMEMBER_DAYS * 1440)
+    return {"access_token": token, "token_type": "bearer", "expires_days": REMEMBER_DAYS}
 
 
 @router.post("/watch-token")

@@ -1,11 +1,12 @@
 import { useEffect, useState, useRef } from 'react'
-import { User, Lock, Bell, Check, AlertCircle, Eye, EyeOff, Save, Shield, Feather, Leaf, RefreshCw, LogOut, Camera, Trash2, UserX, Server, MessageSquare, Watch, Tv, Smartphone, AudioLines } from 'lucide-react'
+import { User, Lock, Bell, Check, AlertCircle, Eye, EyeOff, Save, Shield, Feather, Leaf, RefreshCw, LogOut, Camera, Trash2, UserX, Server, MessageSquare, Watch, Tv, Smartphone, AudioLines, Vibrate } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { format } from 'date-fns'
 import UnifiedCard from './UnifiedCard'
 import { InatRefreshInline } from './Settings'
 import { hasServerPicker, openServerPicker, native, isApp } from '../native'
+import { hapticsEnabled, setHapticsEnabled, hapticEvent } from '../lib/haptics'
 import { tokenStore } from '../lib/api'
 import { TVLinkForm } from './TVLink'
 import StoreBadge from './StoreBadge'
@@ -283,6 +284,22 @@ export function PushNotificationSection() {
           </div>
         </div>
       )}
+    </Section>
+  )
+}
+
+// ── Haptics (iPhone app) ──────────────────────────────────────────────────────
+// Stored on this device only, like the rest of the app's feel.
+function HapticsSection() {
+  const [on, setOn] = useState(hapticsEnabled())
+  const flip = (next) => {
+    setHapticsEnabled(next); setOn(next)
+    if (next) hapticEvent('success')
+  }
+  return (
+    <Section id="me:haptics" fallbackOpen={false} icon={Vibrate} title="Haptics" color="#c084fc">
+      <Toggle checked={on} onChange={flip} label="Vibrate on taps and events"
+              sub="Taps, the tab bar, pull to refresh, new detections. This iPhone only."/>
     </Section>
   )
 }
@@ -927,6 +944,7 @@ export default function UserProfile() {
         <span style={{ color: 'var(--text-tertiary)' }}>›</span>
       </button>
 
+      {isApp() && <HapticsSection/>}
       {hasServerPicker() && <ServerSection/>}
       <IPhoneAppSection/>
       <ChirpLiveSection/>

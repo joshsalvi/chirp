@@ -107,10 +107,13 @@ private struct BirdBody: View {
             }
             .padding(.horizontal, 18).padding(.top, 24).padding(.bottom, 40)
             .background(Theme.bg, in: UnevenRoundedRectangle(topLeadingRadius: 30, topTrailingRadius: 30, style: .continuous))
-            .offset(y: -28)
-            .padding(.bottom, -28)
+            .offset(y: -Self.cardOverlap)
+            .padding(.bottom, -Self.cardOverlap)
         }
     }
+
+    /// How far the details card rides up over the photo.
+    static let cardOverlap: CGFloat = 28
 
     private var gallery: some View {
         let photos = b.photos
@@ -124,7 +127,14 @@ private struct BirdBody: View {
                             Color.clear.overlay { Photo(path: p.url, name: b.name) }.clipped().tag(i)
                         }
                     }
-                    .tabViewStyle(.page(indexDisplayMode: photos.count > 1 ? .always : .never))
+                    .tabViewStyle(.page(indexDisplayMode: .never))
+                }
+            }
+            // The system dots sat under the card's overlap; these sit just above it.
+            .overlay(alignment: .bottom) {
+                if photos.count > 1 {
+                    PageDots(count: photos.count, current: page)
+                        .padding(.bottom, Self.cardOverlap + 10)
                 }
             }
             .overlay(alignment: .topTrailing) {
@@ -248,4 +258,24 @@ struct FlowLayout: Layout {
 
 extension Array {
     subscript(safe i: Int) -> Element? { indices.contains(i) ? self[i] : nil }
+}
+
+/// Photo page dots on a small glass capsule, readable over any picture.
+struct PageDots: View {
+    let count: Int
+    let current: Int
+    var body: some View {
+        HStack(spacing: 7) {
+            ForEach(0..<count, id: \.self) { i in
+                Circle().fill(.white.opacity(i == current ? 1 : 0.45))
+                    .frame(width: i == current ? 8 : 6, height: i == current ? 8 : 6)
+            }
+        }
+        .padding(.horizontal, 10).padding(.vertical, 6)
+        .background(.ultraThinMaterial, in: Capsule())
+        .environment(\.colorScheme, .dark)
+        .animation(.snappy(duration: 0.2), value: current)
+        .accessibilityElement()
+        .accessibilityLabel("Photo \(current + 1) of \(count)")
+    }
 }

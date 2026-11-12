@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
+import SetupGuideCard from './SetupGuideCard'
+import PhotoCarousel from './PhotoCarousel'
 import { Link } from 'react-router-dom'
 import { ChevronDown, Play, Pause } from 'lucide-react'
 import { BirdIcon } from './BirdBatIcons'
 import SongLine from './SongLine'
 import { api, mediaUrl } from '../lib/api'
 import { useTz } from '../lib/time'
+import { whenVisible } from '../lib/visible'
 
 // The Standard dashboard: the latest bird, today's birds as photos, three
 // facts and a line from the journal. One request (GET /lite/today, the same
@@ -39,14 +42,21 @@ function Photo({ src, className, style, alt = '', onLoad }) {
 // tall box and only a sliver is cropped, from the bottom more than the top.
 function HeroPhoto({ hero }) {
   const [ratio, setRatio] = useState(null)
-  useEffect(() => { setRatio(null) }, [hero.photo_large, hero.photo])
+  const photos = hero.photos?.length ? hero.photos : [hero.photo_large || hero.photo]
+  useEffect(() => { setRatio(null) }, [photos[0]])
   const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
   const style = ratio ? { '--hero-ratio': clamp(ratio, 0.72, 1.5), '--hero-ratio-phone': clamp(ratio, 1, 1.6) } : undefined
+  const to = hero.profile_id ? `/library/${hero.profile_id}` : '/recordings'
+  // The box takes the first photo's shape; the others fill it.
   return (
-    <Link to={hero.profile_id ? `/library/${hero.profile_id}` : '/recordings'} className="sd-hero-photo" aria-label={hero.name} style={style}>
-      <Photo src={hero.photo_large || hero.photo} alt={hero.name} className="w-full h-full object-cover"
-             onLoad={e => { const i = e.currentTarget; if (i.naturalHeight) setRatio(i.naturalWidth / i.naturalHeight) }}/>
-    </Link>
+    <div className="sd-hero-photo" style={style}>
+      <PhotoCarousel items={photos} label={`Photos of ${hero.name}`} renderSlide={(src, i) => (
+        <Link to={to} aria-label={hero.name} className="block w-full h-full">
+          <Photo src={src} alt={i ? '' : hero.name} className="w-full h-full object-cover"
+                 onLoad={i ? undefined : e => { const im = e.currentTarget; if (im.naturalHeight) setRatio(im.naturalWidth / im.naturalHeight) }}/>
+        </Link>
+      )}/>
+    </div>
   )
 }
 
@@ -195,6 +205,7 @@ export default function StandardDashboard({ onOpenPicker, onAdvanced }) {
   const [data, setData] = useState(null)
   const [failed, setFailed] = useState(false)
   const [allBirds, setAllBirds] = useState(false)
+  const birdsRef = useRef(null)
   const limit = useTileLimit()
   const { timezone, fmtTime, fmtDate } = useTz()
 
@@ -206,7 +217,7 @@ export default function StandardDashboard({ onOpenPicker, onAdvanced }) {
     load()
     let t = null
     const soon = () => { clearTimeout(t); t = setTimeout(load, 2000) }
-    const iv = setInterval(load, 60000)
+    const iv = setInterval(whenVisible(load), 60000)
     window.addEventListener('chirp-new-detection', soon)
     window.addEventListener('chirp-resume', soon)
     window.addEventListener('chirp-settings-saved', load)
@@ -249,6 +260,7 @@ export default function StandardDashboard({ onOpenPicker, onAdvanced }) {
           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Couldn't load today's birds. They'll appear when the server answers.</p>
         )}
 
+        {data?.has_station === false && <SetupGuideCard/>}
         {hero && (
           <section aria-label="Latest bird" className="sd-hero animate-slide-up">
             <HeroPhoto hero={hero}/>
@@ -290,7 +302,7 @@ export default function StandardDashboard({ onOpenPicker, onAdvanced }) {
         )}
 
         {species.length > 0 && (
-          <section aria-label="Heard today" className="flex flex-col gap-4">
+          <section aria-label="Heard today" className="flex flex-col gap-4" ref={birdsRef}>
             <div className="flex items-baseline justify-between gap-3">
               <h2 className="sd-h2">Heard today</h2>
               {species.length > limit ? (
@@ -315,6 +327,18 @@ export default function StandardDashboard({ onOpenPicker, onAdvanced }) {
                 </Link>
               ))}
             </div>
+            {species.length > limit && (
+              // A second toggle under the grid, so a long list closes where it ends.
+              <button type="button" className="sd-more" aria-expanded={allBirds}
+                      onClick={() => {
+                        if (allBirds) birdsRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+                        setAllBirds(v => !v)
+                      }}>
+                {allBirds ? 'Show fewer' : `Show all ${species.length} birds`}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"
+                     strokeLinejoin="round" aria-hidden="true" style={{ transform: allBirds ? 'rotate(180deg)' : 'none' }}><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+            )}
             {data.detections > 0 && <DayChart hourly={data.hourly || []} nowHour={hourIn(timezone)}/>}
           </section>
         )}

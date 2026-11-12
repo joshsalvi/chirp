@@ -144,6 +144,11 @@ async def live_detect_analyze(
     its detections are returned immediately. If it finds nothing, nothing
     is kept — the response just says so.
     """
+    if source == "device":
+        from ..services.demo import demo_station_heard, is_demo_db
+        if is_demo_db():
+            # The demo station's loop comes with its detections: nothing to run or keep.
+            return await run_in_threadpool(demo_station_heard, db, min_confidence)
     if source == "device" and file is not None:
         # Station audio an app already fetched and played (Chirp Live): the
         # clip comes with the request, credited to the station.

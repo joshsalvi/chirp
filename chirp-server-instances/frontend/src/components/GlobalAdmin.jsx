@@ -226,7 +226,7 @@ function InstanceCard({ instance, usage, onDeleted }) {
             <Home size={16} style={{ color: 'var(--accent-400)' }}/>
           </div>
           <div className="min-w-0">
-            <p className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>{instance.name}</p>
+            <p className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>{instance.name}{instance.is_demo && <span className="ml-2 text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: 'var(--nav-active-bg)', color: 'var(--accent-400)' }}>PUBLIC DEMO</span>}</p>
             <p className="text-xs truncate" style={{ color: 'var(--text-tertiary)' }}>
               {instance.location_name || 'No location set'} · {instance.member_count} member{instance.member_count === 1 ? '' : 's'}
               {instance.created_by_username && <> · created by {instance.created_by_username}</>}

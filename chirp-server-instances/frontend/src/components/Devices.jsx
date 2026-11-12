@@ -20,6 +20,7 @@ const SSHTerminal = React.lazy(() => import('./SSHTerminal'))
 import ErrorBoundary from './ErrorBoundary'
 import { api } from '../lib/api'
 import { hapticEvent } from '../lib/haptics'
+import { whenVisible } from '../lib/visible'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -1294,8 +1295,10 @@ function DevicesInner() {
 
   useEffect(() => {
     load()
-    const iv = setInterval(load, 30000) // refresh every 30s for heartbeat status
-    return () => clearInterval(iv)
+    const iv = setInterval(whenVisible(load), 30000) // refresh every 30s for heartbeat status
+    const back = () => { if (!document.hidden) load() }
+    document.addEventListener('visibilitychange', back)
+    return () => { clearInterval(iv); document.removeEventListener('visibilitychange', back) }
   }, [load])
 
   const handleDiscover = async () => {
@@ -1641,6 +1644,9 @@ function DevicesInner() {
           <h2 className="text-base font-semibold text-white flex items-center gap-2">
             <Radio size={16} className="text-chirp-500"/> Pairing a Raspberry Pi
           </h2>
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+            No station yet? The <a href="https://ourchirp.com/setup.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>setup guide ↗</a> covers the parts list, installing Chirp on the Pi and connecting it here.
+          </p>
           <ol className="space-y-3 text-sm text-gray-400">
             <li className="flex gap-3">
               <span className="flex-shrink-0 w-5 h-5 rounded-full bg-chirp-700/50 text-chirp-300 text-xs flex items-center justify-center font-bold">1</span>

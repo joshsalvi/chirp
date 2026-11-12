@@ -1016,7 +1016,10 @@ export default function LiveDetect() {
       {source === 'device' && (
         <div className="mb-4">
           {devices.length === 0 ? (
-            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>No ChirpPi devices found — Haikubox and Bird Buddy don't support Live Detect. Add a ChirpPi in Devices first.</p>
+            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+              No Chirp station here yet (Haikubox and Bird Buddy can't stream Live Detect).{' '}
+              <a href="https://ourchirp.com/setup.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>Set one up ↗</a>
+            </p>
           ) : (
             <select value={selectedDeviceId} onChange={e => changeDevice(e.target.value)}
                     className="w-full text-sm px-3 py-2 rounded-lg"

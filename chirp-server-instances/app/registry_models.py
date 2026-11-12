@@ -45,6 +45,9 @@ class Instance(RegistryBase):
     invite_code = Column(String, nullable=False, unique=True, default=new_invite_code, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     created_by_user_id = Column(String, ForeignKey("global_users.id"), nullable=True)
+    # The public demo location (services/demo.py): read-only, dates roll
+    # forward, and background jobs leave it alone.
+    is_demo = Column(Boolean, default=False)
 
     memberships = relationship("Membership", back_populates="instance", cascade="all, delete-orphan")
 

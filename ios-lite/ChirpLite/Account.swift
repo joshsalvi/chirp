@@ -19,6 +19,8 @@ final class Account: ObservableObject {
     private var borrowed = false          // a debug sign-in from the build script: never renewed or saved
 
     var signedIn: Bool { token != nil && (expires ?? .distantFuture) > Date() }
+    /// Signed in through "Try the demo": ourchirp.com's read-only demo yard.
+    var isDemo: Bool { defaults.bool(forKey: "demo") }
     var siteName: String {
         guard let host = server.host else { return server.absoluteString }
         let name = host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
@@ -65,6 +67,7 @@ final class Account: ObservableObject {
               let login = json["access_token"] as? String else {
             throw Failure.server(Self.detail(data) ?? "The site answered \(code).")
         }
+        defaults.removeObject(forKey: "demo")
         self.server = url
         self.username = (json["username"] as? String) ?? username
         defaults.set(url.absoluteString, forKey: "server")
@@ -127,9 +130,35 @@ final class Account: ObservableObject {
         Keychain.set("token", lite)
     }
 
+    /// "Try the demo" (POST /auth/demo): a few hours in ourchirp.com's demo
+    /// yard, no account needed.
+    func tryDemo() async throws {
+        let url = Self.defaultServer
+        var req = URLRequest(url: url.appendingPathComponent("api/v1/auth/demo"))
+        req.httpMethod = "POST"
+        req.setValue(API.userAgent, forHTTPHeaderField: "User-Agent")
+        let data: Data, resp: URLResponse
+        do { (data, resp) = try await URLSession.shared.data(for: req) } catch {
+            throw Failure.server("Can't reach ourchirp.com. Check your connection.")
+        }
+        let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
+        guard code == 200, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let t = json["access_token"] as? String else {
+            throw Failure.server(Self.detail(data) ?? "The demo isn't available right now.")
+        }
+        let minutes = (json["expires_minutes"] as? Int) ?? 360
+        server = url; username = "Demo"; token = t
+        expires = Date().addingTimeInterval(TimeInterval(minutes - 5) * 60)
+        defaults.set(url.absoluteString, forKey: "server")
+        defaults.set(expires, forKey: "tokenExpires")
+        defaults.set("Demo yard", forKey: "siteTitle")
+        defaults.set(true, forKey: "demo")
+        Keychain.set("token", t)
+    }
+
     /// Renew the sign-in when it's more than a week old (once per launch).
     func renewIfNeeded() async {
-        guard !borrowed, let token, let expires, expires.timeIntervalSinceNow < 83 * 86_400 else { return }
+        guard !borrowed, !isDemo, let token, let expires, expires.timeIntervalSinceNow < 83 * 86_400 else { return }
         try? await finish(with: token)
     }
 
@@ -142,6 +171,8 @@ final class Account: ObservableObject {
         Keychain.set("token", nil)
         defaults.removeObject(forKey: "tokenExpires")
         defaults.removeObject(forKey: "siteTitle")
+        if isDemo { username = "" }
+        defaults.removeObject(forKey: "demo")
     }
 
     #if DEBUG

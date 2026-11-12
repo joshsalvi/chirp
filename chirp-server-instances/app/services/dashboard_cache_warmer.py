@@ -84,7 +84,7 @@ class DashboardCacheWarmer:
         # each instance's warm pass correctly reaches only its own
         # cache entries, not any other instance's.
         from ..instance_registry import iter_instance_sessions
-        for instance, db in iter_instance_sessions():
+        for instance, db in iter_instance_sessions(include_demo=True):
             summary["instances_seen"] += 1
             try:
                 # Only the default 24h period — the one every Dashboard load

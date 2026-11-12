@@ -393,6 +393,7 @@ final class Listener: ObservableObject {
                                    first: now, last: now), at: 0)
                 BirdPack.shared.wantPicture(sci: sp.scientific)
                 clips[i] = window
+                Haptics.tap()                     // a new bird this session
             }
         }
         if !found.isEmpty { sendToSite(window) }
@@ -406,7 +407,7 @@ final class Listener: ObservableObject {
     /// Signed in: the site checks the clip too and keeps it for the session.
     private func sendToSite(_ window: [Float]) {
         let account = Account.shared
-        guard account.signedIn, let token = account.token, uploading < 2 else { return }
+        guard account.signedIn, !account.isDemo, let token = account.token, uploading < 2 else { return }
         uploading += 1
         let server = account.server, place = locator.lastPlace, name = placeName
         var stationID: String?

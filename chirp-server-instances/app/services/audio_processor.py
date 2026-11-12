@@ -26,8 +26,10 @@ import os
 # which solved the same class of bug for the bat-downshift fix the hard
 # way, by inspecting sample rate — not reusable here since this change
 # doesn't alter sample rate). v2 = the bandpass→highpass +
-# boost=apply_noise_reduction fix.
-DSP_VERSION = "v3"
+# boost=apply_noise_reduction fix. v4 = noise profile from the quietest
+# frames, a soft expander between calls, and gain capped by the noise
+# floor instead of boosting every recording's peak to 0.92.
+DSP_VERSION = "v4"
 
 import subprocess
 import uuid
@@ -96,6 +98,78 @@ def soft_limit_and_normalize(audio: np.ndarray, target_peak: float = 0.92, boost
         return out
     new_peak = float(np.max(np.abs(out))) or 1.0
     return out / new_peak * target_peak
+
+
+# ── Enhanced listening level ────────────────────────────────────────────────
+# Station recordings are quiet (peaks near -35 dBFS) with a call often only
+# 5–15 dB above the hiss. Boosting the peak to 0.92 added 30–40 dB to the hiss
+# as well: measured on five demo recordings, "rumble removed + enhanced" put
+# the hiss floor at -21 to -37 dBFS, about 8 dB under the calls, and the
+# rumble filter made it worse, since rumble had set the peak. The steps below
+# clean first, then raise the level only as far as the cleaned floor allows.
+
+def _frame_rms(x: np.ndarray, sr: float, ms: float):
+    n = max(int(sr * ms / 1000), 1)
+    k = len(x) // n
+    if k == 0:
+        return np.array([np.sqrt(np.mean(x ** 2) + 1e-20)]), n
+    return np.sqrt(np.mean(x[:k * n].reshape(k, n) ** 2, axis=1) + 1e-20), n
+
+
+def _hiss_band(x: np.ndarray, sr: float) -> np.ndarray:
+    """800 Hz–12 kHz, where hiss is heard and most songbirds sing."""
+    hi = min(12000.0 / (sr / 2.0), 0.99)
+    lo = min(800.0 / (sr / 2.0), hi * 0.5)
+    return _spsignal.sosfilt(_spsignal.butter(2, [lo, hi], btype="band", output="sos"), x)
+
+
+def quiet_frames_noise(x: np.ndarray, sr: float, pct: float = 25.0):
+    """The recording's quietest 50 ms frames (by hiss-band level), joined: a
+    noise profile for the whole recording when no call window is known.
+    None when there isn't a quarter second of it."""
+    r, n = _frame_rms(_hiss_band(x, sr), sr, 50)
+    idx = np.where(r <= np.percentile(r, pct))[0]
+    if len(idx) * n < sr * 0.25:
+        return None
+    return np.concatenate([x[i * n:(i + 1) * n] for i in idx])
+
+
+def soft_expander(x: np.ndarray, sr: float, depth_db: float = -10.0, open_db: float = 6.0,
+                  attack_ms: float = 5.0, release_ms: float = 300.0) -> np.ndarray:
+    """Lowers what's left between calls: 10 ms frames at the hiss floor go down
+    by depth_db, frames open_db above it pass untouched. Opens in ~5 ms so call
+    onsets aren't clipped and closes over ~300 ms so quiet tails ring out
+    instead of pumping."""
+    if len(x) < sr * 0.2:
+        return x
+    r, n = _frame_rms(_hiss_band(x, sr), sr, 10)
+    floor = max(float(np.percentile(r, 20)), 1e-12)
+    openness = np.clip(20 * np.log10(r / floor) / open_db, 0.0, 1.0)
+    target = 10 ** ((1.0 - openness) * depth_db / 20.0)
+    a, rl = np.exp(-10.0 / attack_ms), np.exp(-10.0 / release_ms)
+    env = np.empty_like(target)
+    cur = target[0]
+    for i, t in enumerate(target):
+        cur = a * cur + (1 - a) * t if t > cur else rl * cur + (1 - rl) * t
+        env[i] = cur
+    gain = np.interp(np.arange(len(x)), np.arange(len(env)) * n + n / 2.0, env)
+    return x * gain
+
+
+def level_for_listening(x: np.ndarray, sr: float, call_db: float = -22.0, floor_db: float = -54.0,
+                        peak: float = 0.92, max_gain_db: float = 30.0) -> np.ndarray:
+    """Raises a cleaned recording toward calls at call_db (loudest 1% of 50 ms
+    frames), but never so far that the remaining floor (quietest 20%) passes
+    floor_db, the peak passes `peak`, or the gain passes max_gain_db. Never
+    turns a recording down."""
+    if not len(x):
+        return x
+    r, _ = _frame_rms(x, sr, 50)
+    call = max(float(np.percentile(r, 99)), 1e-12)
+    floor = max(float(np.percentile(r, 20)), 1e-12)
+    top = max(float(np.max(np.abs(x))), 1e-12)
+    g = min(10 ** (call_db / 20) / call, 10 ** (floor_db / 20) / floor, peak / top, 10 ** (max_gain_db / 20))
+    return x * max(g, 1.0)
 
 
 def apply_rumble_highpass(audio: np.ndarray, sr: float, low_hz: float) -> np.ndarray:
@@ -1299,7 +1373,8 @@ class AudioProcessor:
             if noise_sample is not None and len(noise_sample) > sr * 0.1:
                 reduced = _noisereduce.reduce_noise(
                     y=filtered, sr=sr, y_noise=noise_sample,
-                    stationary=True, prop_decrease=0.65,
+                    stationary=True, prop_decrease=0.8,
+                    freq_mask_smooth_hz=500, time_mask_smooth_ms=64,
                 )
                 # 3b. Quiet-tail protection — restore part of what the gate
                 # removed, but ONLY within the call's own detected frequency
@@ -1348,9 +1423,22 @@ class AudioProcessor:
                     # fail the whole enhancement request over it.
                     logger.debug("Call-tail protection skipped for %s: %s", cache_id, e)
             else:
-                reduced = _noisereduce.reduce_noise(
-                    y=filtered, sr=sr, stationary=False, prop_decrease=0.65,
-                )
+                # Whole recording: the background is mostly steady hiss, so a
+                # stationary profile from its quietest frames removes far more
+                # of it than the non-stationary estimate did (measured: about
+                # 2 dB better signal-to-noise before, 10–20 dB now). Smoothed
+                # masks keep it from warbling ("musical noise").
+                noise_sample = quiet_frames_noise(filtered, sr)
+                if noise_sample is not None:
+                    reduced = _noisereduce.reduce_noise(
+                        y=filtered, sr=sr, y_noise=noise_sample, stationary=True,
+                        prop_decrease=0.9, n_std_thresh_stationary=1.5,
+                        freq_mask_smooth_hz=500, time_mask_smooth_ms=64,
+                    )
+                else:
+                    reduced = _noisereduce.reduce_noise(
+                        y=filtered, sr=sr, stationary=False, prop_decrease=0.65,
+                    )
             return reduced, noise_sample
         except Exception as e:
             # Fall back to just the bandpass result if noisereduce itself
@@ -1537,14 +1625,18 @@ class AudioProcessor:
         else:
             reduced, noise_sample = filtered, None
 
-        # 4. Soft limiting + level normalization — see soft_limit_and_normalize()
+        # 4. Level: after noise reduction, a soft expander between calls and
+        #    level_for_listening() (above); then the soft limiter. See
+        #    soft_limit_and_normalize()
         #    above (also reused by ai_enhance.py's neural-denoising path).
         #    boost=apply_noise_reduction: only boost the level back up when
         #    noise reduction actually ran to justify it — plain rumble
         #    removal (apply_noise_reduction=False) skips the boost so it
         #    doesn't amplify whatever ambient noise the filter didn't
         #    touch, matching Live Detect's own filter-only behavior.
-        reduced = soft_limit_and_normalize(reduced, boost=apply_noise_reduction)
+        if apply_noise_reduction:
+            reduced = level_for_listening(soft_expander(reduced, sr), sr)
+        reduced = soft_limit_and_normalize(reduced, boost=False)
 
         had_noise_sample = noise_sample is not None
         out_peak = float(np.max(np.abs(reduced))) if len(reduced) else 0.0

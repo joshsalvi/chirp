@@ -74,6 +74,23 @@ def create_access_token(data: dict, expires_minutes: int = 720) -> str:
     return jwt.encode(payload, settings.secret_key, algorithm="HS256")
 
 
+REMEMBER_DAYS = 30          # a sign-in lasts this long, and renews itself while in use
+SESSION_MINUTES = 720       # when a client asks not to stay signed in
+
+
+def carried_minutes(request) -> int:
+    """Lifetime for a token re-issued to the same person (switching, joining
+    or making a location): what's left of the current sign-in, so Stay
+    signed in survives the switch. At least SESSION_MINUTES."""
+    h = request.headers.get("Authorization", "") if request is not None else ""
+    p = verify_token(h[7:]) if h.startswith("Bearer ") else None
+    exp = (p or {}).get("exp")
+    if not exp:
+        return SESSION_MINUTES
+    left = int((float(exp) - time.time()) / 60)
+    return max(SESSION_MINUTES, min(left, REMEMBER_DAYS * 1440))
+
+
 def verify_token(token: str) -> Optional[dict]:
     jwt, JWTError = _get_jwt()
     try:
@@ -316,7 +333,7 @@ def login(request: Request, form: OAuth2PasswordRequestForm = Depends(),
         reg_db.commit()
 
         memberships = reg_db.query(Membership).filter(Membership.user_id == user.id).all()
-        expires = 10080 if remember_me else 720  # 7 days vs 12h
+        expires = REMEMBER_DAYS * 1440 if remember_me else SESSION_MINUTES
         claims = {"sub": user.username, "global_user_id": user.id}
         role_for_token = "viewer"
         if len(memberships) == 1:
@@ -351,8 +368,8 @@ def watch_token(token: str = Depends(oauth2_scheme), current_user=Depends(get_cu
     payload = verify_token(token) if token else None
     if not payload:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    if payload.get("scope") == "watch":
-        raise HTTPException(status_code=403, detail="A watch sign-in can't make another")
+    if payload.get("scope") in ("watch", "demo"):
+        raise HTTPException(status_code=403, detail="This sign-in can't make a watch one")
     claims = {k: payload[k] for k in ("sub", "global_user_id", "active_instance_id", "role") if k in payload}
     claims["scope"] = "watch"
     return {"access_token": create_access_token(claims, expires_minutes=WATCH_TOKEN_DAYS * 1440),
@@ -380,6 +397,93 @@ def lite_token(token: str = Depends(oauth2_scheme), current_user=Depends(get_cur
     claims["scope"] = "lite"
     return {"access_token": create_access_token(claims, expires_minutes=LITE_TOKEN_DAYS * 1440),
             "expires_days": LITE_TOKEN_DAYS, "auth_required": True}
+
+
+# ── The public demo (services/demo.py) ─────────────────────────────────────
+# "Try the demo" signs anyone in, without a password, as the demo location's
+# read-only visitor for a few hours. main.py's demo_may_use keeps it to
+# looking around and Live Detect.
+DEMO_TOKEN_MINUTES = 6 * 60
+DEMO_IP_MAX = 30                 # demo sign-ins per address per hour
+_demo_by_ip: dict = defaultdict(list)
+
+
+def _demo_target():
+    """(global user, instance) for the demo, or None when there isn't one."""
+    try:
+        from ..registry_db import RegistrySessionLocal
+        from ..registry_models import GlobalUser, Instance, Membership
+    except ImportError:
+        return None
+    from ..services.demo import DEMO_USER
+    reg = RegistrySessionLocal()
+    try:
+        inst = reg.query(Instance).filter(Instance.is_demo == True).first()  # noqa: E712
+        user = reg.query(GlobalUser).filter(GlobalUser.username == DEMO_USER).first()
+        if not inst or not user or not reg.query(Membership).filter(
+                Membership.user_id == user.id, Membership.instance_id == inst.id).first():
+            return None
+        return user.id, inst.id
+    except Exception:
+        return None
+    finally:
+        reg.close()
+
+
+def payload_scope(request: Request):
+    """The scope of the request's sign-in ("demo", "lite", …), or None."""
+    h = request.headers.get("Authorization", "")
+    p = verify_token(h[7:]) if h.startswith("Bearer ") else None
+    return (p or {}).get("scope")
+
+
+@router.post("/me/renew")
+def renew_sign_in(request: Request):
+    """A fresh REMEMBER_DAYS sign-in for the same person and location. The
+    app calls this as it opens, so anyone who uses it at least once a month
+    stays signed in. Only full sign-ins renew (not watch, TV, Lite or demo
+    ones), and only while the account is still active."""
+    from ..registry_db import RegistrySessionLocal
+    from ..registry_models import GlobalUser
+    h = request.headers.get("Authorization", "")
+    p = verify_token(h[7:]) if h.startswith("Bearer ") else None
+    if not p or p.get("scope") or not p.get("global_user_id"):
+        raise HTTPException(401, "Not signed in")
+    reg = RegistrySessionLocal()
+    try:
+        g = reg.get(GlobalUser, p["global_user_id"])
+        if not g or not g.active or g.username != p.get("sub"):
+            raise HTTPException(401, "Not signed in")
+    finally:
+        reg.close()
+    claims = {k: v for k, v in p.items() if k not in ("exp", "iat")}
+    return {"access_token": create_access_token(claims, expires_minutes=REMEMBER_DAYS * 1440),
+            "token_type": "bearer", "expires_days": REMEMBER_DAYS}
+
+
+@router.get("/demo")
+def demo_available():
+    return {"available": _demo_target() is not None}
+
+
+@router.post("/demo")
+def demo_sign_in(request: Request):
+    target = _demo_target()
+    if not target:
+        raise HTTPException(status_code=404, detail="The demo isn't available right now.")
+    ip = client_address(request)
+    now = time.time()
+    recent = [t for t in _demo_by_ip[ip] if now - t < 3600]
+    if len(recent) >= DEMO_IP_MAX:
+        _demo_by_ip[ip] = recent
+        raise HTTPException(status_code=429, detail="Too many demo sign-ins from this address. Try again later.")
+    _demo_by_ip[ip] = recent + [now]
+    from ..services.demo import DEMO_USER
+    gid, iid = target
+    token = create_access_token({"sub": DEMO_USER, "global_user_id": gid, "active_instance_id": iid,
+                                 "role": "viewer", "scope": "demo"}, expires_minutes=DEMO_TOKEN_MINUTES)
+    return {"access_token": token, "token_type": "bearer", "username": DEMO_USER, "role": "viewer",
+            "demo": True, "expires_minutes": DEMO_TOKEN_MINUTES}
 
 
 UI_MODES = ("lite", "pro")
@@ -533,6 +637,8 @@ def register(body: RegisterRequest, request: Request = None):
         instance = None
         if body.invite_code:
             instance = reg_db.query(Instance).filter(Instance.invite_code == body.invite_code.strip().upper()).first()
+            if instance and getattr(instance, "is_demo", False):
+                instance = None
             if not instance:
                 # Checked before creating anything — an invalid code
                 # shouldn't leave behind an orphan account with
@@ -857,6 +963,13 @@ def update_my_profile(body: ProfileUpdateRequest, request: Request, db: Session 
         user = db.query(User).filter(User.username == "admin").first()
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
+    if payload_scope(request) == "demo":
+        # The demo visitor is shared: accept the screen's own settings
+        # (dashboard view, tips) without keeping them, refuse the account's.
+        if (body.new_password or body.email is not None or body.display_name is not None
+                or getattr(body, "inat_api_token", None) is not None):
+            raise HTTPException(403, "This is the demo, so account changes are off.")
+        return {"ok": True, "username": user.username, "display_name": user.display_name, "email": None}
 
     crypt = _get_crypt()
 
@@ -1186,6 +1299,9 @@ def delete_my_account(body: DeleteAccountRequest, token: str = Depends(oauth2_sc
     payload = verify_token(token) if token else None
     if not payload:
         raise HTTPException(401, "Not authenticated")
+    from ..services.demo import DEMO_USER
+    if payload.get("scope") == "demo" or payload.get("sub") == DEMO_USER:
+        raise HTTPException(403, "The demo account can't be deleted.")
     reg_db = RegistrySessionLocal()
     try:
         g = reg_db.query(GlobalUser).filter(GlobalUser.username == payload.get("sub")).first()

@@ -95,6 +95,9 @@ def _migrate_registry_columns():
         "site_requests": [
             ("user_id", "VARCHAR"),
         ],
+        "instances": [
+            ("is_demo", "BOOLEAN DEFAULT 0"),
+        ],
         "registry_settings": [
             ("location_approval", "BOOLEAN"),
             ("headscale_basic_auth_enabled", "BOOLEAN DEFAULT 0"),

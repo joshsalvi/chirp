@@ -773,6 +773,19 @@ export const api = {
       return r.ok ? r.json() : null
     },
     logout: () => tokenStore.clear(),
+    // Sign-ins last 30 days and renew as the app opens (api/auth.py
+    // /me/renew), at most twice a day, so regular users stay signed in.
+    renew: async () => {
+      if (!tokenStore.get()) return
+      try {
+        const last = Number(localStorage.getItem('chirp_renewed_at') || 0)
+        if (Date.now() - last < 12 * 3600 * 1000) return
+        const res = await fetch(`${BASE}/auth/me/renew`, { method: 'POST', headers: { Authorization: `Bearer ${tokenStore.get()}` } })
+        if (!res.ok) return
+        const data = await res.json()
+        if (data.access_token) { tokenStore.set(data.access_token); localStorage.setItem('chirp_renewed_at', String(Date.now())) }
+      } catch { /* offline: try next time */ }
+    },
     updateNotificationPrefs: (prefs) => request('/auth/me/notification-prefs', {
       method: 'PUT', body: JSON.stringify(prefs)
     }),

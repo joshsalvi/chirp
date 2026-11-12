@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { RefreshCw, Eye, EyeOff } from 'lucide-react'
 import ChirpLogo from './ChirpLogo'
 import { api } from '../lib/api'
@@ -32,7 +32,6 @@ function InputField({ label, type = 'text', value, onChange, placeholder, requir
 function LoginForm({ onLogin }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [remember, setRemember] = useState(true)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
 
@@ -40,7 +39,7 @@ function LoginForm({ onLogin }) {
     e.preventDefault()
     setLoading(true); setError(null)
     try {
-      const data = await api.auth.login(username.trim(), password, remember)
+      const data = await api.auth.login(username.trim(), password, true)
       hapticEvent('success')
       onLogin(data)
     } catch (e) {
@@ -57,11 +56,6 @@ function LoginForm({ onLogin }) {
     <form onSubmit={submit} className="space-y-4">
       <InputField label="Username" value={username} onChange={e => setUsername(e.target.value)} placeholder="username" required autoFocus autoComplete="username"/>
       <InputField label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required autoComplete="current-password"/>
-      <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: 'var(--text-secondary)' }}>
-        <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)}
-               className="w-4 h-4 accent-chirp-500"/>
-        Stay signed in for 7 days
-      </label>
       {error && (
         <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.25)', color: 'var(--pastel-red)' }}>
           {error}
@@ -149,6 +143,46 @@ function RegisterForm({ onBack, onLogin }) {
   )
 }
 
+// "Try the demo": a read-only look at a real yard, no account needed.
+// /login?demo=1 (the website's buttons) starts it straight away.
+function DemoButton({ onLogin }) {
+  const [available, setAvailable] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const started = useRef(false)
+  const start = async () => {
+    setBusy(true); setError('')
+    try {
+      const data = await api.auth.demo()
+      hapticEvent('success')
+      onLogin(data)
+    } catch (e) {
+      setError(e.message); setBusy(false)
+    }
+  }
+  useEffect(() => {
+    api.auth.demoAvailable().then(ok => {
+      setAvailable(ok)
+      if (ok && !started.current && new URLSearchParams(window.location.search).get('demo') === '1') {
+        started.current = true
+        start()
+      }
+    })
+  }, [])
+  if (!available) return null
+  return (
+    <div className="mt-4 text-center">
+      <button type="button" onClick={start} disabled={busy} className="btn-secondary w-full" style={{ padding: '11px 18px' }}>
+        {busy ? <RefreshCw size={14} className="animate-spin inline mr-2"/> : null}Try the demo
+      </button>
+      <p className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
+        Look around a real yard's birds. No account needed.
+      </p>
+      {error && <p className="text-xs mt-2" style={{ color: 'var(--error, #f87171)' }}>{error}</p>}
+    </div>
+  )
+}
+
 export default function Login({ onLogin }) {
   const [mode, setMode] = useState('login')
   return (
@@ -181,6 +215,7 @@ export default function Login({ onLogin }) {
           </div>
           {mode === 'login' ? <LoginForm onLogin={onLogin}/> : <RegisterForm onBack={() => setMode('login')} onLogin={onLogin}/>}
         </div>
+        <DemoButton onLogin={onLogin}/>
 
         <p className="text-xs text-center mt-4" style={{ color: 'var(--text-tertiary)' }}>
           {mode === 'login' ? 'No account yet? Switch to Register above.' : 'You can sign in right away — no approval needed.'}

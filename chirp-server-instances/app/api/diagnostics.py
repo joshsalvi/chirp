@@ -1307,6 +1307,9 @@ async def _fetch_device_listen_clip(device_id: str, name: str, db: Session, stat
     dev = db.query(Device).filter(Device.id == device_id).first()
     if not dev:
         raise HTTPException(404, "Device not found")
+    from ..services.demo import demo_listen_clip, is_demo_db
+    if is_demo_db():
+        return demo_listen_clip(db)          # the demo station replays a recording
     from ..services.device_net import candidates as _cands, httpx_kwargs
     targets = _cands(dev)
     if not targets:

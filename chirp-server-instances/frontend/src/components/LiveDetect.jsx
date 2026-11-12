@@ -7,7 +7,7 @@ import ChirpLogo from './ChirpLogo'
 import { isApp, deviceName } from '../native'
 import { hapticEvent } from '../lib/haptics'
 import { SeenTodayModal } from './Dashboard'
-import { api, mediaUrl } from '../lib/api'
+import { api, mediaUrl, tokenStore } from '../lib/api'
 import { useTz } from '../lib/time'
 import { LIVE_APP_STORE_URL } from '../lib/appStore'
 
@@ -339,6 +339,9 @@ export default function LiveDetect() {
   // works: walk around, use the phone's own mic), not a deployed
   // ChirpPi. "device" here means "a chirp-device", which is the OTHER
   // option, not the default.
+  // The demo (api/auth.py) keeps nothing and doesn't send where it is; its
+  // station replays a recording from the yard (services/demo.py).
+  const isDemo = tokenStore.isDemo()
   const [source, setSource] = useState(() => {
     try { return localStorage.getItem(SOURCE_KEY) || 'phone' } catch { return 'phone' }
   })
@@ -908,7 +911,7 @@ export default function LiveDetect() {
       // finalizeSessionAudio()'s own comment for why the ordering here
       // matters (it needs live audio resources that stopEverything()
       // is about to close).
-      const hasDetections = sessionDetections.length > 0
+      const hasDetections = sessionDetections.length > 0 && !isDemo
       const audioBlob = hasDetections ? await finalizeSessionAudio() : null
       sessionDeviceIdRef.current = source === 'device' ? (selectedDevice?.id ?? null) : null
       stopLocation()
@@ -926,11 +929,11 @@ export default function LiveDetect() {
     const ok = source === 'phone' ? await startPhoneCapture() : startDevicePolling()
     if (ok) {
       setListening(true)
-      if (source === 'phone') startLocation()
+      if (source === 'phone' && !isDemo) startLocation()
     } else {
       stoppedRef.current = true
     }
-  }, [listening, source, startPhoneCapture, startDevicePolling, stopEverything, sessionDetections, finalizeSessionAudio, selectedDevice, startLocation, stopLocation])
+  }, [listening, source, startPhoneCapture, startDevicePolling, stopEverything, sessionDetections, finalizeSessionAudio, selectedDevice, startLocation, stopLocation, isDemo])
 
   const handleSaveSession = async () => {
     if (!sessionAudioRef.current || !sessionStartRef.current) return
@@ -1016,7 +1019,10 @@ export default function LiveDetect() {
       {source === 'device' && (
         <div className="mb-4">
           {devices.length === 0 ? (
-            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>No ChirpPi devices found — Haikubox and Bird Buddy don't support Live Detect. Add a ChirpPi in Devices first.</p>
+            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+              No Chirp station here yet (Haikubox and Bird Buddy can't stream Live Detect).{' '}
+              <a href="https://ourchirp.com/setup.html" target="_blank" rel="noopener" style={{ color: 'var(--accent-400)' }}>Set one up ↗</a>
+            </p>
           ) : (
             <select value={selectedDeviceId} onChange={e => changeDevice(e.target.value)}
                     className="w-full text-sm px-3 py-2 rounded-lg"
@@ -1027,7 +1033,13 @@ export default function LiveDetect() {
           {selectedDevice && !birdMicName && (
             <p className="text-xs mt-1.5" style={{ color: '#f87171' }}>No bird mic recognized on this device.</p>
           )}
+          {isDemo && (
+            <p className="text-xs mt-1.5" style={{ color: 'var(--text-tertiary)' }}>In the demo, the station plays back a recording from this yard.</p>
+          )}
         </div>
+      )}
+      {isDemo && source === 'phone' && (
+        <p className="text-xs -mt-2 mb-4" style={{ color: 'var(--text-tertiary)' }}>Listens through this device's microphone. Nothing is saved.</p>
       )}
 
       {/* Live visual */}
@@ -1092,7 +1104,7 @@ export default function LiveDetect() {
         </button>
       </div>
 
-      {source === 'phone' && (
+      {source === 'phone' && !isDemo && (
         <div className="card rounded-xl p-4 mb-2">
           <label className="flex items-start gap-3 cursor-pointer">
             <span className="flex-1 min-w-0">

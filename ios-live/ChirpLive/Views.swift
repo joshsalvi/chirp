@@ -26,7 +26,7 @@ struct WelcomeView: View {
             }
             Spacer()
             Button("Start listening", action: start).buttonStyle(PillButtonStyle())
-            Button(account.signedIn ? "Signed in to \(account.siteName)" : "I have a Chirp site: sign in") { signingIn = true }
+            Button(account.isDemo ? "Trying the demo station" : account.signedIn ? "Signed in to \(account.siteName)" : "I have a Chirp site: sign in") { signingIn = true }
                 .buttonStyle(PillButtonStyle(filled: false)).padding(.top, 12)
                 .disabled(account.signedIn)
             Text("Signing in saves sessions to your site too. Powered by BirdNET.")
@@ -96,7 +96,10 @@ struct ListenView: View {
                     Label(place, systemImage: "location").font(.footnote).foregroundStyle(Theme.muted)
                 }
 
-                if listener.listening && account.signedIn {
+                if listener.listening && account.isDemo {
+                    Text("Demo: the station plays back a recording from the demo yard. Nothing is saved there.")
+                        .font(.footnote).foregroundStyle(Theme.muted)
+                } else if listener.listening && account.signedIn {
                     Text(listener.sentToSite == 0 ? "Birds you hear are also sent to \(account.siteName)."
                                                   : "\(listener.sentToSite) clip\(listener.sentToSite == 1 ? "" : "s") confirmed by \(account.siteName)")
                         .font(.footnote).foregroundStyle(Theme.muted)
@@ -545,6 +548,7 @@ struct SessionsView: View {
 
 struct SettingsView: View {
     @AppStorage("minConfidence") private var minConfidence = 0.3
+    @AppStorage(Haptics.offKey) private var hapticsOff = false
     @EnvironmentObject var account: Account
     @EnvironmentObject var listener: Listener
     @EnvironmentObject var store: SessionStore
@@ -554,16 +558,18 @@ struct SettingsView: View {
         Form {
             Section {
                 if account.signedIn {
-                    LabeledContent("Signed in", value: account.username)
+                    LabeledContent("Signed in", value: account.isDemo ? "Demo" : account.username)
                     LabeledContent("Site", value: account.siteName)
-                    Button("Sign out", role: .destructive) { account.signOut() }
+                    Button(account.isDemo ? "Leave the demo" : "Sign out", role: .destructive) { account.signOut() }
                 } else {
                     Button("Sign in to a Chirp site") { signingIn = true }
                 }
             } header: {
                 Text("Chirp site")
             } footer: {
-                Text(account.signedIn
+                Text(account.isDemo
+                     ? "The demo station plays back a recording from a backyard. Nothing is saved there, and the demo ends after a few hours."
+                     : account.signedIn
                      ? "Birds you hear are also checked by your site, and each session is saved there as a Live Detect recording. The sign-in lasts 30 days."
                      : "Optional, for people who already have a Chirp site account. Sessions are then saved there too, with your site's second opinion.")
             }
@@ -575,6 +581,12 @@ struct SettingsView: View {
                 }
             } footer: {
                 Text("Lower finds more birds, and more mistakes.")
+            }
+            .listRowBackground(Theme.card)
+            Section {
+                Toggle("Haptics", isOn: Binding(get: { !hapticsOff }, set: { hapticsOff = !$0; Haptics.tap() }))
+            } footer: {
+                Text("A light tap when a new bird appears and when you switch the sound display.")
             }
             .listRowBackground(Theme.card)
             ScopeSettings()
@@ -663,6 +675,17 @@ struct SignInView: View {
                     Text("For people who already have an account on a Chirp site. You don't need one to use Chirp Live, and accounts can't be created or deleted here. Chirp Live keeps a Live Detect-only sign-in for 30 days, never your password.")
                 }
                 .listRowBackground(Theme.card)
+                Section {
+                    Button {
+                        Task { await demo() }
+                    } label: {
+                        HStack { Spacer(); if busy { ProgressView() } else { Text("Try the demo station") }; Spacer() }
+                    }
+                    .disabled(busy)
+                } footer: {
+                    Text("No account? Listen through the station in ourchirp.com's demo yard, which plays back a recording. Nothing is saved.")
+                }
+                .listRowBackground(Theme.card)
             }
             .scrollContentBackground(.hidden)
             .background(Theme.bg.ignoresSafeArea())
@@ -671,6 +694,17 @@ struct SignInView: View {
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
         }
         .preferredColorScheme(.dark)
+    }
+
+    private func demo() async {
+        busy = true; error = nil
+        defer { busy = false }
+        do {
+            try await account.tryDemo()
+            dismiss()
+        } catch {
+            self.error = error.localizedDescription
+        }
     }
 
     private func go() async {

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react'
+import PhotoCarousel from './PhotoCarousel'
 import { useParams, Link, useSearchParams, useLocation } from 'react-router-dom'
 import {
   Play, Pause, ArrowLeft, ExternalLink, RefreshCw,
@@ -1776,6 +1777,7 @@ export default function BirdProfile() {
   // then fall back to the URL param 'from', then default to life list
 
   const [profile, setProfile] = useState(null)
+  const [heroPage, setHeroPage] = useState(0)
   const [activeTab, setActiveTab] = useState('overview')
   const [enabledSources, setEnabledSources] = useState({ aab: true, macaulay: true, geomodel: true, birdlife: true, ebird_st: false })
   const [sourceOrder, setSourceOrder] = useState(['aab', 'macaulay', 'geomodel', 'birdlife', 'ebird_st'])
@@ -1863,6 +1865,13 @@ export default function BirdProfile() {
 
   if (loading) return <div className="flex items-center justify-center h-64 text-chirp-500 animate-pulse">Loading…</div>
   if (!profile) return <div className="p-4 md:p-6 text-gray-400">Profile not found.</div>
+  // Header photos: the main one, then up to five more from iNaturalist/Wikipedia.
+  const heroPhotos = [
+    ...(profile.photo_url ? [{ url: profile.photo_url, credit: profile.photo_credit }] : []),
+    ...(Array.isArray(profile.extra_photos) ? profile.extra_photos : [])
+      .filter(x => x?.url && x.url !== profile.photo_url).slice(0, 5)
+      .map(x => ({ url: x.url, credit: x.credit })),
+  ]
 
   const rawSections = profile.description_sections
   const sections = Array.isArray(rawSections) ? rawSections
@@ -1907,34 +1916,40 @@ export default function BirdProfile() {
               the source image's own aspect ratio or where the subject
               sits within it. */}
           <div className="absolute inset-0 overflow-hidden">
-            {profile.photo_url ? (
-              <>
-                <img src={profile.photo_url} alt="" aria-hidden="true"
-                     className="absolute inset-0 w-full h-full object-cover"
-                     style={{ filter: 'blur(32px) brightness(0.55) saturate(1.15)', transform: 'scale(1.15)' }}/>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <img src={profile.photo_url} alt={profile.common_name}
-                       className="max-w-full max-h-full w-auto h-auto object-contain"
-                       style={{ boxShadow: '0 12px 40px rgba(0,0,0,.45)' }}/>
-                </div>
-              </>
+            {heroPhotos.length ? (
+              <PhotoCarousel items={heroPhotos} label={`Photos of ${profile.common_name}`} className="absolute inset-0"
+                             onChange={setHeroPage} renderSlide={(ph, i) => (
+                <>
+                  {/* A blurred copy fills the box; the whole photo sits on
+                      top (object-contain), so no subject is ever cropped.
+                      mediaUrl() adds the sign-in a local photo needs. */}
+                  <img src={mediaUrl(ph.url)} alt="" aria-hidden="true"
+                       className="absolute inset-0 w-full h-full object-cover"
+                       style={{ filter: 'blur(32px) brightness(0.55) saturate(1.15)', transform: 'scale(1.15)' }}/>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <img src={mediaUrl(ph.url)} alt={i ? '' : profile.common_name}
+                         className="max-w-full max-h-full w-auto h-auto object-contain"
+                         style={{ boxShadow: '0 12px 40px rgba(0,0,0,.45)' }}/>
+                  </div>
+                </>
+              )}/>
             ) : (
               <div className="absolute inset-0 bg-gradient-to-br from-chirp-900 to-surface-950 flex items-center justify-center"><BirdIcon size={100} style={{ color: 'rgba(255,255,255,.25)' }}/></div>
             )}
           </div>
-          <div className="absolute inset-0 bg-gradient-to-t from-surface-900/95 via-surface-900/20 to-transparent"/>
-          {profile.photo_credit && (
-            <p className="absolute top-2 right-2 text-[10px] leading-none text-gray-300/90 bg-black/40 px-1.5 py-0.5 rounded max-w-[55%] truncate"
-               title={profile.photo_credit}>
-              {profile.photo_credit}
+          <div className="absolute inset-0 bg-gradient-to-t from-surface-900/95 via-surface-900/20 to-transparent pointer-events-none"/>
+          {heroPhotos[heroPage]?.credit && (
+            <p className="absolute top-2 right-2 text-[10px] leading-none text-gray-300/90 bg-black/40 px-1.5 py-0.5 rounded max-w-[55%] truncate pointer-events-none"
+               title={heroPhotos[heroPage].credit}>
+              {heroPhotos[heroPage].credit}
             </p>
           )}
-          <div className="absolute bottom-0 left-0 right-0 p-5 flex items-end justify-between">
+          <div className="absolute bottom-0 left-0 right-0 p-5 flex items-end justify-between pointer-events-none">
             <div className="inline-block px-3 py-1.5 -mx-3 -my-1.5 rounded-lg" style={{ background: 'rgba(0,0,0,0.38)' }}>
               <h1 className="text-3xl font-bold text-white" style={{ textShadow: '0 1px 6px rgba(0,0,0,0.6)' }}>{profile.common_name}</h1>
               <p className="text-base italic text-gray-300 mt-0.5" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.6)' }}>{profile.scientific_name}</p>
             </div>
-            <ConsBadge status={profile.conservation_status} authority={profile.conservation_authority}/>
+            <span className="pointer-events-auto"><ConsBadge status={profile.conservation_status} authority={profile.conservation_authority}/></span>
           </div>
         </div>
         <div className="grid grid-cols-4 divide-x divide-surface-700 border-t border-surface-700">

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useMemo, lazy, Suspense } from 'react'
+import SetupGuideCard from './SetupGuideCard'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 // Recharts loads with the charts, not with the Dashboard (see DashboardBarChart).
@@ -13,6 +14,7 @@ import { chosenMode, localMode, setLocalMode } from '../lib/dashboardMode'
 import ChirpLogo from './ChirpLogo'
 import { isCardOpen, setCardOpen } from '../lib/cardState'
 import { AuthorAvatar } from './Comments'
+import { whenVisible } from '../lib/visible'
 
 // Small helper for Dashboard sections with their own custom, interactive
 // header (period buttons, an embedded toggle link, etc.) that can't just
@@ -1175,7 +1177,7 @@ function AdvancedDashboard({ onOpenPicker, onStandard }) {
     // regardless of whether anything had actually happened, which was
     // ~960 requests/hour from a single open Dashboard tab for data that
     // mostly hadn't changed.
-    const iv = setInterval(load, 60000)
+    const iv = setInterval(whenVisible(load), 60000)
     window.addEventListener('chirp-settings-saved', load)
     window.addEventListener('chirp-new-detection', debouncedLoad)
     window.addEventListener('chirp-resume', debouncedLoad)
@@ -1311,6 +1313,7 @@ function AdvancedDashboard({ onOpenPicker, onStandard }) {
 
       {isLive && sectionOn('latest_recording') && <LiveDetectionCard recordingId={latestId}/>}
 
+      {summary?.has_station === false && <SetupGuideCard/>}
       {sectionOn('seen_today') && <SeenTodayGrid species={summary?.daily?.species_today}/>}
 
       {(sectionOn('daily_journal') || sectionOn('weekly_journal')) &&

@@ -1103,7 +1103,7 @@ STATIC_DIR = Path(__file__).parent / "static"
 from fastapi.responses import PlainTextResponse  # noqa: E402
 from . import security as _security  # noqa: E402
 
-_SITEMAP_PAGES = ["about", "setup.html", "guide.html", "troubleshooting.html", "support.html",
+_SITEMAP_PAGES = ["about", "apps", "setup.html", "guide.html", "troubleshooting.html", "support.html",
                   "testflight.html", "privacy.html"]
 
 
@@ -1135,8 +1135,8 @@ def _crawler_file(name: str):
 
 def spa_response(full_path: str, request, static_dir: Path):
     """The file, the app page, or a 404 for the catch-all route."""
-    if full_path.strip("/") == "about":   # public promotional page (frontend/public/about.html)
-        full_path = "about.html"
+    if full_path.strip("/") in ("about", "apps"):   # public pages (frontend/public/about.html, apps.html)
+        full_path = full_path.strip("/") + ".html"
     # Older iOS asks for the "-precomposed" icon name before reading the page.
     if full_path in ("apple-touch-icon-precomposed.png", "apple-touch-icon-120x120.png",
                      "apple-touch-icon-120x120-precomposed.png"):
