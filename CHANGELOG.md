@@ -1,3 +1,7 @@
+## 0.5.19.ak — 2026-11-12 — BUGFIX — Photo edge
+
+- Dashboard's latest bird: the next photo no longer peeks in at the right edge after a tap.
+
 ## 0.5.19.aj — 2026-11-12 — ENHANCEMENT — Tighter website header
 
 - About and Apps pages: less empty space above the first line on phones.

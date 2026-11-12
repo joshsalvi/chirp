@@ -2479,7 +2479,9 @@ html.vp-shift { --inset-top: calc(max(env(safe-area-inset-top, 0px) - var(--vp-s
 .sd-hero-photo img, .sd-hero-photo > div { position: absolute; inset: 0; transition: transform .6s cubic-bezier(.16,1,.3,1); }
 /* Tiles crop toward the top, where a portrait photo has the bird's head. */
 .sd-tile img { object-position: 50% 12%; }
-.sd-hero-photo:hover img { transform: scale(1.03); }
+/* Hover zoom only with a mouse: on a phone a tap left it stuck, and in the
+   photo carousel the next photo's zoom showed at the edge. */
+@media (hover: hover) and (pointer: fine) { .sd-hero-photo:hover .photo-carousel-slide img, .sd-hero-photo:hover > img { transform: scale(1.03); } }
 .sd-hero-body { padding: 36px; display: flex; flex-direction: column; justify-content: space-between; gap: 28px; min-width: 0; }
 .sd-hero-name { font-family: 'Lora', Georgia, serif; font-weight: 500; font-size: clamp(28px, 4vw, 38px); line-height: 1.1; color: var(--text-primary); }
 @media (hover: hover) { .sd-hero-name:hover { color: var(--accent-300); } }
@@ -2636,7 +2638,7 @@ html.vp-shift { --inset-top: calc(max(env(safe-area-inset-top, 0px) - var(--vp-s
   overscroll-behavior-x: contain; scrollbar-width: none; outline: none;
 }
 .photo-carousel-track::-webkit-scrollbar { display: none; }
-.photo-carousel-slide { position: relative; flex: 0 0 100%; height: 100%; scroll-snap-align: center; scroll-snap-stop: always; }
+.photo-carousel-slide { position: relative; overflow: hidden; flex: 0 0 100%; height: 100%; scroll-snap-align: center; scroll-snap-stop: always; }
 .photo-carousel-dots {
   position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%);
   display: flex; gap: 6px; padding: 5px 8px; border-radius: 999px;
