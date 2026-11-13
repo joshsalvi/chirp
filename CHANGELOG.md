@@ -1,3 +1,7 @@
+## 0.5.19.am — 2026-11-13 — CRITICAL — Sign-in kept off outside photos
+
+- Photos from iNaturalist, Wikipedia and other sites no longer have your sign-in added to their address; only this server's files get it.
+
 ## 0.5.19.al — 2026-11-13 — BUGFIX — Bird profile photo
 
 - Bird profiles show their header photo again (blank since 0.5.19.ai).

@@ -1818,7 +1818,7 @@ export default function RecordingDetail({ shared = false }) {
                     401'd. Every bat shares the same representative photo via
                     this exact route, which is why this affected every bat
                     detection, not just one species. mediaUrl() is safe to
-                    wrap unconditionally — harmless no-op on an external
+                    wrap unconditionally: it leaves an external
                     iNaturalist URL, which doesn't need or use the token. */}
                 <img src={mediaUrl(heroPhoto)} alt="" aria-hidden="true"
                      className="absolute inset-0 w-full h-full object-cover"

@@ -68,7 +68,7 @@ function Avatar({ name, size = 64, photoUrl }) {
       // an instance-scoped route behind this project's multi-tenant get_db,
       // which needs a token a plain <img src> can never carry — this always
       // 401'd for anyone who'd actually uploaded a photo rather than pasted
-      // an external URL. mediaUrl() is a harmless no-op on an external URL.
+      // an external URL. mediaUrl() leaves an external URL as it is.
       <img src={mediaUrl(photoUrl)} alt={name || 'avatar'}
            style={{
              width: size, height: size, borderRadius: '50%', flexShrink: 0,

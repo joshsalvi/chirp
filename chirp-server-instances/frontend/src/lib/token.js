@@ -39,10 +39,17 @@ export const tokenStore = {
 // header — adding this there too wouldn't break anything, but doing it
 // only where actually needed keeps the token out of server logs/proxy
 // history for the far more common case of a real API call.
+// Only this server's own files get the sign-in: a photo from iNaturalist,
+// Wikipedia or any other site must never carry it in its address.
+function isOwnServer(path) {
+  if (path.startsWith('/') && !path.startsWith('//')) return true
+  try { return new URL(path, window.location.href).origin === window.location.origin } catch { return false }
+}
+
 export function mediaUrl(path) {
   if (!path) return path
   const token = tokenStore.get()
-  if (!token) return path
+  if (!token || !isOwnServer(path)) return path
   const sep = path.includes('?') ? '&' : '?'
   return `${path}${sep}token=${encodeURIComponent(token)}`
 }

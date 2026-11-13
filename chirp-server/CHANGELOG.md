@@ -1,3 +1,7 @@
+## 0.5.19.am — 2026-11-13 — DEVELOPER — Version sync
+
+- Version kept in step with the multi-site server.
+
 ## 0.5.19.al — 2026-11-13 — BUGFIX — Bird profile photo
 
 - Bird profiles show their header photo again (blank since 0.5.19.ai).
