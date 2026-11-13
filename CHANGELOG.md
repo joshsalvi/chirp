@@ -1,3 +1,7 @@
+## 0.5.19.al — 2026-11-13 — BUGFIX — Bird profile photo
+
+- Bird profiles show their header photo again (blank since 0.5.19.ai).
+
 ## 0.5.19.ak — 2026-11-12 — BUGFIX — Photo edge
 
 - Dashboard's latest bird: the next photo no longer peeks in at the right edge after a tap.

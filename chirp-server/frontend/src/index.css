@@ -2631,7 +2631,10 @@ html.vp-shift { --inset-top: calc(max(env(safe-area-inset-top, 0px) - var(--vp-s
 .sd-more svg { transition: transform .2s; }
 
 /* ── Photo carousel (components/PhotoCarousel.jsx) ─────────────────────── */
-.photo-carousel { position: relative; }
+/* :where() keeps this at zero specificity, so a className such as Tailwind's
+   `absolute inset-0` (the bird profile header) wins; as plain .photo-carousel it
+   overrode `absolute`, the box had no height and the photos never showed. */
+:where(.photo-carousel) { position: relative; }
 .photo-carousel-track {
   display: flex; width: 100%; height: 100%;
   overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory;
