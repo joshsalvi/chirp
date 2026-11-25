@@ -1,3 +1,7 @@
+## 0.5.19.ap — 2026-11-25 — ENHANCEMENT — Lite recording pictures
+
+- Chirp Lite's recording pictures keep short calls visible and the background darker.
+
 ## 0.5.19.ao — 2026-11-25 — CRITICAL — Lite recording pictures
 
 - Chirp Lite's Listen cards load their pictures again (blank in 0.5.19.an).
