@@ -1,3 +1,7 @@
+## 0.5.19.ao — 2026-11-25 — CRITICAL — Lite recording pictures
+
+- Chirp Lite's Listen cards load their pictures again (blank in 0.5.19.an).
+
 ## 0.5.19.an — 2026-11-25 — ENHANCEMENT — Faster dashboard, clearer Lite cards
 
 - The dashboard opens with your last view of the yard, then refreshes. The saved copy is removed when you sign out.

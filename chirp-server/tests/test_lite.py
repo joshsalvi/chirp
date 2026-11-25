@@ -95,14 +95,14 @@ def test_lite_screens(client):
     titmouse = client.get("/api/v1/lite/listen", params={"bird": "Tufted Titmouse"}).json()["recordings"]
     assert titmouse and titmouse[0]["bird"] == "Tufted Titmouse" and titmouse[0]["starts_at"] == 6
     assert client.get("/api/v1/lite/listen?before=yesterday").status_code == 400
-    assert first["spectrogram"] == "/api/v1/lite/recording/lite-0/strip.png"
+    assert first["spectrogram"] == "/api/v1/lite/recording/lite-0/strip"
     png = client.get(first["spectrogram"])
     assert png.status_code == 200 and png.headers["content-type"] == "image/png" and png.content[:4] == b"\x89PNG"
     from PIL import Image
     import io
     assert Image.open(io.BytesIO(png.content)).size == (900, 150)
     assert client.get(first["spectrogram"]).content == png.content           # served from the saved file
-    assert client.get("/api/v1/lite/recording/nope/strip.png").status_code == 404
+    assert client.get("/api/v1/lite/recording/nope/strip").status_code == 404
 
     p = client.get("/api/v1/lite/bird/bp-cardinal").json()
     assert p["size"]["label"] == "Smaller than a robin" and p["season"] == "All year"
@@ -137,6 +137,7 @@ def test_ui_mode_saved(client):
 def test_lite_token_paths():
     from app.main import lite_may_use as ok
     for p in ("/api/v1/auth/me", "/api/v1/lite/today", "/api/v1/lite/bird/bp-1", "/api/v1/lite/listen",
+              "/api/v1/lite/recording/3f2a-11/strip",
               "/api/v1/recordings/statistics/daily-journal", "/api/v1/watch/audio/3f2a-11"):
         assert ok("GET", p), p
     assert ok("POST", "/api/v1/auth/lite-token")

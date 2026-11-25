@@ -9,7 +9,7 @@ each route returns only what one Lite screen draws, in one request.
   GET /lite/guide            birds expected near you this month, with how likely and whether heard
   GET /lite/bird/{id}        a simple profile: photos, song, three facts, blurb
   GET /lite/recording/{id}/songline   loudness bars, where each bird was identified, and call marks
-  GET /lite/recording/{id}/strip.png  clean bird-band spectrogram for the Listen cards
+  GET /lite/recording/{id}/strip      clean bird-band spectrogram for the Listen cards
 
 Which app someone sees is User.ui_mode (api/auth.py ui_mode_for).
 """
@@ -313,7 +313,7 @@ def listen(limit: int = Query(24, ge=1, le=60), before: Optional[str] = None, bi
             "has_audio": bool(r.wav_path and os.path.exists(r.wav_path)),
             "audio": f"/api/v1/recordings/{r.id}/audio",
             "spectrogram": f"/api/v1/recordings/{r.id}/spectrogram" if r.is_bat
-                           else f"/api/v1/lite/recording/{r.id}/strip.png",
+                           else f"/api/v1/lite/recording/{r.id}/strip",
         })
     profiles = _profiles(db, names)
     for c in cards:
@@ -347,7 +347,7 @@ def songline(recording_id: str, bird: Optional[str] = None, db: Session = Depend
     return sl.build(path, float(r.duration_seconds or 0), dict(spans), bird)
 
 
-@router.get("/recording/{recording_id}/strip.png")
+@router.get("/recording/{recording_id}/strip")
 def strip(recording_id: str, db: Session = Depends(get_db)):
     """The card picture: a clean bird-band spectrogram, made once and kept."""
     from fastapi.responses import FileResponse
