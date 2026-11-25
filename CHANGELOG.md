@@ -1,3 +1,8 @@
+## 0.5.19.an — 2026-11-25 — ENHANCEMENT — Faster dashboard, clearer Lite cards
+
+- The dashboard opens with your last view of the yard, then refreshes. The saved copy is removed when you sign out.
+- Chirp Lite's Listen cards show a clean spectrogram of the bird band, so calls stand out.
+
 ## 0.5.19.am — 2026-11-13 — CRITICAL — Sign-in kept off outside photos
 
 - Photos from iNaturalist, Wikipedia and other sites no longer have your sign-in added to their address; only this server's files get it.

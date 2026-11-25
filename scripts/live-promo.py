@@ -20,7 +20,7 @@ SHOTS = [
     ("listen", "1-listen.png", "See who's\nsinging", "Names birds as they sing, on your iPhone"),
     ("summary", "2-summary.png", "Every walk,\nsummed up", "Species, calls and the best clip of each bird"),
     ("sessions", "3-sessions.png", "Keeps every\nsession", "With the sound, the place and GPS"),
-    ("station", "4-station.png", "Listen to\nyour yard", "Signed in to a Chirp site, hear your stations"),
+    ("station", "4-station.png", "Listen to\nyour yard", "Hear a Chirp station live, or try the demo"),
     ("welcome", "5-welcome.png", "No account.\nNo signal needed.", "Over 6,000 species, all on your iPhone"),
 ]
 

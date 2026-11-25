@@ -9,6 +9,7 @@ each route returns only what one Lite screen draws, in one request.
   GET /lite/guide            birds expected near you this month, with how likely and whether heard
   GET /lite/bird/{id}        a simple profile: photos, song, three facts, blurb
   GET /lite/recording/{id}/songline   loudness bars, where each bird was identified, and call marks
+  GET /lite/recording/{id}/strip.png  clean bird-band spectrogram for the Listen cards
 
 Which app someone sees is User.ui_mode (api/auth.py ui_mode_for).
 """
@@ -311,7 +312,8 @@ def listen(limit: int = Query(24, ge=1, le=60), before: Optional[str] = None, bi
             "starts_at": round(float(lead.start_time or 0), 1) if lead else 0,
             "has_audio": bool(r.wav_path and os.path.exists(r.wav_path)),
             "audio": f"/api/v1/recordings/{r.id}/audio",
-            "spectrogram": f"/api/v1/recordings/{r.id}/spectrogram",
+            "spectrogram": f"/api/v1/recordings/{r.id}/spectrogram" if r.is_bat
+                           else f"/api/v1/lite/recording/{r.id}/strip.png",
         })
     profiles = _profiles(db, names)
     for c in cards:
@@ -343,6 +345,23 @@ def songline(recording_id: str, bird: Optional[str] = None, db: Session = Depend
         bird = best.common_name if best else None
     path = r.wav_path if r.wav_path and os.path.exists(r.wav_path) else None
     return sl.build(path, float(r.duration_seconds or 0), dict(spans), bird)
+
+
+@router.get("/recording/{recording_id}/strip.png")
+def strip(recording_id: str, db: Session = Depends(get_db)):
+    """The card picture: a clean bird-band spectrogram, made once and kept."""
+    from fastapi.responses import FileResponse
+    from ..config import settings
+    from ..services import lite_strip
+    r = db.query(Recording).filter(Recording.id == recording_id).first()
+    if not r:
+        raise HTTPException(404, "Recording not found")
+    out = lite_strip.path_for(settings.spectrograms_dir, r.id)
+    if not os.path.exists(out):
+        if not (r.wav_path and os.path.exists(r.wav_path)) or not lite_strip.build(r.wav_path, out):
+            raise HTTPException(404, "No audio for this recording")
+    return FileResponse(out, media_type="image/png",
+                        headers={"Cache-Control": "public, max-age=2592000, immutable"})
 
 
 # ── Guide (birds near you this month) ────────────────────────────────────────

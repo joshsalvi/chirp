@@ -173,6 +173,7 @@ final class Account: ObservableObject {
         defaults.removeObject(forKey: "siteTitle")
         if isDemo { username = "" }
         defaults.removeObject(forKey: "demo")
+        DiskCache.clear()
     }
 
     #if DEBUG

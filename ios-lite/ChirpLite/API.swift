@@ -61,25 +61,64 @@ enum API {
 }
 
 /// Loads one screen's data and keeps the last good copy while refreshing.
+/// The last copy is also kept on disk, so a cold start shows it at once.
 @MainActor
 final class Loader<T: Decodable>: ObservableObject {
     @Published var value: T?
     @Published var error: String?
     @Published var loading = false
     private let path: () -> String
+    private var loadedAt: Date?
 
     init(_ path: @escaping () -> String) { self.path = path }
 
     func load(_ account: Account) async {
+        let p = path()
+        let key = DiskCache.key(p, account: account)
+        if value == nil, let data = DiskCache.read(key), let saved = try? JSONDecoder.chirp.decode(T.self, from: data) {
+            value = saved
+        }
         loading = true
         defer { loading = false }
         do {
-            value = try await API.get(path(), server: account.server, token: account.token)
+            let data = try await API.data(p, server: account.server, token: account.token)
+            value = try JSONDecoder.chirp.decode(T.self, from: data)
             error = nil
+            loadedAt = Date()
+            DiskCache.write(key, data)
         } catch API.Failure.signedOut {
             account.signOut()
         } catch {
             if value == nil { self.error = error.localizedDescription }
         }
+    }
+
+    /// Reloads when the copy shown is older than `age` seconds.
+    func refreshIfStale(_ account: Account, age: TimeInterval = 300) async {
+        guard !loading, (loadedAt.map { -$0.timeIntervalSinceNow > age } ?? true) else { return }
+        await load(account)
+    }
+}
+
+/// Last copies of each screen, per site and person, in Caches.
+enum DiskCache {
+    static let dir: URL = {
+        let d = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("screens")
+        try? FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
+        return d
+    }()
+
+    @MainActor static func key(_ path: String, account: Account) -> String {
+        let raw = "\(account.server.absoluteString)|\(account.username)|\(path)"
+        var h: UInt64 = 1469598103934665603
+        for b in raw.utf8 { h = (h ^ UInt64(b)) &* 1099511628211 }
+        return String(h, radix: 16)
+    }
+
+    static func read(_ key: String) -> Data? { try? Data(contentsOf: dir.appendingPathComponent(key)) }
+    static func write(_ key: String, _ data: Data) { try? data.write(to: dir.appendingPathComponent(key), options: .atomic) }
+    static func clear() {
+        try? FileManager.default.removeItem(at: dir)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
     }
 }

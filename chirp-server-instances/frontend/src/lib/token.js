@@ -5,7 +5,13 @@ const TOKEN_KEY = 'chirp_token'
 export const tokenStore = {
   get: () => localStorage.getItem(TOKEN_KEY),
   set: (t) => localStorage.setItem(TOKEN_KEY, t),
-  clear: () => localStorage.removeItem(TOKEN_KEY),
+  clear: () => {
+    localStorage.removeItem(TOKEN_KEY)
+    // The Dashboard's saved copies (lib/lastCopy.js) belong to whoever was signed in.
+    try {
+      for (const k of Object.keys(localStorage)) if (k.startsWith('chirp-last:')) localStorage.removeItem(k)
+    } catch { /* nothing to clear */ }
+  },
   // Multi-instance addition (see ARCHITECTURE.md): reads the
   // active_instance_id claim straight out of the stored JWT's own
   // payload, client-side. Deliberately NOT verified here — only the

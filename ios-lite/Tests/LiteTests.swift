@@ -116,4 +116,13 @@ final class CreditTests: XCTestCase {
         XCTAssertEqual(SongLineView.target(x: 175.5, width: 351, line: l), 17.55, accuracy: 0.01)
         XCTAssertEqual(SongLineView.target(x: -5, width: 351, line: l), 0)
     }
+
+    func testDiskCache() {
+        DiskCache.clear()
+        XCTAssertNil(DiskCache.read("abc"))
+        DiskCache.write("abc", Data("{}".utf8))
+        XCTAssertEqual(DiskCache.read("abc"), Data("{}".utf8))
+        DiskCache.clear()
+        XCTAssertNil(DiskCache.read("abc"))
+    }
 }

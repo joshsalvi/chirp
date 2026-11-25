@@ -3,6 +3,7 @@ import SwiftUI
 struct GuideView: View {
     @Binding var showAccount: Bool
     @EnvironmentObject var account: Account
+    @Environment(\.scenePhase) private var phase
     @StateObject private var loader = Loader<Guide> { "api/v1/lite/guide" }
     @State private var show = "all"
 
@@ -53,6 +54,7 @@ struct GuideView: View {
         .background(Theme.bg)
         .refreshable { await loader.load(account) }
         .task { await loader.load(account) }
+        .onChange(of: phase) { _, p in if p == .active { Task { await loader.refreshIfStale(account) } } }
     }
 
     private func progress(_ g: Guide) -> some View {

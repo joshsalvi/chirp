@@ -95,6 +95,14 @@ def test_lite_screens(client):
     titmouse = client.get("/api/v1/lite/listen", params={"bird": "Tufted Titmouse"}).json()["recordings"]
     assert titmouse and titmouse[0]["bird"] == "Tufted Titmouse" and titmouse[0]["starts_at"] == 6
     assert client.get("/api/v1/lite/listen?before=yesterday").status_code == 400
+    assert first["spectrogram"] == "/api/v1/lite/recording/lite-0/strip.png"
+    png = client.get(first["spectrogram"])
+    assert png.status_code == 200 and png.headers["content-type"] == "image/png" and png.content[:4] == b"\x89PNG"
+    from PIL import Image
+    import io
+    assert Image.open(io.BytesIO(png.content)).size == (900, 150)
+    assert client.get(first["spectrogram"]).content == png.content           # served from the saved file
+    assert client.get("/api/v1/lite/recording/nope/strip.png").status_code == 404
 
     p = client.get("/api/v1/lite/bird/bp-cardinal").json()
     assert p["size"]["label"] == "Smaller than a robin" and p["season"] == "All year"

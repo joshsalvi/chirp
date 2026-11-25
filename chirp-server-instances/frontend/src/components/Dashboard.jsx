@@ -15,6 +15,7 @@ import ChirpLogo from './ChirpLogo'
 import { isCardOpen, setCardOpen } from '../lib/cardState'
 import { AuthorAvatar } from './Comments'
 import { whenVisible } from '../lib/visible'
+import { lastCopy, keepCopy } from '../lib/lastCopy'
 
 // Small helper for Dashboard sections with their own custom, interactive
 // header (period buttons, an embedded toggle link, etc.) that can't just
@@ -1085,14 +1086,14 @@ function recHeaderAgo(detail) {
 }
 
 function AdvancedDashboard({ onOpenPicker, onStandard }) {
-  const [stats, setStats] = useState(null)
+  const [stats, setStats] = useState(() => lastCopy('stats-24h', null, { sameDay: true }))
   const [period, setPeriod] = useState('24h')
   const [activityOpen, toggleActivityOpen] = useSectionCollapse('dashboard:activity-chart', true)
   const [recentOpen, toggleRecentOpen] = useSectionCollapse('dashboard:recent-recordings', true)
   const [notesOpen, toggleNotesOpen] = useSectionCollapse('dashboard:recent-notes', true)
-  const [recent, setRecent] = useState([])
-  const [recentComments, setRecentComments] = useState([])
-  const [summary, setSummary] = useState(null)
+  const [recent, setRecent] = useState(() => lastCopy('recent', []))
+  const [recentComments, setRecentComments] = useState(() => lastCopy('comments', []))
+  const [summary, setSummary] = useState(() => lastCopy('summary', null, { sameDay: true }))
   const [summaryPeriod, setSummaryPeriod] = useState('daily')   // 'daily' | 'weekly'
   const { fmtTs, fmtAgo: fmtRelative, fmtDate, timezone } = useTz()
   const latestId = stats?.latest_recording_id
@@ -1143,18 +1144,18 @@ function AdvancedDashboard({ onOpenPicker, onStandard }) {
       // chart, and latest_recording via stats.latest_recording_id below)
       // — fire it if ANY of them are enabled, not just 'stats' itself.
       if (sectionOn('stats') || sectionOn('activity_chart') || sectionOn('latest_recording')) {
-        api.recordings.stats(period).then(setStats).catch(() => {})
+        api.recordings.stats(period).then(d => setStats(keepCopy(`stats-${period}`, d))).catch(() => {})
       }
       if (sectionOn('recent_recordings')) {
-        api.recordings.list({ limit: 6 }).then(r => setRecent(r.items || r)).catch(() => {})
+        api.recordings.list({ limit: 6 }).then(r => setRecent(keepCopy('recent', r.items || r))).catch(() => {})
       }
       if (sectionOn('recent_comments')) {
-        api.birds.recentComments(5).then(setRecentComments).catch(() => {})
+        api.birds.recentComments(5).then(d => setRecentComments(keepCopy('comments', d))).catch(() => {})
       }
       // dashboardSummary similarly powers both seen_today and
       // daily_weekly_summary — same "either one" logic as stats above.
       if (sectionOn('seen_today') || sectionOn('daily_weekly_summary')) {
-        api.recordings.dashboardSummary().then(setSummary).catch(() => {})
+        api.recordings.dashboardSummary().then(d => setSummary(keepCopy('summary', d))).catch(() => {})
       }
     }
     load()

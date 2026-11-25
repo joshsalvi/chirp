@@ -3,6 +3,7 @@ import SwiftUI
 struct BirdsView: View {
     @Binding var showAccount: Bool
     @EnvironmentObject var account: Account
+    @Environment(\.scenePhase) private var phase
     @AppStorage("birdsSort") private var sort = "recent"
     @State private var find = ""
     @StateObject private var loader: Loader<BirdList>
@@ -60,6 +61,7 @@ struct BirdsView: View {
         .background(Theme.bg)
         .refreshable { await loader.load(account) }
         .task(id: sort) { await loader.load(account) }
+        .onChange(of: phase) { _, p in if p == .active { Task { await loader.refreshIfStale(account) } } }
     }
 
     private func subtitle(_ b: BirdList.Card) -> String {

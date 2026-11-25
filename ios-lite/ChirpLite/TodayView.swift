@@ -3,6 +3,7 @@ import SwiftUI
 struct TodayView: View {
     @Binding var showAccount: Bool
     @EnvironmentObject var account: Account
+    @Environment(\.scenePhase) private var phase
     @StateObject private var loader = Loader<Today> { "api/v1/lite/today" }
 
     var body: some View {
@@ -24,6 +25,7 @@ struct TodayView: View {
         .background(Theme.bg)
         .refreshable { await loader.load(account) }
         .task { await loader.load(account) }
+        .onChange(of: phase) { _, p in if p == .active { Task { await loader.refreshIfStale(account) } } }
     }
 }
 

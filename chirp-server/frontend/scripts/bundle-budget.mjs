@@ -7,7 +7,7 @@ import path from 'path'
 import zlib from 'zlib'
 
 const BUDGETS = {
-  'index.html': { js: 130, css: 25 },   // Chirp. 0.5.18.a: 112.6 and 21.3
+  'index.html': { js: 130, css: 26 },   // Chirp. 0.5.18.a: 112.6 and 21.3; css 25.1 at 0.5.19.am (this fork keeps more theme CSS)
   'lite.html': { js: 75, css: 10 },     // Chirp Lite. 0.5.19.a: see the build log
 }
 const dist = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../dist')

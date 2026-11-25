@@ -8,6 +8,7 @@ import SongLine from './SongLine'
 import { api, mediaUrl } from '../lib/api'
 import { useTz } from '../lib/time'
 import { whenVisible } from '../lib/visible'
+import { lastCopy, keepCopy } from '../lib/lastCopy'
 
 // The Standard dashboard: the latest bird, today's birds as photos, three
 // facts and a line from the journal. One request (GET /lite/today, the same
@@ -202,7 +203,7 @@ function DayChart({ hourly, nowHour }) {
 }
 
 export default function StandardDashboard({ onOpenPicker, onAdvanced }) {
-  const [data, setData] = useState(null)
+  const [data, setData] = useState(() => lastCopy('today', null, { sameDay: true }))
   const [failed, setFailed] = useState(false)
   const [allBirds, setAllBirds] = useState(false)
   const birdsRef = useRef(null)
@@ -212,7 +213,7 @@ export default function StandardDashboard({ onOpenPicker, onAdvanced }) {
   useEffect(() => {
     let alive = true
     const load = () => api.recordings.today()
-      .then(d => { if (alive) { setData(d); setFailed(false) } })
+      .then(d => { if (alive) { setData(keepCopy('today', d)); setFailed(false) } })
       .catch(() => { if (alive) setFailed(true) })
     load()
     let t = null

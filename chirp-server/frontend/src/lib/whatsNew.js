@@ -18,7 +18,7 @@
 // it back with the same text. WhatsNewModal shows it only when `popup` is
 // newer than the version last dismissed.
 export const WHATS_NEW = {
-  version: '0.5.19.am',
+  version: '0.5.19.an',
   // The release whose `latest` text this is. The popup shows once per value,
   // so small fixes that don't change `latest` don't bring it back.
   popup: '0.5.19.l',
@@ -37,6 +37,7 @@ export const WHATS_NEW = {
     ],
   },
   recent: [
+    { version: '0.5.19.an', summary: 'The dashboard opens with your last view, then refreshes; clearer Chirp Lite recording pictures.' },
     { version: '0.5.19.am', summary: 'Version kept in step with the multi-site server.' },
     { version: '0.5.19.al', summary: 'Bird profiles show their header photo again.' },
     { version: '0.5.19.ak', summary: 'The next photo no longer peeks in on the dashboard.' },
